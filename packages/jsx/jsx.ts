@@ -489,6 +489,11 @@ function diffElement(oldNode: Node, newNode: Node): Node {
     if ((oldNode as any)._componentInstance && (newNode as any)._componentInstance) {
       const oldInstance = (oldNode as any)._componentInstance;
       const newInstance = (newNode as any)._componentInstance;
+      // 组件函数不同时（路由切换等）→ 完全替换
+      if (oldInstance.setupFn !== newInstance.setupFn) {
+        oldNode.parentNode?.replaceChild(newNode, oldNode);
+        return newNode;
+      }
       oldInstance.props = newInstance.props;
       syncAttributes(oldNode, newNode);
       syncStyles(oldNode, newNode);

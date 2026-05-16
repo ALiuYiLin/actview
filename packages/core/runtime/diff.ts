@@ -25,6 +25,18 @@ export function diff(oldNode: Node, newNode: Node): Node {
     // 如果旧节点是组件根元素，由组件的 updateFn 管理子节点更新
     // 此处只同步根元素的属性，不递归子节点
     if ((oldNode as any)._componentInstance) {
+      // 当新节点也是组件根元素且组件函数不同时 → 路由切换等场景
+      // 需要完全替换旧节点，而不是保留旧组件实例
+      const newInstance = (newNode as any)._componentInstance;
+      if (newInstance) {
+        const oldInstance = (oldNode as any)._componentInstance;
+        if (oldInstance.setupFn !== newInstance.setupFn) {
+          oldNode.parentNode?.replaceChild(newNode, oldNode);
+          return newNode;
+        }
+        // 同一组件：只同步 props
+        oldInstance.props = newInstance.props;
+      }
       updateAttributes(oldNode, newNode);
       updateListeners(oldNode, newNode);
       return oldNode;
