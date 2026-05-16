@@ -373,6 +373,8 @@ function patchComponentFragment(instance: ComponentInstance, newFragment: Docume
   const endAnchor = instance._endAnchor;
 
   if (!startAnchor || !endAnchor || !startAnchor.parentNode) return;
+  // 确保 endAnchor 与 startAnchor 在同一父节点下
+  if (endAnchor.parentNode !== startAnchor.parentNode) return;
 
   const parent = startAnchor.parentNode;
 
@@ -435,7 +437,8 @@ function reconcileFragmentChildren(
         node = node.nextSibling;
       }
 
-      if (targetNode !== refNode) {
+      // 安全校验：refNode 和 targetNode 都是 parent 的子节点时才移动
+      if (targetNode !== refNode && refNode.parentNode === parent) {
         parent.insertBefore(targetNode, refNode);
       }
     }
@@ -453,9 +456,13 @@ function reconcileFragmentChildren(
       const oldChild = oldChildren[i];
       const newChild = newChildren[i];
       if (!oldChild && newChild) {
-        parent.insertBefore(newChild, endAnchor);
+        if (endAnchor.parentNode === parent) {
+          parent.insertBefore(newChild, endAnchor);
+        }
       } else if (oldChild && !newChild) {
-        parent.removeChild(oldChild);
+        if (oldChild.parentNode === parent) {
+          parent.removeChild(oldChild);
+        }
       } else if (oldChild && newChild) {
         diffElement(oldChild, newChild);
       }
