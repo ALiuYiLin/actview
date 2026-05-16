@@ -1,6 +1,7 @@
 import { App, Option } from "@actview/core";
 import { Home } from "./pages/home";
 import { NotFound } from "./pages/notfound";
+import { Bugs } from "./pages/bugs";
 import { Router } from "@actview/router";
 import { Menu, MenuGroup } from "./components/menu";
 import { Button } from "./pages/components/button";
@@ -18,6 +19,7 @@ const routes = [
   { path: "/component/button", component: Button },
   { path: "/component/switch", component: Switch },
   { path: "/component/input", component: Input },
+  { path: "/bugs", component: Bugs },
 ];
 const router = new Router({ routes });
 
@@ -26,6 +28,10 @@ const menus: MenuGroup[] = [
   {
     group: "示例",
     items: [{ path: "/not-found", label: "404 页面", icon: "🚫" }],
+  },
+  {
+    group: "调试",
+    items: [{ path: "/bugs", label: "Bug 演示", icon: "🐛" }],
   },
   {
     group: "组件",

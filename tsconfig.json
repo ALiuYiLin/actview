@@ -10,7 +10,6 @@
     /* 自定义 JSX */
     "jsx": "react-jsx",
     "jsxImportSource": "@actview/jsx",
-    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

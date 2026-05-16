@@ -20,6 +20,11 @@ export function injectUpdateFnAccessors(
 
 export namespace JSX {
   export type Element = HTMLElement | SVGElement | Text | DocumentFragment;
+  // 支持 setup 模式组件（返回 () => Element）
+  export type ElementType =
+    | string
+    | ((props: any) => Element)
+    | ((props: any) => (props: any) => Element);
   
 
 
