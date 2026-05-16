@@ -112,7 +112,7 @@ export function createElement(
 ): HTMLElement | SVGElement | DocumentFragment {
   // 从 props 中提取 children（jsxDEV 模式会把 children 放在 props 里）
   const propsChildren = props?.children;
-  const allChildren = children.length > 0 ? children : (propsChildren ? (Array.isArray(propsChildren) ? propsChildren : [propsChildren]) : []);
+  const allChildren = children.length > 0 ? children : (propsChildren != null ? (Array.isArray(propsChildren) ? propsChildren : [propsChildren]) : []);
   
   // 如果 tag 是函数组件
   if (typeof tag === "function") {
