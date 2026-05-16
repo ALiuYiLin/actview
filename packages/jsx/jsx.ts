@@ -295,7 +295,11 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     } else {
       const oldEl = instance.el as Element;
       if (oldEl.parentNode) {
-        diffElement(oldEl, newResult as Element);
+        const newEl = diffElement(oldEl, newResult as Element);
+        if (newEl !== oldEl) {
+          instance.el = newEl;
+          (newEl as any)._componentInstance = instance;
+        }
       }
     }
   };
@@ -367,11 +371,11 @@ function setupComponentFragment(instance: ComponentInstance, fragment: DocumentF
 function patchComponentFragment(instance: ComponentInstance, newFragment: DocumentFragment) {
   const startAnchor = instance._startAnchor;
   const endAnchor = instance._endAnchor;
-  
+
   if (!startAnchor || !endAnchor || !startAnchor.parentNode) return;
-  
+
   const parent = startAnchor.parentNode;
-  
+
   // 收集旧子节点（锚点之间）
   const oldChildren: Node[] = [];
   let current: Node | null = startAnchor.nextSibling;
@@ -379,20 +383,82 @@ function patchComponentFragment(instance: ComponentInstance, newFragment: Docume
     oldChildren.push(current);
     current = current.nextSibling;
   }
-  
+
   const newChildren = Array.from(newFragment.childNodes);
-  
-  // 简单的 index-based diff（锚点间内容）
-  const maxLen = Math.max(oldChildren.length, newChildren.length);
-  for (let i = 0; i < maxLen; i++) {
-    const oldChild = oldChildren[i];
-    const newChild = newChildren[i];
-    if (!oldChild && newChild) {
-      parent.insertBefore(newChild, endAnchor);
-    } else if (oldChild && !newChild) {
-      parent.removeChild(oldChild);
-    } else if (oldChild && newChild) {
-      diffElement(oldChild, newChild);
+  reconcileFragmentChildren(parent, startAnchor, endAnchor, oldChildren, newChildren);
+}
+
+/**
+ * Fragment 子节点协调（支持 keyed diff）
+ * 与 reconcileChildren 逻辑相同，但使用锚点边界定位
+ */
+function reconcileFragmentChildren(
+  parent: Node,
+  startAnchor: Node,
+  endAnchor: Node,
+  oldChildren: Node[],
+  newChildren: Node[]
+) {
+  // 建立旧节点 key 索引
+  const oldKeyMap = new Map<any, Node>();
+  for (const child of oldChildren) {
+    const key = (child as any)._key;
+    if (key != null) oldKeyMap.set(key, child);
+  }
+
+  const useKeys = newChildren.length > 0 && newChildren.some(c => (c as any)._key != null);
+
+  if (useKeys) {
+    const reused = new Set<Node>();
+
+    for (let i = 0; i < newChildren.length; i++) {
+      const newChild = newChildren[i];
+      const key = (newChild as any)._key;
+
+      let oldChild: Node | undefined;
+      if (key != null && oldKeyMap.has(key)) {
+        oldChild = oldKeyMap.get(key)!;
+        oldKeyMap.delete(key);
+        reused.add(oldChild);
+        diffElement(oldChild, newChild);
+      }
+
+      const targetNode = oldChild ?? newChild;
+
+      // 从当前 live DOM 中找到第 i 个子节点做参考（相对 startAnchor）
+      let refNode: Node = endAnchor;
+      let count = 0;
+      let node: Node | null = startAnchor.nextSibling;
+      while (node && node !== endAnchor) {
+        if (count >= i) { refNode = node; break; }
+        count++;
+        node = node.nextSibling;
+      }
+
+      if (targetNode !== refNode) {
+        parent.insertBefore(targetNode, refNode);
+      }
+    }
+
+    // 移除未被复用的旧节点
+    for (const child of oldChildren) {
+      if (!reused.has(child) && child.parentNode === parent) {
+        parent.removeChild(child);
+      }
+    }
+  } else {
+    // 无 key 时使用索引匹配（兼容无 key 的简单场景）
+    const maxLen = Math.max(oldChildren.length, newChildren.length);
+    for (let i = 0; i < maxLen; i++) {
+      const oldChild = oldChildren[i];
+      const newChild = newChildren[i];
+      if (!oldChild && newChild) {
+        parent.insertBefore(newChild, endAnchor);
+      } else if (oldChild && !newChild) {
+        parent.removeChild(oldChild);
+      } else if (oldChild && newChild) {
+        diffElement(oldChild, newChild);
+      }
     }
   }
 }
@@ -414,7 +480,10 @@ function diffElement(oldNode: Node, newNode: Node): Node {
     return oldNode;
   }
 
-  if (oldNode instanceof HTMLElement && newNode instanceof HTMLElement) {
+  // SVGElement 不是 HTMLElement 的子类，需要同时处理
+  const isOldStyled = oldNode instanceof HTMLElement || oldNode instanceof SVGElement;
+  const isNewStyled = newNode instanceof HTMLElement || newNode instanceof SVGElement;
+  if (isOldStyled && isNewStyled) {
     // 如果新旧节点都是组件的根节点，跳过深度 diff（由组件自己管理）
     // 此场景发生在父组件 re-render 遇到子组件边界时
     if ((oldNode as any)._componentInstance && (newNode as any)._componentInstance) {
@@ -439,9 +508,12 @@ function diffElement(oldNode: Node, newNode: Node): Node {
     // 特殊处理 value property
     if ('value' in newNode && 'value' in oldNode) {
       const newValue = (newNode as any).value;
-      const hasValueAttr = newNode.hasAttribute('value');
+      const oldHasValueAttr = oldNode.hasAttribute('value');
+      const newHasValueAttr = newNode.hasAttribute('value');
       if ((newNode as any).value !== (oldNode as any).value) {
-        if (hasValueAttr || newValue !== '') {
+        // 曾受控（oldHasValueAttr）、或正在受控（newHasValueAttr）、或非空值 → 更新
+        // 纯非受控 + 空值 时不更新，以保留用户输入
+        if (oldHasValueAttr || newHasValueAttr || newValue !== '') {
           (oldNode as any).value = newValue;
         }
       }
@@ -453,7 +525,7 @@ function diffElement(oldNode: Node, newNode: Node): Node {
   return oldNode;
 }
 
-function syncAttributes(oldNode: HTMLElement, newNode: HTMLElement) {
+function syncAttributes(oldNode: Element, newNode: Element) {
   Array.from(oldNode.attributes).forEach(attr => {
     if (!newNode.hasAttribute(attr.name)) oldNode.removeAttribute(attr.name);
   });
@@ -462,7 +534,7 @@ function syncAttributes(oldNode: HTMLElement, newNode: HTMLElement) {
   });
 }
 
-function syncListeners(oldNode: HTMLElement, newNode: HTMLElement) {
+function syncListeners(oldNode: Element, newNode: Element) {
   const oldListeners = (oldNode as any)._listeners || {};
   const newListeners = (newNode as any)._listeners || {};
   for (const [name, listener] of Object.entries(oldListeners)) {
@@ -480,9 +552,11 @@ function syncListeners(oldNode: HTMLElement, newNode: HTMLElement) {
   (oldNode as any)._listeners = oldListeners;
 }
 
-function syncStyles(oldNode: HTMLElement, newNode: HTMLElement) {
-  if (oldNode.style.cssText !== newNode.style.cssText) {
-    oldNode.style.cssText = newNode.style.cssText;
+function syncStyles(oldNode: Element, newNode: Element) {
+  const oldStyle = (oldNode as HTMLElement | SVGElement).style;
+  const newStyle = (newNode as HTMLElement | SVGElement).style;
+  if (oldStyle.cssText !== newStyle.cssText) {
+    oldStyle.cssText = newStyle.cssText;
   }
 }
 
@@ -499,7 +573,7 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
   }
 
   // 是否所有新子节点都有 key（决定是否启用 keyed 模式）
-  const useKeys = newChildren.length > 0 && newChildren.every(c => (c as any)._key != null);
+  const useKeys = newChildren.length > 0 && newChildren.some(c => (c as any)._key != null);
 
   if (useKeys) {
     // keyed 模式：按 key 匹配
