@@ -1,6 +1,6 @@
 // 自定义 JSX 工厂函数
 
-/** 
+/**
  * 组件级更新函数的 getter/setter
  * 由 @actview/core 的 hooks 模块注入，实现 JSX 层与 core 层的解耦
  */
@@ -16,6 +16,38 @@ export function injectUpdateFnAccessors(
 ) {
   _getCurrentUpdateFn = getter;
   _setCurrentUpdateFn = setter;
+}
+
+// ======== 统一的 Diff 注入（由 @actview/core 提供实现）========
+
+type DiffFn = (oldNode: Node, newNode: Node) => Node;
+type SyncAttributesFn = (oldNode: Element, newNode: Element) => void;
+type SyncListenersFn = (oldNode: Element, newNode: Element) => void;
+type SyncStylesFn = (oldNode: Element, newNode: Element) => void;
+type ReconcileFn = (parent: Node, oldChildren: Node[], newChildren: Node[]) => void;
+type ReconcileFragmentFn = (parent: Node, startAnchor: Node, endAnchor: Node, oldChildren: Node[], newChildren: Node[]) => void;
+
+interface DiffFunctions {
+  diff: DiffFn;
+  syncAttributes: SyncAttributesFn;
+  syncListeners: SyncListenersFn;
+  syncStyles: SyncStylesFn;
+  reconcileChildren: ReconcileFn;
+  reconcileFragmentChildren: ReconcileFragmentFn;
+}
+
+let _injectedDiff: DiffFunctions | null = null;
+
+/**
+ * 注入统一的 diff 实现（由 @actview/core 在初始化时调用）
+ * 使 JSX 层使用 core 的增强 diff，同时保留自身实现作为回退
+ */
+export function injectDiffFunctions(fns: DiffFunctions) {
+  _injectedDiff = fns;
+}
+
+function getDiff<T extends keyof DiffFunctions>(name: T): DiffFunctions[T] | null {
+  return _injectedDiff?.[name] ?? null;
 }
 
 export namespace JSX {
@@ -391,8 +423,8 @@ function patchComponentFragment(instance: ComponentInstance, newFragment: Docume
 }
 
 /**
- * Fragment 子节点协调（支持 keyed diff）
- * 与 reconcileChildren 逻辑相同，但使用锚点边界定位
+ * Fragment 子节点协调
+ * 当 @actview/core 注入 diff 后，优先使用注入的版本
  */
 function reconcileFragmentChildren(
   parent: Node,
@@ -401,7 +433,10 @@ function reconcileFragmentChildren(
   oldChildren: Node[],
   newChildren: Node[]
 ) {
-  // 建立旧节点 key 索引
+  const fn = getDiff('reconcileFragmentChildren');
+  if (fn) { fn(parent, startAnchor, endAnchor, oldChildren, newChildren); return; }
+
+  // === 回退实现 ===
   const oldKeyMap = new Map<any, Node>();
   for (const child of oldChildren) {
     const key = (child as any)._key;
@@ -412,11 +447,9 @@ function reconcileFragmentChildren(
 
   if (useKeys) {
     const reused = new Set<Node>();
-
     for (let i = 0; i < newChildren.length; i++) {
       const newChild = newChildren[i];
       const key = (newChild as any)._key;
-
       let oldChild: Node | undefined;
       if (key != null && oldKeyMap.has(key)) {
         oldChild = oldKeyMap.get(key)!;
@@ -424,10 +457,7 @@ function reconcileFragmentChildren(
         reused.add(oldChild);
         diffElement(oldChild, newChild);
       }
-
       const targetNode = oldChild ?? newChild;
-
-      // 从当前 live DOM 中找到第 i 个子节点做参考（相对 startAnchor）
       let refNode: Node = endAnchor;
       let count = 0;
       let node: Node | null = startAnchor.nextSibling;
@@ -436,21 +466,16 @@ function reconcileFragmentChildren(
         count++;
         node = node.nextSibling;
       }
-
-      // 安全校验：refNode 和 targetNode 都是 parent 的子节点时才移动
       if (targetNode !== refNode && refNode.parentNode === parent) {
         parent.insertBefore(targetNode, refNode);
       }
     }
-
-    // 移除未被复用的旧节点
     for (const child of oldChildren) {
       if (!reused.has(child) && child.parentNode === parent) {
         parent.removeChild(child);
       }
     }
   } else {
-    // 无 key 时使用索引匹配（兼容无 key 的简单场景）
     const maxLen = Math.max(oldChildren.length, newChildren.length);
     for (let i = 0; i < maxLen; i++) {
       const oldChild = oldChildren[i];
@@ -472,9 +497,13 @@ function reconcileFragmentChildren(
 
 /**
  * 简易 diff：在 JSX 层内联一个轻量 diff 实现
- * 避免循环依赖（jsx 包不依赖 core 的 diff）
+ * 当 @actview/core 注入 diff 后，优先使用注入的版本
  */
 function diffElement(oldNode: Node, newNode: Node): Node {
+  const injectedDiff = getDiff('diff');
+  if (injectedDiff) return injectedDiff(oldNode, newNode);
+
+  // === 以下是回退实现（与 core 的 diff 保持同步）===
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
     oldNode.parentNode?.replaceChild(newNode, oldNode);
     return newNode;
@@ -487,16 +516,12 @@ function diffElement(oldNode: Node, newNode: Node): Node {
     return oldNode;
   }
 
-  // SVGElement 不是 HTMLElement 的子类，需要同时处理
   const isOldStyled = oldNode instanceof HTMLElement || oldNode instanceof SVGElement;
   const isNewStyled = newNode instanceof HTMLElement || newNode instanceof SVGElement;
   if (isOldStyled && isNewStyled) {
-    // 如果新旧节点都是组件的根节点，跳过深度 diff（由组件自己管理）
-    // 此场景发生在父组件 re-render 遇到子组件边界时
     if ((oldNode as any)._componentInstance && (newNode as any)._componentInstance) {
       const oldInstance = (oldNode as any)._componentInstance;
       const newInstance = (newNode as any)._componentInstance;
-      // 组件函数不同时（路由切换等）→ 完全替换
       if (oldInstance.setupFn !== newInstance.setupFn) {
         oldNode.parentNode?.replaceChild(newNode, oldNode);
         return newNode;
@@ -511,25 +536,10 @@ function diffElement(oldNode: Node, newNode: Node): Node {
     syncAttributes(oldNode, newNode);
     syncStyles(oldNode, newNode);
     syncListeners(oldNode, newNode);
-    
-    // 递归子节点（keyed diff，按 _key 匹配，保留节点状态）
+
     const oldChildren = Array.from(oldNode.childNodes);
     const newChildren = Array.from(newNode.childNodes);
     reconcileChildren(oldNode, oldChildren, newChildren);
-
-    // 特殊处理 value property
-    if ('value' in newNode && 'value' in oldNode) {
-      const newValue = (newNode as any).value;
-      const oldHasValueAttr = oldNode.hasAttribute('value');
-      const newHasValueAttr = newNode.hasAttribute('value');
-      if ((newNode as any).value !== (oldNode as any).value) {
-        // 曾受控（oldHasValueAttr）、或正在受控（newHasValueAttr）、或非空值 → 更新
-        // 纯非受控 + 空值 时不更新，以保留用户输入
-        if (oldHasValueAttr || newHasValueAttr || newValue !== '') {
-          (oldNode as any).value = newValue;
-        }
-      }
-    }
 
     return oldNode;
   }
@@ -538,15 +548,29 @@ function diffElement(oldNode: Node, newNode: Node): Node {
 }
 
 function syncAttributes(oldNode: Element, newNode: Element) {
+  const fn = getDiff('syncAttributes');
+  if (fn) { fn(oldNode, newNode); return; }
   Array.from(oldNode.attributes).forEach(attr => {
     if (!newNode.hasAttribute(attr.name)) oldNode.removeAttribute(attr.name);
   });
   Array.from(newNode.attributes).forEach(attr => {
     if (oldNode.getAttribute(attr.name) !== attr.value) oldNode.setAttribute(attr.name, attr.value);
   });
+  if ('value' in newNode && 'value' in oldNode) {
+    const newValue = (newNode as any).value;
+    const oldHasValueAttr = oldNode.hasAttribute('value');
+    const newHasValueAttr = newNode.hasAttribute('value');
+    if ((newNode as any).value !== (oldNode as any).value) {
+      if (oldHasValueAttr || newHasValueAttr || newValue !== '') {
+        (oldNode as any).value = newValue;
+      }
+    }
+  }
 }
 
 function syncListeners(oldNode: Element, newNode: Element) {
+  const fn = getDiff('syncListeners');
+  if (fn) { fn(oldNode, newNode); return; }
   const oldListeners = (oldNode as any)._listeners || {};
   const newListeners = (newNode as any)._listeners || {};
   for (const [name, listener] of Object.entries(oldListeners)) {
@@ -565,6 +589,8 @@ function syncListeners(oldNode: Element, newNode: Element) {
 }
 
 function syncStyles(oldNode: Element, newNode: Element) {
+  const fn = getDiff('syncStyles');
+  if (fn) { fn(oldNode, newNode); return; }
   const oldStyle = (oldNode as HTMLElement | SVGElement).style;
   const newStyle = (newNode as HTMLElement | SVGElement).style;
   if (oldStyle.cssText !== newStyle.cssText) {
@@ -573,28 +599,27 @@ function syncStyles(oldNode: Element, newNode: Element) {
 }
 
 /**
- * 带 key 的子节点协调（keyed reconciliation）
- * 匹配新旧子节点列表中的 _key，保留已存在 DOM 节点的状态（如 input 输入内容）
- * 算法：遍历新子节点 → 按 key 匹配旧节点 → diff 后移动到正确位置 → 删除残余旧节点
+ * 带 key 的子节点协调
+ * 当 @actview/core 注入 diff 后，优先使用注入的版本
  */
 function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[]) {
+  const fn = getDiff('reconcileChildren');
+  if (fn) { fn(parent, oldChildren, newChildren); return; }
+
+  // === 回退实现 ===
   const oldKeyMap = new Map<any, Node>();
   for (const child of oldChildren) {
     const key = (child as any)._key;
     if (key != null) oldKeyMap.set(key, child);
   }
 
-  // 是否所有新子节点都有 key（决定是否启用 keyed 模式）
   const useKeys = newChildren.length > 0 && newChildren.some(c => (c as any)._key != null);
 
   if (useKeys) {
-    // keyed 模式：按 key 匹配
     const reused = new Set<Node>();
-
     for (let i = 0; i < newChildren.length; i++) {
       const newChild = newChildren[i];
       const key = (newChild as any)._key;
-
       let oldChild: Node | undefined;
       if (key != null && oldKeyMap.has(key)) {
         oldChild = oldKeyMap.get(key)!;
@@ -602,22 +627,18 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
         reused.add(oldChild);
         diffElement(oldChild, newChild);
       }
-
       const targetNode = oldChild ?? newChild;
       const refNode = parent.childNodes[i];
       if (targetNode !== refNode) {
         parent.insertBefore(targetNode, refNode);
       }
     }
-
-    // 移除未被复用的旧节点
     for (const child of oldChildren) {
       if (!reused.has(child)) {
         parent.removeChild(child);
       }
     }
   } else {
-    // 无 key 时使用索引匹配（兼容无 key 的简单场景）
     const maxLen = Math.max(oldChildren.length, newChildren.length);
     for (let i = 0; i < maxLen; i++) {
       const oc = oldChildren[i];
