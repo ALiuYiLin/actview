@@ -527,6 +527,11 @@ function diffElement(oldNode: Node, newNode: Node): Node {
         return newNode;
       }
       oldInstance.props = newInstance.props;
+      // 直接模式（setupFn === renderFn）：用新 props 重新执行组件函数并 diff
+      if (oldInstance.setupFn === oldInstance.renderFn) {
+        const newDom = oldInstance.setupFn(oldInstance.props);
+        return diffElement(oldNode, newDom as Node);
+      }
       syncAttributes(oldNode, newNode);
       syncStyles(oldNode, newNode);
       syncListeners(oldNode, newNode);

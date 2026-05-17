@@ -35,8 +35,14 @@ export function diff(oldNode: Node, newNode: Node): Node {
         oldNode.parentNode?.replaceChild(newNode, oldNode);
         return newNode;
       }
-      // 同一组件：只同步 props
+      // 同一组件：更新 props
       oldInstance.props = newInstance.props;
+      // 直接模式（setupFn === renderFn）：用新 props 重新执行组件函数并 diff
+      if (oldInstance.setupFn === oldInstance.renderFn) {
+        const newDom = oldInstance.setupFn(oldInstance.props);
+        return diff(oldNode, newDom as Node);
+      }
+      // Setup 模式：由 componentUpdateFn 自行调用 renderFn，只同步根属性
       syncAttributes(oldNode, newNode);
       syncListeners(oldNode, newNode);
       return oldNode;
