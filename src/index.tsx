@@ -3,6 +3,7 @@ import { Home } from "./pages/home";
 import { NotFound } from "./pages/notfound";
 import { Bugs } from "./pages/bugs";
 import { Demo } from "./pages/demo";
+import { Guide } from "./pages/guide";
 import { Router } from "@actview/router";
 import { Menu, MenuGroup } from "./components/menu";
 import { Button } from "./pages/components/button";
@@ -22,6 +23,7 @@ const routes = [
   { path: "/component/input", component: Input },
   { path: "/bugs", component: Bugs },
   { path: "/demo", component: Demo },
+  { path: "/guide", component: Guide },
 ];
 const router = new Router({ routes });
 
@@ -36,6 +38,7 @@ const menus: MenuGroup[] = [
     items: [
       { path: "/bugs", label: "Bug 演示", icon: "🐛" },
       { path: "/demo", label: "组件写法", icon: "📖" },
+      { path: "/guide", label: "指南", icon: "📘" },
     ],
   },
   {
