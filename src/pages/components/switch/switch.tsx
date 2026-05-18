@@ -2,9 +2,9 @@ import { useResolveOptions, ref } from "@actview/core"
 import { MySwitch } from "@/components/switch"
 import './switch.css'
 
-const isOn = ref(false)
 
 export const Switch = () => {
+    const isOn = ref(false)
     isOn.value = false
     useResolveOptions([
         {
