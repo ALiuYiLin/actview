@@ -27,6 +27,7 @@ export type MyInputProps = {
   "input-type"?: string;
   clearable?: boolean;
   "data-id"?: string;
+  onInput?: (e: Event) => void;
 };
 
 export const MyInput = (props: MyInputProps) => {
@@ -50,6 +51,7 @@ export const MyInput = (props: MyInputProps) => {
         value={props.value || ""}
         disabled={props.disabled !== undefined}
         readOnly={props.readonly !== undefined}
+        onInput={props.onInput}
       />
       {props.clearable !== undefined && (
         <span className="input-clear">

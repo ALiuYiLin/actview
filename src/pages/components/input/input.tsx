@@ -41,7 +41,7 @@ export const Input = () => {
         </div>
       </div>
       <div class="section">
-        <h2>原生类型 / Native Types</h2>
+        <h2  >原生类型 / Native Types</h2>
         <div class="input-vertical">
           <div class="label-row"><span style="min-width:60px">text:</span><MyInput placeholder="文本输入" /></div>
           <div class="label-row"><span style="min-width:60px">number:</span><MyInput input-type="number" placeholder="数字输入" /></div>
@@ -52,7 +52,7 @@ export const Input = () => {
       <div class="section">
         <h2>交互演示 / Interactive Demo</h2>
         <div class="input-vertical">
-          <MyInput type="primary" placeholder="输入内容实时显示..." />
+          <MyInput type="primary" placeholder="输入内容实时显示..." value={inputValue.value} onInput={(e: any) => inputValue.value = e.target.value} />
         </div>
         <p>输入内容: {inputValue.value}</p>
       </div>
