@@ -4,7 +4,8 @@ import { NotFound } from "./pages/notfound";
 import { Bugs } from "./pages/bugs";
 import { Demo } from "./pages/demo";
 import { Guide } from "./pages/guide";
-import { Router } from "@actview/router";
+import { ComponentsLayout } from "./pages/components-layout";
+import { Router, RouterView } from "@actview/router";
 import { Menu, MenuGroup } from "./components/menu";
 import { Button } from "./pages/components/button";
 import { Switch } from "./pages/components/switch";
@@ -18,9 +19,11 @@ const routes = [
   { path: "/home", component: Home },
   { path: "/", component: Home },
   { path: "/not-found", component: NotFound },
-  { path: "/component/button", component: Button },
-  { path: "/component/switch", component: Switch },
-  { path: "/component/input", component: Input },
+  { path: "/component", component: ComponentsLayout, children: [
+    { path: "/component/button", component: Button },
+    { path: "/component/switch", component: Switch },
+    { path: "/component/input", component: Input },
+  ]},
   { path: "/bugs", component: Bugs },
   { path: "/demo", component: Demo },
   { path: "/guide", component: Guide },
@@ -43,6 +46,7 @@ const menus: MenuGroup[] = [
   },
   {
     group: "组件",
+    path: "/component",
     items: [
       { path: "/component/button", label: "按钮", icon: "🔘" },
       { path: "/component/switch", label: "开关", icon: "🔛" },
@@ -94,17 +98,14 @@ const options: Option[] = [
   },
   {
     selector: "#app",
-    render: () => {
-      const Component = router.route.value?.component as ((...args: any[]) => any) | undefined;
-      return (
-        <div>
-          <p style="margin-bottom:12px;color:#999;font-size:13px;">
-            当前路由：{router.route.value?.path}
-          </p>
-          {Component ? <Component /> : null}
-        </div>
-      );
-    },
+    render: () => (
+      <div>
+        <p style="margin-bottom:12px;color:#999;font-size:13px;">
+          当前路由：{router.route.value?.path}
+        </p>
+        <RouterView />
+      </div>
+    ),
   },
 ];
 app.resolveOptions(options);
