@@ -81,6 +81,12 @@ export class Router {
   private update() {
     this.currentPath.value = location.pathname;
   }
+
+  /** 获取全局 Router 单例 */
+  static getInstance(): Router {
+    if (!routerInstance) throw new Error("Router not initialized");
+    return routerInstance;
+  }
 }
 
 export function useRouter(): Router {

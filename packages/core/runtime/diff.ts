@@ -68,11 +68,6 @@ export function diff(oldNode: Node, newNode: Node): Node {
   return oldNode;
 }
 
-/** @alias {@link syncAttributes} — 兼容 compile.ts 等旧引用 */
-export const updateAttributes = syncAttributes;
-/** @alias {@link syncListeners} — 兼容 compile.ts 等旧引用 */
-export const updateListeners = syncListeners;
-
 export function syncAttributes(oldNode: Element, newNode: Element) {
   Array.from(oldNode.attributes).forEach(attr => {
     if (!newNode.hasAttribute(attr.name)) oldNode.removeAttribute(attr.name);

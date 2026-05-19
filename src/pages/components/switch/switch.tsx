@@ -1,99 +1,50 @@
-import { useResolveOptions, ref } from "@actview/core"
-import { MySwitch } from "@/components/switch"
-import './switch.css'
+import { ref } from "@actview/core";
+import { MySwitch } from "@/components/switch";
+import "./switch.css";
 
+const isOn = ref(false);
 
 export const Switch = () => {
-    const isOn = ref(false)
-    isOn.value = false
-    useResolveOptions([
-        {
-            selector: '[data-id="demo-switch"]',
-            render: () => (
-                <MySwitch
-                    type="primary"
-                    checked={isOn.value ? true : undefined}
-                    data-id="demo-switch"
-                    onToggle={() => { isOn.value = !isOn.value }}
-                />
-            ),
-        },
-        {
-            selector: '#switch-status',
-            text: () => `开关状态: ${isOn.value ? '开启' : '关闭'}`,
-        },
-    ])
-    return (
-        <div class="switch-demo">
-            <div class="section">
-                <h2>开关类型 / Switch Types</h2>
-                <div class="switch-group">
-                    <div class="label-row">
-                        <MySwitch type="primary" checked />
-                        <span>Primary</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="success" checked />
-                        <span>Success</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="danger" checked />
-                        <span>Danger</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="warning" checked />
-                        <span>Warning</span>
-                    </div>
-                </div>
-            </div>
-            <div class="section">
-                <h2>开关尺寸 / Switch Sizes</h2>
-                <div class="switch-group">
-                    <div class="label-row">
-                        <MySwitch type="primary" size="sm" checked />
-                        <span>Small</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="primary" checked />
-                        <span>Default</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="primary" size="lg" checked />
-                        <span>Large</span>
-                    </div>
-                </div>
-            </div>
-            <div class="section">
-                <h2>开关状态 / Switch States</h2>
-                <div class="switch-group">
-                    <div class="label-row">
-                        <MySwitch type="primary" />
-                        <span>Off</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="primary" checked />
-                        <span>On</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="primary" disabled />
-                        <span>Disabled (Off)</span>
-                    </div>
-                    <div class="label-row">
-                        <MySwitch type="primary" checked disabled />
-                        <span>Disabled (On)</span>
-                    </div>
-                </div>
-            </div>
-            <div class="section">
-                <h2>交互演示 / Interactive Demo</h2>
-                <div class="switch-group">
-                    <div class="label-row">
-                        <MySwitch type="primary" data-id="demo-switch" />
-                        <span>点击切换</span>
-                    </div>
-                </div>
-                <p id="switch-status">开关状态: 关闭</p>
-            </div>
+  isOn.value = false;
+
+  return () => (
+    <div class="switch-demo">
+      <div class="section">
+        <h2>开关类型 / Switch Types</h2>
+        <div class="switch-group">
+          <div class="label-row"><MySwitch type="primary" checked /><span>Primary</span></div>
+          <div class="label-row"><MySwitch type="success" checked /><span>Success</span></div>
+          <div class="label-row"><MySwitch type="danger" checked /><span>Danger</span></div>
+          <div class="label-row"><MySwitch type="warning" checked /><span>Warning</span></div>
         </div>
-    )
-}
+      </div>
+      <div class="section">
+        <h2>开关尺寸 / Switch Sizes</h2>
+        <div class="switch-group">
+          <div class="label-row"><MySwitch type="primary" size="sm" checked /><span>Small</span></div>
+          <div class="label-row"><MySwitch type="primary" checked /><span>Default</span></div>
+          <div class="label-row"><MySwitch type="primary" size="lg" checked /><span>Large</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>开关状态 / Switch States</h2>
+        <div class="switch-group">
+          <div class="label-row"><MySwitch type="primary" /><span>Off</span></div>
+          <div class="label-row"><MySwitch type="primary" checked /><span>On</span></div>
+          <div class="label-row"><MySwitch type="primary" disabled /><span>Disabled (Off)</span></div>
+          <div class="label-row"><MySwitch type="primary" checked disabled /><span>Disabled (On)</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>交互演示 / Interactive Demo</h2>
+        <div class="switch-group">
+          <div class="label-row">
+            <MySwitch type="primary" checked={isOn.value ? true : undefined} onToggle={() => isOn.value = !isOn.value} />
+            <span>点击切换</span>
+          </div>
+        </div>
+        <p>开关状态: {isOn.value ? "开启" : "关闭"}</p>
+      </div>
+    </div>
+  );
+};

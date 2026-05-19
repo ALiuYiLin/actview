@@ -21,4 +21,4 @@ injectDiffFunctions({
 });
 
 export { useCurrentUpdateFn, getCurrentUpdateFn, setCurrentUpdateFn }
-export { useApp, useResolveOptions } from './use-app'
+export { useApp } from './use-app'
