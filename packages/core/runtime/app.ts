@@ -1,4 +1,3 @@
-import { registerComponent } from "./component";
 import { compile } from "./compile";
 import { RenderFn } from "../types";
 
@@ -15,7 +14,6 @@ export class App {
   }
 
   use(render: RenderFn): this {
-    registerComponent(render);
     return this;
   }
 

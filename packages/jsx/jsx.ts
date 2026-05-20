@@ -18,37 +18,6 @@ export function injectUpdateFnAccessors(
   _setCurrentUpdateFn = setter;
 }
 
-// ======== 统一的 Diff 注入（由 @actview/core 提供实现）========
-
-type DiffFn = (oldNode: Node, newNode: Node) => Node;
-type SyncAttributesFn = (oldNode: Element, newNode: Element) => void;
-type SyncListenersFn = (oldNode: Element, newNode: Element) => void;
-type SyncStylesFn = (oldNode: Element, newNode: Element) => void;
-type ReconcileFn = (parent: Node, oldChildren: Node[], newChildren: Node[]) => void;
-type ReconcileFragmentFn = (parent: Node, startAnchor: Node, endAnchor: Node, oldChildren: Node[], newChildren: Node[]) => void;
-
-interface DiffFunctions {
-  diff: DiffFn;
-  syncAttributes: SyncAttributesFn;
-  syncListeners: SyncListenersFn;
-  syncStyles: SyncStylesFn;
-  reconcileChildren: ReconcileFn;
-  reconcileFragmentChildren: ReconcileFragmentFn;
-}
-
-let _injectedDiff: DiffFunctions | null = null;
-
-/**
- * 注入统一的 diff 实现（由 @actview/core 在初始化时调用）
- * 使 JSX 层使用 core 的增强 diff，同时保留自身实现作为回退
- */
-export function injectDiffFunctions(fns: DiffFunctions) {
-  _injectedDiff = fns;
-}
-
-function getDiff<T extends keyof DiffFunctions>(name: T): DiffFunctions[T] | null {
-  return _injectedDiff?.[name] ?? null;
-}
 
 export namespace JSX {
   export type Element = HTMLElement | SVGElement | Text | DocumentFragment;
@@ -422,10 +391,6 @@ function patchComponentFragment(instance: ComponentInstance, newFragment: Docume
   reconcileFragmentChildren(parent, startAnchor, endAnchor, oldChildren, newChildren);
 }
 
-/**
- * Fragment 子节点协调
- * 当 @actview/core 注入 diff 后，优先使用注入的版本
- */
 function reconcileFragmentChildren(
   parent: Node,
   startAnchor: Node,
@@ -433,10 +398,6 @@ function reconcileFragmentChildren(
   oldChildren: Node[],
   newChildren: Node[]
 ) {
-  const fn = getDiff('reconcileFragmentChildren');
-  if (fn) { fn(parent, startAnchor, endAnchor, oldChildren, newChildren); return; }
-
-  // === 回退实现 ===
   const oldKeyMap = new Map<any, Node>();
   for (const child of oldChildren) {
     const key = (child as any)._key;
@@ -495,15 +456,7 @@ function reconcileFragmentChildren(
   }
 }
 
-/**
- * 简易 diff：在 JSX 层内联一个轻量 diff 实现
- * 当 @actview/core 注入 diff 后，优先使用注入的版本
- */
 function diffElement(oldNode: Node, newNode: Node): Node {
-  const injectedDiff = getDiff('diff');
-  if (injectedDiff) return injectedDiff(oldNode, newNode);
-
-  // === 以下是回退实现（与 core 的 diff 保持同步）===
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
     oldNode.parentNode?.replaceChild(newNode, oldNode);
     return newNode;
@@ -553,8 +506,6 @@ function diffElement(oldNode: Node, newNode: Node): Node {
 }
 
 function syncAttributes(oldNode: Element, newNode: Element) {
-  const fn = getDiff('syncAttributes');
-  if (fn) { fn(oldNode, newNode); return; }
   Array.from(oldNode.attributes).forEach(attr => {
     if (!newNode.hasAttribute(attr.name)) oldNode.removeAttribute(attr.name);
   });
@@ -574,8 +525,6 @@ function syncAttributes(oldNode: Element, newNode: Element) {
 }
 
 function syncListeners(oldNode: Element, newNode: Element) {
-  const fn = getDiff('syncListeners');
-  if (fn) { fn(oldNode, newNode); return; }
   const oldListeners = (oldNode as any)._listeners || {};
   const newListeners = (newNode as any)._listeners || {};
   for (const [name, listener] of Object.entries(oldListeners)) {
@@ -594,8 +543,6 @@ function syncListeners(oldNode: Element, newNode: Element) {
 }
 
 function syncStyles(oldNode: Element, newNode: Element) {
-  const fn = getDiff('syncStyles');
-  if (fn) { fn(oldNode, newNode); return; }
   const oldStyle = (oldNode as HTMLElement | SVGElement).style;
   const newStyle = (newNode as HTMLElement | SVGElement).style;
   if (oldStyle.cssText !== newStyle.cssText) {
@@ -603,15 +550,7 @@ function syncStyles(oldNode: Element, newNode: Element) {
   }
 }
 
-/**
- * 带 key 的子节点协调
- * 当 @actview/core 注入 diff 后，优先使用注入的版本
- */
 function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[]) {
-  const fn = getDiff('reconcileChildren');
-  if (fn) { fn(parent, oldChildren, newChildren); return; }
-
-  // === 回退实现 ===
   const oldKeyMap = new Map<any, Node>();
   for (const child of oldChildren) {
     const key = (child as any)._key;
