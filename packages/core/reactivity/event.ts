@@ -34,3 +34,9 @@ export class EventBus {
 }
 
 export const eventBus = new EventBus();
+
+setInterval(() => {
+  let total = 0;
+  for (const set of eventBus['subscribers'].values()) total += set.size;
+  console.log(`[EventBus] 订阅总数: ${total}`);
+}, 1000);
