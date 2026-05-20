@@ -29,7 +29,7 @@ export type MyButtonProps = {
 };
 
 export const MyButton = (props: MyButtonProps) => {
-  console.log('props: ', props);
+  // console.log('props: ', props);
     const kls = ['btn', props.type ? `btn-${props.type}` : '', props.size ? `btn-${props.size}` : '', props.disabled !== undefined ? 'btn-disabled' : '', props.loading !== undefined ? 'btn-loading' : '', props.class || ''].filter(Boolean).join(' ');
     return (
       <div className={kls} data-id={props['data-id']} onClick={props.onClick}>

@@ -45,6 +45,8 @@ export function App() {
           >Not Found</a>
         </div>
       </nav>
+      <div id="app-main">
+
       <div id="sidebar">
         <Menu menus={menus} router={router} />
       </div>
@@ -54,6 +56,7 @@ export function App() {
         </p>
         <RouterView />
       </main>
+      </div>
     </div>
   )
 }
