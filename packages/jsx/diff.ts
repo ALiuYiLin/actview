@@ -93,7 +93,7 @@ export function reconcileFragmentChildren(
 /**
  * 同步属性
  * 先删除旧节点有而新节点没有的属性，再更新值不同的属性。
- * input value 特殊处理：保留曾受控或正在受控的 value 双向绑定。
+ * input value 始终同步新值，不受 attribute 存在与否影响。
  */
 function syncAttributes(oldNode: Element, newNode: Element) {
   // 移除旧节点独有的属性
@@ -104,15 +104,10 @@ function syncAttributes(oldNode: Element, newNode: Element) {
   Array.from(newNode.attributes).forEach(attr => {
     if (oldNode.getAttribute(attr.name) !== attr.value) oldNode.setAttribute(attr.name, attr.value);
   });
-  // input value 特殊处理：保持 DOM 值与受控状态一致
+  // input value 特殊处理：新值不同时总是更新 property
   if ('value' in newNode && 'value' in oldNode) {
-    const newValue = (newNode as any).value;
-    const oldHasValueAttr = oldNode.hasAttribute('value');
-    const newHasValueAttr = newNode.hasAttribute('value');
     if ((newNode as any).value !== (oldNode as any).value) {
-      if (oldHasValueAttr || newHasValueAttr || newValue !== '') {
-        (oldNode as any).value = newValue;
-      }
+      (oldNode as any).value = (newNode as any).value;
     }
   }
 }
@@ -221,10 +216,8 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
  * 4. 普通元素 → syncAttributes → syncStyles → syncListeners → reconcileChildren
  */
 export function diffElement(oldNode: Node, newNode: Node): Node {
-  // 1. 节点类型不同 → 直接替换（清理旧组件的订阅）
+  // 1. 节点类型不同 → 直接替换（不清理 _componentInstance，同一组件换根元素时不可误取消自身）
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
-    const inst = (oldNode as any)._componentInstance;
-    if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
     oldNode.parentNode?.replaceChild(newNode, oldNode);
     return newNode;
   }
