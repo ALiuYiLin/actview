@@ -1,6 +1,6 @@
 // 自定义 JSX 工厂函数
 
-import { diffElement, reconcileFragmentChildren } from './diff';
+import { diffElement, reconcileFragmentChildren, injectUpdateFnAccessors as injectDiffUpdateFnAccessors } from './diff';
 export { injectUnsubscribe } from './diff';
 
 /**
@@ -19,6 +19,7 @@ export function injectUpdateFnAccessors(
 ) {
   _getCurrentUpdateFn = getter;
   _setCurrentUpdateFn = setter;
+  injectDiffUpdateFnAccessors?.(getter, setter);
 }
 
 // ======== 当前组件实例注入 ========

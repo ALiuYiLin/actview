@@ -10,6 +10,17 @@ export function injectUnsubscribe(fn: (callback: () => void, refs: Set<any>) => 
   _unsubscribeComponent = fn;
 }
 
+// currentUpdateFn 的 getter/setter（由 jsx 注入，setup 组件 re-render 时保持正确的依赖收集上下文）
+let _getCustomUpdateFn: (() => (() => void) | null) | null = null;
+let _setCustomUpdateFn: ((fn: (() => void) | null) => void) | null = null;
+export function injectUpdateFnAccessors(
+  getter: () => (() => void) | null,
+  setter: (fn: (() => void) | null) => void
+) {
+  _getCustomUpdateFn = getter;
+  _setCustomUpdateFn = setter;
+}
+
 function getChildKey(node: Node): any {
   return (node as any)._key;
 }
@@ -248,8 +259,8 @@ export function diffElement(oldNode: Node, newNode: Node): Node {
         oldNode.parentNode?.replaceChild(newNode, oldNode);
         return newNode;
       }
-      // 同一组件：更新 props，同时清理被丢弃新实例及其子组件的订阅
-      oldInstance.props = newInstance.props;
+      // 同一组件：合并 props 到原对象（setup 组件的 renderFn 闭包捕获的是原 props 引用）
+      Object.assign(oldInstance.props, newInstance.props);
       if (newInstance.refs.size > 0) {
         _unsubscribeComponent?.(newInstance.update, newInstance.refs);
       }
@@ -261,11 +272,12 @@ export function diffElement(oldNode: Node, newNode: Node): Node {
         const newDom = oldInstance.setupFn(oldInstance.props);
         return diffElement(oldNode, newDom as Node);
       }
-      // Setup 模式：仅同步根元素属性，内部更新由 componentUpdateFn 触发
-      syncAttributes(oldNode, newNode);
-      syncStyles(oldNode, newNode);
-      syncListeners(oldNode, newNode);
-      return oldNode;
+      // Setup 模式：在组件自己的 updateFn 上下文中重新执行 render 并 diff
+      const prevUpdate = _getCustomUpdateFn?.() ?? null;
+      _setCustomUpdateFn?.(oldInstance.update);
+      const newDom = oldInstance.renderFn(oldInstance.props);
+      _setCustomUpdateFn?.(prevUpdate);
+      return diffElement(oldNode, newDom as Node);
     }
 
     // 普通元素：同步属性 + 递归子节点
