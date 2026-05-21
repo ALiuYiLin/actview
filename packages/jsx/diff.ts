@@ -247,12 +247,20 @@ export function diffElement(oldNode: Node, newNode: Node): Node {
       const newInstance = (newNode as any)._componentInstance;
       // 组件不同（路由切换等）→ 完全替换（清理旧组件订阅）
       if (oldInstance.setupFn !== newInstance.setupFn) {
-        _unsubscribeComponent?.(oldInstance.update, oldInstance.refs);
+        // 若存在被覆盖的子组件实例，清理子组件的订阅而非父组件
+        const target = oldInstance._childComponent || oldInstance;
+        _unsubscribeComponent?.(target.update, target.refs);
         oldNode.parentNode?.replaceChild(newNode, oldNode);
         return newNode;
       }
-      // 同一组件：更新 props
+      // 同一组件：更新 props，同时清理被丢弃新实例及其子组件的订阅
       oldInstance.props = newInstance.props;
+      if (newInstance.refs.size > 0) {
+        _unsubscribeComponent?.(newInstance.update, newInstance.refs);
+      }
+      if (newInstance._childComponent?.refs.size > 0) {
+        _unsubscribeComponent?.(newInstance._childComponent.update, newInstance._childComponent.refs);
+      }
       // 直接模式（setupFn === renderFn）：用新 props 重新执行并 diff
       if (oldInstance.setupFn === oldInstance.renderFn) {
         const newDom = oldInstance.setupFn(oldInstance.props);

@@ -1,8 +1,9 @@
 import { Ref } from "../types";
 import { eventBus } from "./event";
 import { getCurrentUpdateFn } from "../hooks";
-export function ref<T>(value: T): Ref<T> {
-  const obj = { value, __isRef: true };
+export function ref<T>(value: T, _debug?: string): Ref<T> {
+  const obj: any = { value, __isRef: true };
+  if (_debug) obj._debug = _debug;
   const state = new Proxy(obj, {
     set: (target, key, value) => {
       if (key === "value") {

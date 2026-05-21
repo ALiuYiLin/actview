@@ -56,7 +56,13 @@ export class EventBus {
 export const eventBus = new EventBus();
 
 setInterval(() => {
+  const subs = eventBus['subscribers'] as Map<any, Set<()=>void>>;
+  console.log('subs: ', subs);
   let total = 0;
-  for (const set of eventBus['subscribers'].values()) total += set.size;
-  console.log(`[EventBus] 订阅总数: ${total}`);
+  for (const [ref, set] of subs) {
+    const label = (ref as any)._debug || 'ref#' + String(total);
+    total += set.size;
+    if (set.size > 0) console.log(`  [${label}] ${set.size}`);
+  }
+  console.log(`[EventBus] 共 ${total} 个订阅`);
 }, 1000);

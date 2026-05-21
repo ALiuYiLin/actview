@@ -258,6 +258,8 @@ interface ComponentInstance {
   update: () => void;
 
   refs: Set<Ref<any>>
+  /** setup 模式下被 _componentInstance 覆盖前的子组件实例 */
+  _childComponent?: ComponentInstance
 }
 /**
  * 挂载函数组件，创建组件级 updateFn 实现独立的依赖收集和更新
@@ -327,7 +329,9 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
         const newEl = diffElement(oldEl, newResult as Element);
         if (newEl !== oldEl) {
           instance.el = newEl;
+          const childInst = (newEl as any)._componentInstance;
           (newEl as any)._componentInstance = instance;
+          if (childInst) instance._childComponent = childInst;
         }
       }
     }
@@ -368,7 +372,11 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     instance.isFragment = true;
     return setupComponentFragment(instance, domResult);
   } else {
+    // 标记组件实例：先保存子组件的实例，再覆盖（用于 diff 组件边界）
+    const childInst = (domResult as any)._componentInstance;
     (domResult as any)._componentInstance = instance;
+    // 若存在子组件实例，记录到 parent 以便卸载时清理子组件的订阅
+    if (childInst) instance._childComponent = childInst;
     instance.el = domResult;
     return domResult;
   }
