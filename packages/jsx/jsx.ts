@@ -18,6 +18,19 @@ export function injectUpdateFnAccessors(
   _setCurrentUpdateFn = setter;
 }
 
+// ======== 当前组件实例注入 ========
+
+let _getCurrentInstance: (() => any) | null = null;
+let _setCurrentInstance: ((inst: any) => void) | null = null;
+
+export function injectCurrentInstanceAccessors(
+  getter: () => any,
+  setter: (inst: any) => void
+) {
+  _getCurrentInstance = getter;
+  _setCurrentInstance = setter;
+}
+
 
 export namespace JSX {
   export type Element = HTMLElement | SVGElement | Text | DocumentFragment;
@@ -213,6 +226,14 @@ export function Fragment(props: { children?: Child | Child[] }): DocumentFragmen
   return fragment;
 }
 
+
+
+export type Ref<T> = {
+  value: T;
+  __isRef: true;
+};
+
+
 /**
  * 组件实例信息，挂载在根 DOM 元素的 _componentInstance 上
  */
@@ -232,8 +253,9 @@ interface ComponentInstance {
   isFragment: boolean;
   /** 组件级 updateFn */
   update: () => void;
-}
 
+  refs: Set<Ref<any>>
+}
 /**
  * 挂载函数组件，创建组件级 updateFn 实现独立的依赖收集和更新
  * 
@@ -277,6 +299,7 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     el: null,
     isFragment: false,
     update: null!,
+    refs: new Set()
   };
 
   // 组件级更新函数
@@ -287,7 +310,11 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     const prev = getUpdateFn();
     setUpdateFn(componentUpdateFn);
 
+    const prevInstance = _getCurrentInstance?.() ?? null;
+    _setCurrentInstance?.(instance);
+    console.log('instance: ', instance);
     const newResult = instance.renderFn(instance.props);
+    _setCurrentInstance?.(prevInstance);
 
     setUpdateFn(prev);
 
@@ -307,8 +334,10 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
 
   instance.update = componentUpdateFn;
 
-  // 暂存父级 updateFn，切换到组件自己的 updateFn
+  // 保存父级上下文，切换到当前组件
   const parentUpdateFn = getUpdateFn();
+  const prevInstance = _getCurrentInstance?.() ?? null;
+  _setCurrentInstance?.(instance);
   setUpdateFn(componentUpdateFn);
 
   // 执行组件函数（setup 阶段）
@@ -326,8 +355,9 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     domResult = setupResult as HTMLElement | SVGElement | DocumentFragment;
   }
 
-  // 恢复父级 updateFn
+  // 恢复父级上下文
   setUpdateFn(parentUpdateFn);
+  _setCurrentInstance?.(prevInstance);
 
   // 在返回的 DOM 上标记组件实例
   if (domResult instanceof DocumentFragment) {

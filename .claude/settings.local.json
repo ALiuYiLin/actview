@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Set-Content *)"
+      "PowerShell(Set-Content *)",
+      "PowerShell(Get-Content \"E:\\\\code3\\\\actview\\\\packages\\\\jsx\\\\jsx.ts\" -Encoding UTF8 | Select-Object -Index \\(310,311,312,313,314\\))"
     ]
   }
 }
