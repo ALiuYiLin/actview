@@ -3,7 +3,6 @@ import './index.css'
 import { ReactiveDemo } from './reactive-demo'
 import { ComputedDemo } from './computed-demo'
 import { JsxDemo } from './jsx-demo'
-import { OptionDemo } from './option-demo'
 import { ComponentsDemo } from './components-demo'
 
 type Tab = 'reactive' | 'computed' | 'jsx' | 'option' | 'components'
@@ -12,7 +11,6 @@ const tabs: { key: Tab; label: string; icon: string }[] = [
   { key: 'reactive', label: '响应式基础', icon: '⚡' },
   { key: 'computed', label: '计算与侦听', icon: '📡' },
   { key: 'jsx', label: 'JSX 渲染', icon: '🖼️' },
-  { key: 'option', label: 'Option 编译', icon: '⚙️' },
   { key: 'components', label: '组件', icon: '🧩' },
 ]
 
@@ -52,7 +50,6 @@ export function Guide() {
           {tab === 'reactive' && <ReactiveDemo />}
           {tab === 'computed' && <ComputedDemo />}
           {tab === 'jsx' && <JsxDemo />}
-          {tab === 'option' && <OptionDemo />}
           {tab === 'components' && <ComponentsDemo />}
         </div>
       </div>

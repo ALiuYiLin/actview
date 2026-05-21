@@ -4,13 +4,8 @@ import { Menu, MenuGroup } from "./components/menu"
 const menus: MenuGroup[] = [
   { group: "导航", items: [{ path: "/home", label: "首页", icon: "🏠" }] },
   {
-    group: "示例",
-    items: [{ path: "/not-found", label: "404 页面", icon: "🚫" }],
-  },
-  {
     group: "调试",
     items: [
-      { path: "/bugs", label: "Bug 演示", icon: "🐛" },
       { path: "/demo", label: "组件写法", icon: "📖" },
       { path: "/guide", label: "指南", icon: "📘" },
     ],
