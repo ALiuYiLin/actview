@@ -104,9 +104,11 @@ function syncAttributes(oldNode: Element, newNode: Element) {
   Array.from(newNode.attributes).forEach(attr => {
     if (oldNode.getAttribute(attr.name) !== attr.value) oldNode.setAttribute(attr.name, attr.value);
   });
-  // input value 特殊处理：新值不同时总是更新 property
+  // input value：受控（有 value attr）才同步 property；非受控保留用户输入
+  // 但受控→非受控的过渡需清空（old 有 value attr 但 new 无）
   if ('value' in newNode && 'value' in oldNode) {
-    if ((newNode as any).value !== (oldNode as any).value) {
+    const syncValue = newNode.hasAttribute('value') || oldNode.hasAttribute('value');
+    if (syncValue && (newNode as any).value !== (oldNode as any).value) {
       (oldNode as any).value = (newNode as any).value;
     }
   }
