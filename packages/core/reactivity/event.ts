@@ -55,14 +55,14 @@ export class EventBus {
 
 export const eventBus = new EventBus();
 
-setInterval(() => {
-  const subs = eventBus['subscribers'] as Map<any, Set<()=>void>>;
-  console.log('subs: ', subs);
-  let total = 0;
-  for (const [ref, set] of subs) {
-    const label = (ref as any)._debug || 'ref#' + String(total);
-    total += set.size;
-    if (set.size > 0) console.log(`  [${label}] ${set.size}`);
-  }
-  console.log(`[EventBus] 共 ${total} 个订阅`);
-}, 1000);
+// setInterval(() => {
+//   const subs = eventBus['subscribers'] as Map<any, Set<()=>void>>;
+//   console.log('subs: ', subs);
+//   let total = 0;
+//   for (const [ref, set] of subs) {
+//     const label = (ref as any)._debug || 'ref#' + String(total);
+//     total += set.size;
+//     if (set.size > 0) console.log(`  [${label}] ${set.size}`);
+//   }
+//   console.log(`[EventBus] 共 ${total} 个订阅`);
+// }, 1000);

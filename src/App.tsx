@@ -13,8 +13,6 @@ const menus: MenuGroup[] = [
       { path: "/bugs", label: "Bug 演示", icon: "🐛" },
       { path: "/demo", label: "组件写法", icon: "📖" },
       { path: "/guide", label: "指南", icon: "📘" },
-      { path: "/test-a", label: "TestA", icon: "🧪" },
-      { path: "/test-b", label: "TestB", icon: "🧪" },
     ],
   },
   {
