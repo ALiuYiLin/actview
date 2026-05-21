@@ -4,6 +4,12 @@
  * 策略：类型不同则替换 → 文本则更新内容 → 组件边界隔离 → 元素则同步属性 + 递归子节点。
  */
 
+// 组件卸载时取消订阅其 refs（由 @actview/core 注入）
+let _unsubscribeComponent: ((callback: () => void, refs: Set<any>) => void) | null = null;
+export function injectUnsubscribe(fn: (callback: () => void, refs: Set<any>) => void) {
+  _unsubscribeComponent = fn;
+}
+
 function getChildKey(node: Node): any {
   return (node as any)._key;
 }
@@ -56,6 +62,8 @@ export function reconcileFragmentChildren(
     }
     for (const child of oldChildren) {
       if (!reused.has(child) && child.parentNode === parent) {
+        const inst = (child as any)._componentInstance;
+        if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
         parent.removeChild(child);
       }
     }
@@ -71,6 +79,8 @@ export function reconcileFragmentChildren(
         }
       } else if (oldChild && !newChild) {
         if (oldChild.parentNode === parent) {
+          const inst = (oldChild as any)._componentInstance;
+          if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
           parent.removeChild(oldChild);
         }
       } else if (oldChild && newChild) {
@@ -178,6 +188,8 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
     }
     for (const child of oldChildren) {
       if (!reused.has(child)) {
+        const inst = (child as any)._componentInstance;
+        if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
         parent.removeChild(child);
       }
     }
@@ -189,6 +201,8 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
       if (!oc && nc) {
         parent.appendChild(nc);
       } else if (oc && !nc) {
+        const inst = (oc as any)._componentInstance;
+        if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
         parent.removeChild(oc);
       } else if (oc && nc) {
         diffElement(oc, nc);
@@ -207,8 +221,10 @@ function reconcileChildren(parent: Node, oldChildren: Node[], newChildren: Node[
  * 4. 普通元素 → syncAttributes → syncStyles → syncListeners → reconcileChildren
  */
 export function diffElement(oldNode: Node, newNode: Node): Node {
-  // 1. 节点类型不同 → 直接替换
+  // 1. 节点类型不同 → 直接替换（清理旧组件的订阅）
   if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) {
+    const inst = (oldNode as any)._componentInstance;
+    if (inst) _unsubscribeComponent?.(inst.update, inst.refs);
     oldNode.parentNode?.replaceChild(newNode, oldNode);
     return newNode;
   }
@@ -229,8 +245,9 @@ export function diffElement(oldNode: Node, newNode: Node): Node {
     if ((oldNode as any)._componentInstance && (newNode as any)._componentInstance) {
       const oldInstance = (oldNode as any)._componentInstance;
       const newInstance = (newNode as any)._componentInstance;
-      // 组件不同（路由切换等）→ 完全替换
+      // 组件不同（路由切换等）→ 完全替换（清理旧组件订阅）
       if (oldInstance.setupFn !== newInstance.setupFn) {
+        _unsubscribeComponent?.(oldInstance.update, oldInstance.refs);
         oldNode.parentNode?.replaceChild(newNode, oldNode);
         return newNode;
       }

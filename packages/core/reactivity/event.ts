@@ -10,32 +10,28 @@ import { Ref } from "../types";
 export class EventBus {
   /** ref → 依赖它的回调集合 */
   private subscribers = new Map<Ref<any>, Set<()=>void>>();
-  /** 回调 → 它订阅的 ref 集合（用于取消订阅时反向查找） */
-  private callbackRefs = new Map<()=>void, Set<Ref<any>>>();
   /** 正在发布中的 ref 集合（防止循环调用栈溢出） */
   private publishing = new Set<Ref<any>>();
 
   /**
-   * 将回调注册到 ref 上，同时双向记录以便后续取消
+   * 将回调注册到 ref 上
    * 调用时机：ref getter 中，且当前存在 currentUpdateFn
+   * 同时将 ref 记录到当前组件实例的 refs 集合，用于卸载时取消订阅
    */
   subscribe(ref: Ref<any>, callback: () => void) {
     if (!this.subscribers.has(ref)) this.subscribers.set(ref, new Set());
     this.subscribers.get(ref)?.add(callback);
-    // 追踪当前组件实例的 ref 订阅，用于组件卸载时取消订阅
     const inst = getCurrentInstance();
     if (inst) inst.refs.add(ref);
   }
 
   /**
-   * 取消指定回调的所有订阅
-   * 通过 callbackRefs 找到该回调注册过的所有 ref，逐一移除
+   * 取消指定回调在指定 refs 上的订阅
+   * 只移除该回调，保留其他组件对同一 ref 的订阅
    */
-  unsubscribe(callback: () => void) {
-    const refs = this.callbackRefs.get(callback);
-    if (refs) {
-      for (const ref of refs) this.subscribers.get(ref)?.delete(callback);
-      this.callbackRefs.delete(callback);
+  unsubscribe(callback: () => void, refs: Set<Ref<any>>) {
+    for (const ref of refs) {
+      this.subscribers.get(ref)?.delete(callback);
     }
   }
 

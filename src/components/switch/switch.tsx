@@ -37,7 +37,7 @@ export const MySwitch = (props: MySwitchProps) => {
     .filter(Boolean)
     .join(" ");
 
-  return (
+  return ()=>(
     <div className={kls} tabIndex={0} role="switch" data-id={props["data-id"]} onClick={props.onToggle}>
       <div className="switch-handle">
         <slot></slot>

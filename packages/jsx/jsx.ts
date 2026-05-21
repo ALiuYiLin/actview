@@ -1,6 +1,7 @@
 // 自定义 JSX 工厂函数
 
 import { diffElement, reconcileFragmentChildren } from './diff';
+export { injectUnsubscribe } from './diff';
 
 /**
  * 组件级更新函数的 getter/setter
@@ -316,9 +317,7 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
     _setCurrentInstance?.(instance);
     console.log('instance: ', instance);
     const newResult = instance.renderFn(instance.props);
-    _setCurrentInstance?.(prevInstance);
 
-    setUpdateFn(prev);
 
     if (instance.isFragment) {
       patchComponentFragment(instance, newResult as DocumentFragment);
@@ -332,6 +331,9 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
         }
       }
     }
+
+    _setCurrentInstance?.(prevInstance);
+    setUpdateFn(prev);
   };
 
   instance.update = componentUpdateFn;
