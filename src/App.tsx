@@ -15,15 +15,6 @@ const menus: MenuGroup[] = [
       { path: "/guide", label: "指南", icon: "📘" },
     ],
   },
-  {
-    group: "组件",
-    path: "/component",
-    items: [
-      { path: "/component/button", label: "按钮", icon: "🔘" },
-      { path: "/component/switch", label: "开关", icon: "🔛" },
-      { path: "/component/input", label: "输入框", icon: "📝" },
-    ],
-  },
 ]
 
 export function App() {

@@ -317,7 +317,7 @@ function mountComponent(tag: Function, mergedProps: Record<string, any>): HTMLEl
 
     const prevInstance = _getCurrentInstance?.() ?? null;
     _setCurrentInstance?.(instance);
-    console.log('instance: ', instance);
+    // console.log('instance: ', instance);
     const newResult = instance.renderFn(instance.props);
 
 
