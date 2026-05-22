@@ -2,13 +2,14 @@ import { Router, RouterView } from "@actview/router"
 import { Menu, MenuGroup } from "./components/menu"
 
 const menus: MenuGroup[] = [
-  { group: "导航", items: [{ path: "/home", label: "首页", icon: "🏠" }] },
   {
-    group: "调试",
+    group: "指南",
     items: [
-      { path: "/demo", label: "组件写法", icon: "📖" },
-      { path: "/guide", label: "指南", icon: "📘" },
-      { path: "/slot-demo", label: "插槽", icon: "🧩" },
+      { path: "/reactive-demo", label: "响应式基础", icon: "⚡" },
+      { path: "/computed-demo", label: "计算与侦听", icon: "📡" },
+      { path: "/jsx-demo", label: "JSX 渲染", icon: "🖼️" },
+      { path: "/components-demo", label: "组件", icon: "🧩" },
+      { path: "/slot-demo", label: "插槽", icon: "📥" },
     ],
   },
 ]

@@ -1,17 +1,19 @@
 import { App } from "@actview/core";
 import { Router } from "@actview/router";
-import { Home } from "./pages/home";
-import { Demo } from "./pages/demo";
-import { Guide } from "./pages/guide";
 import { SlotDemo } from "./pages/slot-demo";
+import { ReactiveDemo } from "./pages/reactive-demo";
+import { ComputedDemo } from "./pages/computed-demo";
+import { JsxDemo } from "./pages/jsx-demo";
+import { ComponentsDemo } from "./pages/components-demo";
 import { App as Root } from "./App";
 
 const routes = [
-  { path: "/", component: Home },
-  { path: "/home", component: Home },
-  { path: "/demo", component: Demo },
-  { path: "/guide", component: Guide },
+  { path: "/", component: ReactiveDemo },
   { path: "/slot-demo", component: SlotDemo },
+  { path: "/reactive-demo", component: ReactiveDemo },
+  { path: "/computed-demo", component: ComputedDemo },
+  { path: "/jsx-demo", component: JsxDemo },
+  { path: "/components-demo", component: ComponentsDemo },
 ];
 new Router({ routes });
 

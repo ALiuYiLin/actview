@@ -1,4 +1,5 @@
 import { ref } from '@actview/core'
+import '../guide.css'
 
 function Welcome(props: { name: string }) {
   return () => (

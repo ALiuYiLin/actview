@@ -1,4 +1,5 @@
 import { ref, computed } from '@actview/core'
+import '../guide.css'
 
 export function ComputedDemo() {
   const price = ref(100)

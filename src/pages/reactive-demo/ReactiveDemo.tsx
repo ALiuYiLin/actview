@@ -1,4 +1,5 @@
 import { ref, reactive } from '@actview/core'
+import '../guide.css'
 
 export function ReactiveDemo() {
   const count = ref(0)

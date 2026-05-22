@@ -1,4 +1,5 @@
 import { reactive, ref } from '@actview/core'
+import '../guide.css'
 
 export function JsxDemo() {
   const items = reactive(['A', 'B', 'C'])
