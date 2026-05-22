@@ -14,14 +14,5 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-        button: path.resolve(__dirname, 'src/components/button/index.html'),
-        switch: path.resolve(__dirname, 'src/components/switch/index.html'),
-        input: path.resolve(__dirname, 'src/components/input/index.html'),
-        notfound: path.resolve(__dirname, 'src/notfound/index.html'),
-      }
-    }
   },
 })

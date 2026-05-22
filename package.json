@@ -15,7 +15,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node scripts/write-dist-package-json.mjs",
+    "build": "tsc && vite build",
     "build:packages": "node build/index.mjs",
     "build:core": "node build/index.mjs core",
     "build:jsx": "node build/index.mjs jsx",

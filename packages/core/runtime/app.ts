@@ -14,6 +14,7 @@ export class App {
   }
 
   use(render: RenderFn): this {
+    console.log('render: ', render);
     return this;
   }
 
