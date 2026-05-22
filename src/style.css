@@ -4,6 +4,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Sego
 #app-main{
   display: flex;
   flex-direction: row;
+  padding-top: 56px;
 }
 /* 顶部导航栏 */
 #navbar {

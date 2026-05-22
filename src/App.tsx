@@ -18,6 +18,7 @@ export function App() {
   return () => (
     <div id="app-root">
       <nav id="navbar">
+        <div class="logo">ActView</div>
         <div class="nav-links" style="display:flex;gap:24px;">
           <a
             class={router.route.value?.path === "/home" ? "active" : ""}
@@ -36,7 +37,7 @@ export function App() {
       <div id="sidebar">
         <Menu menus={menus} router={router} />
       </div>
-      <main id="app-content">
+      <main id="content">
         <p style="margin-bottom:12px;color:#999;font-size:13px;">
           当前路由：{router.route.value?.path}
         </p>
