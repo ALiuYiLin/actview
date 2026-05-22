@@ -8,6 +8,7 @@ const menus: MenuGroup[] = [
     items: [
       { path: "/demo", label: "组件写法", icon: "📖" },
       { path: "/guide", label: "指南", icon: "📘" },
+      { path: "/slot-demo", label: "插槽", icon: "🧩" },
     ],
   },
 ]
