@@ -1,0 +1,83 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-02-12T01:50:26.971Z
+provider: 
+---
+
+# ActView 组件封装规则
+
+## Option.render 重塑规则
+
+`app.resolveOptions(options)` 中每个 Option 的 `render` 方法会**替换** `selector` 选中的整个 DOM 元素，而非仅替换其 innerHTML。
+
+因此，`render` 返回的 JSX **必须在最外层保留原始 DOM 元素的结构**（标签名、id、class 等属性），否则页面布局和样式会丢失。
+
+### 正确写法
+
+```tsx
+{
+  selector: "#sidebar",
+  render: () => <div id="sidebar"><Menu menus={menus} router={router} /></div>
+}
+```
+
+### 错误写法
+
+```tsx
+{
+  selector: "#sidebar",
+  render: () => <Menu menus={menus} router={router} />
+}
+```
+
+## 文件格式
+
+项目支持两种 JSX 文件格式：
+
+### .tsx — 标准 JSX
+- 使用 `@actview/jsx` 工厂函数
+- 标准 JSX 语法，不支持 `<template #slot>` 写法
+- 插槽通过 props 传递：`<MyButton before={<svg>...</svg>}>文字</MyButton>`
+
+### .atsx — ActView 扩展 JSX
+- 使用 `@actview/jsx/atsx-runtime` 工厂函数
+- **支持 Vue 风格插槽语法**：`<template #slotName>...</template>`
+- atsx 工厂会自动从 children 中提取 `<template>` 节点，构建 `slots: Map<string, Node[]>` 作为第二个参数传给组件函数
+- 由 `build/vite-plugin-atsx.mjs` Vite 插件处理编译
+
+#### .atsx 示例
+
+```atsx
+<MyButton type="primary">
+    <template #before>
+        <svg class="btn-icon" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"/>
+        </svg>
+    </template>
+    添加
+</MyButton>
+```
+
+编译时 `<template #before>` 被转为 `<template slot="before">`，运行时 atsx 工厂将其提取为 `slots.get("before")` 传给 `MyButton`。
+
+## 组件文件结构
+
+每个组件放在 `src/components/<name>/` 目录下：
+
+- `index.ts` — 入口文件，负责 re-export 组件和类型
+- `<name>.tsx` 或 `<name>.atsx` — 组件实现（需要插槽语法时用 .atsx）
+- `<name>.css` — 组件样式（在实现文件中 `import "./<name>.css"`）
+
+### 组件函数签名
+
+```ts
+// .tsx 中：只有 props
+export const MyComp = (props: MyCompProps) => { ... }
+
+// .atsx 中：props + slots
+export const MyComp = (props: MyCompProps, slots?: Map<string, Node[]>) => { ... }
+```
+
+组件的样式应内聚在组件自身的 CSS 文件中，不要放在 `index.html` 的全局 `<style>` 里。

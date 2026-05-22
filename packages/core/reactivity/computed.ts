@@ -1,14 +1,15 @@
 import { Ref } from "../types";
 import { ref } from "./ref"
-import { setCurrentUpdateFn } from "../hooks"
+import { getCurrentUpdateFn, setCurrentUpdateFn } from "../hooks"
 
 export function computed<T>(computedFn: ()=> T): Ref<T>{
   const computedRef = ref<T | null>(null)
+  const prevFn = getCurrentUpdateFn()
   const updateFn = ()=> {
     computedRef.value = computedFn()
   }
   setCurrentUpdateFn(updateFn)
   updateFn()
-  setCurrentUpdateFn(null)
+  setCurrentUpdateFn(prevFn)
   return computedRef as Ref<T>
 }

@@ -33,6 +33,7 @@
     "url": ""
   },
   "dependencies": {
+    "@actview/jsx": "workspace:*",
     "jquery": "^4.0.0"
   },
   "devDependencies": {

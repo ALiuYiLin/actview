@@ -1,0 +1,39 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #333; }
+
+#app-main{
+  display: flex;
+  flex-direction: row;
+  padding-top: 56px;
+}
+/* 顶部导航栏 */
+#navbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: #fff; border-bottom: 1px solid #e8e8e8;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+#navbar .logo { font-size: 18px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px; }
+#navbar .nav-links { display: flex; gap: 24px; }
+#navbar .nav-links a {
+  text-decoration: none; color: #666; font-size: 14px; font-weight: 500;
+  padding: 6px 0; border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+#navbar .nav-links a:hover,
+#navbar .nav-links a.active { color: #1677ff; border-bottom-color: #1677ff; }
+
+/* 布局容器 */
+#layout { display: flex; padding-top: 56px; min-height: 100vh; }
+
+/* 侧边栏 */
+#sidebar {
+  width: 240px; min-height: calc(100vh - 56px);
+  background: #fff; border-right: 1px solid #ebebeb;
+  padding: 28px 0; flex-shrink: 0;
+}
+
+/* 内容区域 */
+#content {
+  flex: 1; padding: 24px 32px; background: #fff; min-height: calc(100vh - 56px);
+}

@@ -1,0 +1,121 @@
+/* ===== Switch 基础样式 ===== */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background-color: #4a4a4a;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  flex-shrink: 0;
+}
+
+.switch:focus-visible {
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.5);
+}
+
+/* 滑块 */
+.switch-handle {
+  position: absolute;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 选中状态 */
+.switch-checked {
+  background-color: #646cff;
+}
+
+.switch-checked .switch-handle {
+  left: calc(100% - 22px);
+}
+
+/* ===== 颜色变体 ===== */
+.switch-primary.switch-checked {
+  background-color: #646cff;
+}
+
+.switch-success.switch-checked {
+  background-color: #10b981;
+}
+
+.switch-danger.switch-checked {
+  background-color: #ef4444;
+}
+
+.switch-warning.switch-checked {
+  background-color: #f59e0b;
+}
+
+/* ===== 尺寸变体 ===== */
+
+/* 小尺寸 */
+.switch-sm {
+  width: 34px;
+  height: 18px;
+  border-radius: 9px;
+}
+
+.switch-sm .switch-handle {
+  width: 14px;
+  height: 14px;
+  left: 2px;
+}
+
+.switch-sm.switch-checked .switch-handle {
+  left: calc(100% - 16px);
+}
+
+/* 大尺寸 */
+.switch-lg {
+  width: 56px;
+  height: 30px;
+  border-radius: 15px;
+}
+
+.switch-lg .switch-handle {
+  width: 26px;
+  height: 26px;
+  left: 2px;
+}
+
+.switch-lg.switch-checked .switch-handle {
+  left: calc(100% - 28px);
+}
+
+/* ===== 禁用状态 ===== */
+.switch-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ===== 标签文字 ===== */
+.switch-label {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #aaa;
+  user-select: none;
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: light) {
+  .switch {
+    background-color: #d1d5db;
+  }
+
+  .switch-label {
+    color: #666;
+  }
+}

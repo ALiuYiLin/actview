@@ -60,7 +60,7 @@ export function reactiveArray<T extends object>(inittialValue: T): T {
   // 需要拦截的数组变更方法
   const arrayMethods = [
     'push', 'pop', 'shift', 'unshift',
-    'splice', 'soft', 'reverse', 'fill',
+    'splice', 'sort', 'reverse', 'fill',
     'copyWithin'
   ]
 

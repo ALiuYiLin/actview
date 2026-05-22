@@ -1,7 +1,7 @@
 import { Ref } from "../types";
 import { eventBus } from "./event";
 import { getReactiveTriggerRef } from "./reactive";
-import { setCurrentUpdateFn } from "../hooks";
+import { getCurrentUpdateFn, setCurrentUpdateFn } from "../hooks";
 
 function isRefLike<T = unknown>(value: unknown): value is Ref<T> {
   return !!value && typeof value === 'object' && (value as any).__isRef === true
@@ -13,9 +13,10 @@ export function watch<T>(source: Ref<T> | (() => T) | object, callback: (newValu
     let oldValue: T
 
     const runGetter = () => {
+      const prev = getCurrentUpdateFn()
       setCurrentUpdateFn(job)
       const value = getter()
-      setCurrentUpdateFn(null)
+      setCurrentUpdateFn(prev)
       return value
     }
 
