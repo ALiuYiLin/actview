@@ -44,8 +44,5 @@
     "@actview/router": "workspace:*",
     "actview": "workspace:*",
     "jquery": "^4.0.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
   }
 }
