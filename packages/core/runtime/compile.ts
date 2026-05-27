@@ -152,6 +152,8 @@ function mount(vnode: VNode, parent: Node): Node {
       return r;
     })();
 
+    // 保存 renderFn 闭包捕获的 props 引用（mount 时 compType(props) 的 props 对象）
+    (vnode as any)._capturedProps = (vnode as any)._capturedProps || vnode.props;
     (vnode as any)._resolved = child;
     (vnode as any)._update = componentUpdateFn;
     (vnode as any)._instance = instance;
@@ -217,10 +219,12 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
     const oldResolved = (oldV as any)._resolved as VNode | null;
 
     let newResolved: VNode;
+    let capturedProps: Record<string, any> | null = null;
     if (renderFn) {
-      // 合并新 props 到旧 props 对象（renderFn 闭包捕获的是旧 props 的引用）
-      if (newV.props && oldV.props) {
-        Object.assign(oldV.props, newV.props);
+      // 合并新 props 到 renderFn 闭包捕获的原始 props 对象
+      capturedProps = (oldV as any)._capturedProps || oldV.props;
+      if (capturedProps && newV.props) {
+        Object.assign(capturedProps, newV.props);
       }
       newResolved = existingUpdate && existingInstance
         ? withReactiveContext(existingUpdate, existingInstance, () => renderFn())
@@ -235,9 +239,11 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
 
     // 继承旧 VNode 的 reactive 状态
     (oldV as any)._resolved = newResolved;
+    (newV as any)._resolved = newResolved;
     (newV as any)._update = existingUpdate;
     (newV as any)._instance = existingInstance;
     (newV as any)._renderFn = renderFn;
+    (newV as any)._capturedProps = capturedProps;
     (newV as any)._parentNode = (oldV as any)._parentNode;
 
     if (oldResolved) {
