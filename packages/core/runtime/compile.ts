@@ -218,6 +218,10 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
 
     let newResolved: VNode;
     if (renderFn) {
+      // 合并新 props 到旧 props 对象（renderFn 闭包捕获的是旧 props 的引用）
+      if (newV.props && oldV.props) {
+        Object.assign(oldV.props, newV.props);
+      }
       newResolved = existingUpdate && existingInstance
         ? withReactiveContext(existingUpdate, existingInstance, () => renderFn())
         : renderFn();
