@@ -61,12 +61,8 @@ function patchProps(el: Element, oldProps: Record<string, any>, newProps: Record
 
     if (key.startsWith('on') && typeof value === 'function') {
       const eventName = key.slice(2).toLowerCase();
-      if (oldProps[key] && oldProps[key] !== value) {
-        el.removeEventListener(eventName, oldProps[key]);
-      }
-      if (!oldProps[key]) {
-        el.addEventListener(eventName, value);
-      }
+      if (oldProps[key]) el.removeEventListener(eventName, oldProps[key]);
+      el.addEventListener(eventName, value);
     } else if (key === 'className' || key === 'class') {
       el.setAttribute('class', String(value));
     } else if (key === 'style' && typeof value === 'object') {
@@ -224,7 +220,18 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
       // 合并新 props 到 renderFn 闭包捕获的原始 props 对象
       capturedProps = (oldV as any)._capturedProps || oldV.props;
       if (capturedProps && newV.props) {
-        Object.assign(capturedProps, newV.props);
+        // 对象类型 prop 原地 merge（解构变量仍指向同一引用）
+        // 原始类型/数组/函数直接替换
+        for (const key of Object.keys(newV.props)) {
+          const oldVal = capturedProps[key];
+          const newVal = newV.props[key];
+          if (typeof oldVal === 'object' && oldVal !== null && !Array.isArray(oldVal) &&
+              typeof newVal === 'object' && newVal !== null && !Array.isArray(newVal)) {
+            Object.assign(oldVal, newVal);
+          } else {
+            capturedProps[key] = newVal;
+          }
+        }
       }
       newResolved = existingUpdate && existingInstance
         ? withReactiveContext(existingUpdate, existingInstance, () => renderFn())
