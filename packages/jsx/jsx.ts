@@ -13,16 +13,6 @@ export const ACTVIEW_FRAGMENT = Symbol.for('actview.fragment');
 
 // ======== 类型定义 ========
 
-/** 虚拟节点子元素 */
-export type VChild =
-  | VElement
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | VChild[];
-
 /** 虚拟 Element 描述符 */
 export interface VElement {
   $$typeof: typeof ACTVIEW_ELEMENT;
@@ -35,46 +25,6 @@ export type VType =
   | string
   | symbol
   | ((props: any) => any);
-
-/** 组件实例元信息（延用已有接口，在 mount 阶段使用） */
-export interface ComponentInstance {
-  setupFn: Function;
-  renderFn: Function;
-  props: Record<string, any>;
-  el: Node | null;
-  _startAnchor?: Comment;
-  _endAnchor?: Comment;
-  isFragment: boolean;
-  update: () => void;
-  refs: Set<any>;
-  _childComponent?: ComponentInstance;
-}
-
-// ======== 注入的 hooks（由 core 层提供） ========
-
-let _getCurrentUpdateFn: (() => (() => void) | null) | null = null;
-let _setCurrentUpdateFn: ((fn: (() => void) | null) => void) | null = null;
-
-export function injectUpdateFnAccessors(
-  getter: () => (() => void) | null,
-  setter: (fn: (() => void) | null) => void,
-) {
-  _getCurrentUpdateFn = getter;
-  _setCurrentUpdateFn = setter;
-}
-
-let _getCurrentInstance: (() => any) | null = null;
-let _setCurrentInstance: ((inst: any) => void) | null = null;
-
-export function injectCurrentInstanceAccessors(
-  getter: () => any,
-  setter: (inst: any) => void,
-) {
-  _getCurrentInstance = getter;
-  _setCurrentInstance = setter;
-}
-
-export { injectUnsubscribe } from './diff';
 
 // ======== JSX 命名空间（供 tsconfig jsx 类型推导使用） ========
 
@@ -265,10 +215,3 @@ export function jsx(
 
 export const jsxs = jsx;
 
-/**
- * Ref 工具类型
- */
-export type Ref<T> = {
-  value: T;
-  __isRef: true;
-};
