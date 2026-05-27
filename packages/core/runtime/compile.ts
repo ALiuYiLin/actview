@@ -296,17 +296,86 @@ function patchChildren(oldV: VNode, newV: VNode, parent: Node): void {
   const oldArr = toChildArray(oldV.children);
   const newArr = toChildArray(newV.children);
 
-  const max = Math.max(oldArr.length, newArr.length);
-  for (let i = 0; i < max; i++) {
-    const oc = oldArr[i];
-    const nc = newArr[i];
+  // 判断是否使用 key（任一数组有 key 就走 keyed reconciliation）
+  const useKey = oldArr.some(c => c.key != null) || newArr.some(c => c.key != null);
 
-    if (oc && nc) {
+  if (useKey) {
+    keyedPatchChildren(oldArr, newArr, parent);
+  } else {
+    // 无 key：索引匹配（原逻辑）
+    const max = Math.max(oldArr.length, newArr.length);
+    for (let i = 0; i < max; i++) {
+      const oc = oldArr[i];
+      const nc = newArr[i];
+      if (oc && nc) {
+        patch(oc, nc, parent);
+      } else if (nc && !oc) {
+        mount(nc, parent);
+      } else if (oc && !nc) {
+        unmount(oc);
+      }
+    }
+  }
+}
+
+// ======== Keyed Children Reconciliation ========
+
+/**
+ * 基于 key 的子节点协调
+ *
+ * 1. 用旧子节点的 key 建立 Map
+ * 2. 遍历新子节点，按 key 匹配旧节点：
+ *    - 匹配且 type 相同 → patch 复用 DOM
+ *    - 未匹配 → mount 新节点
+ * 3. 删除未匹配的旧节点
+ * 4. 重排 DOM 顺序使与新数组一致（解决插入/排序导致的错位）
+ */
+function keyedPatchChildren(oldArr: VNode[], newArr: VNode[], parent: Node): void {
+  const oldMap = new Map<string, VNode>();
+  for (const c of oldArr) {
+    if (c.key != null) oldMap.set(c.key, c);
+  }
+
+  const reused = new Set<VNode>();
+
+  for (const nc of newArr) {
+    const oc = nc.key != null ? oldMap.get(nc.key) : undefined;
+    if (oc) {
+      reused.add(oc);
       patch(oc, nc, parent);
-    } else if (nc && !oc) {
+    } else {
       mount(nc, parent);
-    } else if (oc && !nc) {
+    }
+  }
+
+  // 删除未复用(oldMap中有但newArr中没有key)的旧节点
+  for (const oc of oldArr) {
+    if (!reused.has(oc)) {
       unmount(oc);
+    }
+  }
+
+  // 按新数组顺序重排真实 DOM
+  reorderDOM(newArr, parent);
+}
+
+/** 找到 VNode 对应的真实 DOM（穿透函数组件/Fragment） */
+function resolveDOM(vnode: VNode): Node | null {
+  if (vnode.el) return vnode.el;
+  if (typeof vnode.type === 'function') {
+    const r = (vnode as any)._resolved;
+    return r ? resolveDOM(r) : null;
+  }
+  return null;
+}
+
+function reorderDOM(arr: VNode[], parent: Node): void {
+  for (let i = 0; i < arr.length; i++) {
+    const dom = resolveDOM(arr[i]);
+    if (!dom) continue;
+    const target = parent.childNodes[i];
+    if (dom !== target && target) {
+      parent.insertBefore(dom, target);
     }
   }
 }

@@ -36,6 +36,9 @@ export namespace JSX {
   export type Child = VNode | string | number | boolean | null | undefined;
   export type Children = Child | Child[];
 
+  /** 告诉 TS compiler key 是运行时属性，不会透传给组件 props */
+  export type LibraryManagedAttributes<C, P> = P & { key?: any };
+
   export interface IntrinsicElements {
     div: HTMLAttributes;
     span: HTMLAttributes;
