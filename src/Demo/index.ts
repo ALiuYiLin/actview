@@ -1,0 +1,5 @@
+export { RefDemo } from './RefDemo'
+export { ReactiveDemo } from './ReactiveDemo'
+export { ComputedDemo } from './ComputedDemo'
+export { WatchDemo } from './WatchDemo'
+export { KeyDiffDemo } from './KeyDiffDemo'
