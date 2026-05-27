@@ -1,36 +1,40 @@
 /**
- * JSX 工厂函数 — 生成虚拟 Element 描述符对象（类似 React Element）
+ * JSX 工厂 — 生成类 Vue 的 VNode 描述对象
  *
- * createElement / jsx / jsxs / jsxDEV 均不操作真实 DOM，
- * 只返回描述结构的普通对象 { $$typeof, type, props, key }。
- * Fragment 返回 type 为 ACTVIEW_FRAGMENT 的 descriptor。
+ * createElement / jsx / jsxs / jsxDEV 只生成普通 VNode 对象：
+ *   { __v_isVNode, type, props, children, key, el }
+ *
+ * 函数组件不会在工厂中调用（type 保留为函数引用），
+ * 由 Fiber Reconciler 在 render 阶段调用。
  */
 
-/** 用于标记内部 VElement 对象的 Symbol */
-export const ACTVIEW_ELEMENT = Symbol.for('actview.element');
 /** Fragment 类型标记 */
 export const ACTVIEW_FRAGMENT = Symbol.for('actview.fragment');
 
 // ======== 类型定义 ========
 
-/** 虚拟 Element 描述符 */
-export interface VElement {
-  $$typeof: typeof ACTVIEW_ELEMENT;
-  type: VType;
-  props: Record<string, any>;
+export type VNodeTypes = string | symbol | ((props: any) => any);
+
+/** VNode — 类似 Vue 的虚拟节点结构 */
+export interface VNode<T = any> {
+  __v_isVNode: true;
+  type: VNodeTypes;
+  props: Record<string, any> | null;
+  children: VNode[] | string | null;
   key: string | null;
+  el: Node | null;
 }
 
-export type VType =
-  | string
-  | symbol
-  | ((props: any) => any);
+export type VType = VNodeTypes;
 
 // ======== JSX 命名空间（供 tsconfig jsx 类型推导使用） ========
 
 export namespace JSX {
-  export type Element = VElement;
-  export type ElementType = VType;
+  export type Element = VNode;
+  export type ElementType = VNodeTypes;
+  export type ArrayElement = VNode[];
+  export type Child = VNode | string | number | boolean | null | undefined;
+  export type Children = Child | Child[];
 
   export interface IntrinsicElements {
     div: HTMLAttributes;
@@ -84,134 +88,165 @@ export namespace JSX {
   }
 }
 
-// ======== 工厂函数 ========
+// ======== 工具函数 ========
 
-function createDescriptor(
-  type: VType,
+/** 运行时 VNode 类型守卫 */
+export function isVNode(v: any): v is VNode {
+  return v != null && typeof v === 'object' && v.__v_isVNode === true;
+}
+
+// ======== VNode 工厂 ========
+
+function createVNode(
+  type: VNodeTypes,
   props: Record<string, any> | null,
+  children: VNode[] | string | null,
   key: string | null,
-): VElement {
+): VNode {
   return {
-    $$typeof: ACTVIEW_ELEMENT,
+    __v_isVNode: true,
     type,
-    props: props ?? {},
+    props: props ?? null,
+    children,
     key,
+    el: null,
   };
 }
 
 /**
- * 标准 JSX 工厂（可自动转换标签函数执行）
+ * 标准化 children 数组为 VNode[] | string | null
  *
- * 注意：createElement 仍然会原地执行函数组件（以保持与现有 setup 模式的兼容），
- * 但返回的是 VElement 描述符而非真实 DOM。
+ * 规则：
+ * - null/undefined/boolean 被过滤
+ * - 单文本子节点 → string
+ * - 多子节点 → VNode[]，文本片段转为 TEXT 类型 VNode
+ * - 空 → null
+ */
+function normalizeChildren(raw: any[]): VNode[] | string | null {
+  const flat = raw.flat(Infinity);
+  const filtered = flat.filter(c => c != null && typeof c !== 'boolean');
+
+  if (filtered.length === 0) return null;
+  if (filtered.length === 1) {
+    const c = filtered[0];
+    if (typeof c === 'string') return c;
+    if (typeof c === 'number') return String(c);
+    if (isVNode(c)) return [c];
+    return null;
+  }
+
+  // 多子节点：文本转为 TEXT VNode
+  return filtered.map(c => {
+    if (isVNode(c)) return c;
+    if (typeof c === 'string' || typeof c === 'number') {
+      return createVNode('TEXT', null, String(c), null);
+    }
+    return null;
+  }).filter(Boolean) as VNode[];
+}
+
+// ======== 工厂函数 ========
+
+/**
+ * 标准 JSX 工厂（classic transform）
+ * 签名：createElement(type, props, ...children)
  */
 export function createElement(
-  type: VType,
+  type: VNodeTypes,
   props: Record<string, any> | null,
   ...children: any[]
-): VElement | VElement[] {
-  // 从 props 中提取 children（jsxDEV 模式会把 children 放在 props 里）
-  const propsChildren = props?.children;
-  const allChildren =
-    children.length > 0
-      ? children
-      : propsChildren != null
-        ? Array.isArray(propsChildren)
-          ? propsChildren
-          : [propsChildren]
-        : [];
-
-  // 提取 key
+): VNode {
   let key: string | null = null;
   if (props && props.key !== undefined) {
     key = String(props.key);
   }
 
-  const mergedProps = { ...props };
-
-  // 函数组件
-  if (typeof type === 'function') {
-    const defaultChildren: any[] = [];
-    for (const child of allChildren) {
-      defaultChildren.push(child);
-    }
-    mergedProps.children = defaultChildren;
-    // 执行组件函数，递归展开
-    const result = type(mergedProps);
-    return result;
+  // 从 props.children 或展开参数中提取子节点
+  let childNodes: VNode[] | string | null = null;
+  if (children.length > 0) {
+    childNodes = normalizeChildren(children);
+  } else if (props?.children != null) {
+    const raw = Array.isArray(props.children) ? props.children : [props.children];
+    childNodes = normalizeChildren(raw);
   }
 
-  // 字符串标签（HTML/SVG 元素）
-  mergedProps.children = allChildren;
-  // 清理不应出现在 props 中的内部字段
-  delete mergedProps.key;
+  // 清理 props 中的内部字段
+  const cleanedProps = props ? Object.assign({}, props) : null;
+  if (cleanedProps) {
+    delete cleanedProps.children;
+    delete cleanedProps.key;
+  }
 
-  return createDescriptor(type, mergedProps, key);
+  return createVNode(type, cleanedProps, childNodes, key);
 }
 
 /**
  * jsxDEV — 开发模式 JSX 工厂
- * 签名: jsxDEV(type, props, key, isStaticChildren, source, self)
+ * 签名：jsxDEV(type, props, key, isStaticChildren, source, self)
  */
 export function jsxDEV(
-  type: VType,
+  type: VNodeTypes,
   props: Record<string, any> | null,
   key?: string,
   _isStaticChildren?: boolean,
   _source?: any,
   _self?: any,
-): VElement | VElement[] {
+): VNode {
   if (type === Fragment) {
-    return createDescriptor(ACTVIEW_FRAGMENT, props ?? {}, key ?? null);
+    return createVNode(ACTVIEW_FRAGMENT, props, null, key ?? null);
   }
 
-  // jsxDEV 模式下 key 是独立参数
-  const mergedProps = { ...props };
-
-  if (typeof type === 'function') {
-    mergedProps.children = [];
-    const result = type(mergedProps);
-    return result;
+  let childNodes: VNode[] | string | null = null;
+  if (props?.children != null) {
+    const raw = Array.isArray(props.children) ? props.children : [props.children];
+    childNodes = normalizeChildren(raw);
   }
 
-  return createDescriptor(type, mergedProps, key ?? null);
+  const cleanedProps = props ? Object.assign({}, props) : null;
+  if (cleanedProps) {
+    delete cleanedProps.children;
+    delete cleanedProps.key;
+  }
+
+  return createVNode(type, cleanedProps, childNodes, key ?? null);
 }
 
-/**
- * Fragment 组件
- */
-export function Fragment(props: { children?: any; key?: any }): VElement {
-  return createDescriptor(
-    ACTVIEW_FRAGMENT,
-    { ...props },
-    props?.key != null ? String(props.key) : null,
-  );
+/** Fragment 组件 */
+export function Fragment(props: { children?: any; key?: any }): VNode {
+  let childNodes: VNode[] | string | null = null;
+  if (props?.children != null) {
+    const raw = Array.isArray(props.children) ? props.children : [props.children];
+    childNodes = normalizeChildren(raw);
+  }
+  return createVNode(ACTVIEW_FRAGMENT, null, childNodes, props?.key != null ? String(props.key) : null);
 }
 
 /**
  * react-jsx transform 的 jsx/jsxs 函数
- * 签名: jsx(type, props, key)
- * children 在 props.children 中（非展开参数），key 是独立参数
+ * 签名：jsx(type, props, key)
  */
 export function jsx(
-  type: VType,
+  type: VNodeTypes,
   props: Record<string, any> | null,
   key?: any,
-): VElement | VElement[] {
+): VNode {
   if (type === Fragment) {
-    return createDescriptor(ACTVIEW_FRAGMENT, props ?? {}, key ?? null);
+    return createVNode(ACTVIEW_FRAGMENT, props, null, key != null ? String(key) : null);
   }
 
-  const mergedProps = { ...props };
-
-  if (typeof type === 'function') {
-    mergedProps.children = [];
-    const result = type(mergedProps);
-    return result;
+  let childNodes: VNode[] | string | null = null;
+  if (props?.children != null) {
+    const raw = Array.isArray(props.children) ? props.children : [props.children];
+    childNodes = normalizeChildren(raw);
   }
 
-  return createDescriptor(type, mergedProps, key ?? null);
+  const cleanedProps = props ? Object.assign({}, props) : null;
+  if (cleanedProps) {
+    delete cleanedProps.children;
+    delete cleanedProps.key;
+  }
+
+  return createVNode(type, cleanedProps, childNodes, key != null ? String(key) : null);
 }
 
 export const jsxs = jsx;
-
