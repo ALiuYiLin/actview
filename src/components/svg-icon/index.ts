@@ -1,1 +1,0 @@
-export { MyAddIcon } from './add'
