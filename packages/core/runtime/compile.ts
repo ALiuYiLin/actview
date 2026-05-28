@@ -101,6 +101,35 @@ function createCompInstance(): { refs: Set<any> } {
   return { refs: new Set<any>() };
 }
 
+/**
+ * 从 VNode 的 children 中提取 template[slot] 子节点为命名 props
+ *
+ * jsx 工厂将 children 放在 vnode.children 而非 vnode.props.children 中，
+ * 因此需要额外传入 children。
+ *
+ * 输入: children=[template(slot=header), p, template(slot=footer)]
+ * 输出: props.header=[slotChildren], props.footer=[slotChildren], props.children=[p]
+ */
+function extractSlotProps(props: Record<string, any>, children: VNode[] | string | null): Record<string, any> {
+  const raw = Array.isArray(children) ? children : null;
+  if (!raw) return props;
+
+  const result: Record<string, any> = {};
+  for (const key of Object.keys(props)) result[key] = props[key];
+
+  const defaultChildren: any[] = [];
+  for (const child of raw) {
+    if (isVNode(child) && child.type === 'template' && child.props?.slot) {
+      result[child.props.slot] = child.children;
+    } else {
+      defaultChildren.push(child);
+    }
+  }
+
+  result.children = defaultChildren.length > 0 ? defaultChildren : null;
+  return result;
+}
+
 // ======== Mount（首次渲染） ========
 
 function mount(vnode: VNode, parent: Node): Node {
@@ -109,22 +138,26 @@ function mount(vnode: VNode, parent: Node): Node {
     const compType = vnode.type;
     const instance = createCompInstance();
 
+    // 提取 slot，构建组件实际接收的 props
+    const slotProps = extractSlotProps(vnode.props ?? {}, vnode.children);
+
     // 执行组件（setup），获取后续 render 函数
-    const setupResult = compType(vnode.props ?? {});
+    const setupResult = compType(slotProps);
     // setup 模式：组件返回 render 函数；否则直接返回 VNode
-    const renderFn: () => VNode = typeof setupResult === 'function'
-      ? setupResult as () => VNode
-      : () => compType(vnode.props ?? {});
+    // renderFn 接收当前 props 参数（支持 slot 模式中 (props) => VNode 的写法）
+    const renderFn = typeof setupResult === 'function'
+      ? setupResult as (props?: any) => VNode
+      : (p?: any) => compType(p ?? slotProps);
 
     // 组件级更新函数（被 ref 变化触发时重渲染）
-    // 注意：调用的是缓存的 renderFn，而不是 compType（否则会重复执行 setup）
     const componentUpdateFn = () => {
       const prevFn = getCurrentUpdateFn();
       setCurrentUpdateFn(componentUpdateFn);
       const prevInst = getCurrentInstance();
       setCurrentInstance(instance);
 
-      const newChild = renderFn();
+      const props = (vnode as any)._capturedProps || slotProps;
+      const newChild = renderFn(props);
       const oldChild = (vnode as any)._resolved;
 
       if (oldChild && (vnode as any)._parentNode) {
@@ -142,14 +175,13 @@ function mount(vnode: VNode, parent: Node): Node {
       setCurrentUpdateFn(componentUpdateFn);
       const prevInst = getCurrentInstance();
       setCurrentInstance(instance);
-      const r = renderFn();
+      const r = renderFn(slotProps);
       setCurrentInstance(prevInst);
       setCurrentUpdateFn(prevFn);
       return r;
     })();
 
-    // 保存 renderFn 闭包捕获的 props 引用（mount 时 compType(props) 的 props 对象）
-    (vnode as any)._capturedProps = (vnode as any)._capturedProps || vnode.props;
+    (vnode as any)._capturedProps = slotProps;
     (vnode as any)._resolved = child;
     (vnode as any)._update = componentUpdateFn;
     (vnode as any)._instance = instance;
@@ -209,7 +241,7 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
 
   // 函数组件：在旧组件的 reactive 上下文中重新执行
   if (typeof newV.type === 'function') {
-    const renderFn = (oldV as any)._renderFn as (() => VNode) | null;
+    const renderFn = (oldV as any)._renderFn as ((props?: any) => VNode) | null;
     const existingUpdate = (oldV as any)._update as (() => void) | null;
     const existingInstance = (oldV as any)._instance as { refs: Set<any> };
     const oldResolved = (oldV as any)._resolved as VNode | null;
@@ -217,14 +249,14 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
     let newResolved: VNode;
     let capturedProps: Record<string, any> | null = null;
     if (renderFn) {
-      // 合并新 props 到 renderFn 闭包捕获的原始 props 对象
+      // 提取 slot，构建新 props
+      const newSlotProps = newV.props ? extractSlotProps(newV.props, newV.children) : {};
+      // 合并到 renderFn 闭包捕获的原始 props 对象
       capturedProps = (oldV as any)._capturedProps || oldV.props;
-      if (capturedProps && newV.props) {
-        // 对象类型 prop 原地 merge（解构变量仍指向同一引用）
-        // 原始类型/数组/函数直接替换
-        for (const key of Object.keys(newV.props)) {
+      if (capturedProps) {
+        for (const key of Object.keys(newSlotProps)) {
           const oldVal = capturedProps[key];
-          const newVal = newV.props[key];
+          const newVal = newSlotProps[key];
           if (typeof oldVal === 'object' && oldVal !== null && !Array.isArray(oldVal) &&
               typeof newVal === 'object' && newVal !== null && !Array.isArray(newVal)) {
             Object.assign(oldVal, newVal);
@@ -234,8 +266,8 @@ function patch(oldV: VNode, newV: VNode, parent: Node): Node {
         }
       }
       newResolved = existingUpdate && existingInstance
-        ? withReactiveContext(existingUpdate, existingInstance, () => renderFn())
-        : renderFn();
+        ? withReactiveContext(existingUpdate, existingInstance, () => renderFn(capturedProps))
+        : renderFn(capturedProps);
     } else {
       // 没有缓存（兼容），退回到直接执行
       const compType = newV.type as (props: any) => any;
