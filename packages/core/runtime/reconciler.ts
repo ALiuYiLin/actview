@@ -111,6 +111,8 @@ function mountComponent(vnode: VNode, parent: Node): Node {
   (vnode as any)._renderFn = renderFn;
   (vnode as any)._parentNode = parent;
   (vnode as any)._lifecycleHooks = lifecycleHooks;
+  // 挂载 VNode 引用到实例，供 patchComponent 更新
+  (instance as any)._mountVNode = vnode;
 
   const dom = mount(child, parent);
 
@@ -240,6 +242,10 @@ function patchComponent(oldV: VNode, newV: VNode, parent: Node): Node {
   (newV as any)._capturedProps = capturedProps;
   (newV as any)._lifecycleHooks = (oldV as any)._lifecycleHooks;
   (newV as any)._parentNode = (oldV as any)._parentNode;
+  // 同步到 mount VNode，使组件自身的 componentUpdateFn 读到最新 resolved
+  if (existingInstance && (existingInstance as any)._mountVNode) {
+    (existingInstance as any)._mountVNode._resolved = newResolved;
+  }
 
   if (oldResolved) return patch(oldResolved, newResolved, parent);
   return mount(newResolved, parent);
@@ -355,6 +361,6 @@ function toChildArray(children: VNode[] | string | null): VNode[] {
 }
 
 // 需要引用 getCurrentUpdateFn/setCurrentUpdateFn/getCurrentInstance/setCurrentInstance
-import { getCurrentUpdateFn, setCurrentUpdateFn, getCurrentInstance, setCurrentInstance,
-  setCurrentLifecycleHooks, createLifecycleHooks, getCurrentLifecycleHooks } from '../hooks';
-import type { LifecycleHooks } from '../hooks/lifecycle';
+import { getCurrentUpdateFn, setCurrentUpdateFn, getCurrentInstance, setCurrentInstance } from '../hooks';
+import { setCurrentLifecycleHooks, createLifecycleHooks, getCurrentLifecycleHooks } from '../lifecycle';
+import type { LifecycleHooks } from '../lifecycle';

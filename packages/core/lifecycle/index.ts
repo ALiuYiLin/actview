@@ -1,5 +1,5 @@
 /**
- * 生命周期 Hook — onMounted / onBeforeUnmount
+ * 生命周期 Hook — onCreated / onMounted / onBeforeUnmount
  *
  * 在 setup 中调用注册，reconciler 在对应时机执行。
  */
