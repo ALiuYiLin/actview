@@ -38,6 +38,7 @@ export function reactive<T extends object>(inittialValue: T): T {
         if(oldValue !== newValue) {
           target[key] = newValue
           eventBus.publish(triggerRef)
+          triggerRef.value = target
         }
         return true
       },
@@ -80,12 +81,12 @@ export function reactiveArray<T extends object>(inittialValue: T): T {
             return result;
           }
         }
-
         return value;
       },
       set(target, key, newValue){
         const result = Reflect.set(target, key, reactive(newValue))
         if(typeof key === 'string' && (!isNaN(Number(key)) || key === 'length')) eventBus.publish(triggerRef)
+        triggerRef.value = target
         return result
       }
     }) as T

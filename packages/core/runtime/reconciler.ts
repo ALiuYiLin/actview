@@ -69,6 +69,7 @@ function mountComponent(vnode: VNode, parent: Node): Node {
     setCurrentUpdateFn(componentUpdateFn);
     const prevInst = getCurrentInstance();
     setCurrentInstance(instance);
+    console.log('instance: ', instance);
 
     const props = (vnode as any)._capturedProps || slotProps;
     const newChild = renderFn(props);
@@ -107,6 +108,26 @@ function mountComponent(vnode: VNode, parent: Node): Node {
 
 // ======== Patch ========
 
+/**
+ * VNode diff 入口，将 oldV 代表的 DOM 增量更新为 newV 的状态
+ *
+ * 策略（同类型就地更新，不同类型替换）：
+ *
+ * ├─ type 不同 → mount(newV) + unmount(oldV) → 完全替换
+ * │
+ * ├─ 函数组件 → patchComponent
+ * │   复用旧组件的 renderFn / updateFn，在 reactive 上下文中
+ * │   重新执行 renderFn 得到新 VNode，patch 新旧 resolved 树
+ * │
+ * ├─ TEXT    → el.nodeValue = newText
+ * ├─ Fragment → patchChildren 透传
+ * │
+ * └─ 宿主元素 → patchProps + 处理 children
+ *     ├─ children 都是 string → el.textContent
+ *     ├─ 新是 string          → el.textContent（清掉旧 VNode）
+ *     ├─ 旧是 string          → 清空文本后 patchChildren
+ *     └─ 都是 VNode[]        → patchChildren
+ */
 export function patch(oldV: VNode, newV: VNode, parent: Node): Node {
   // 类型不同 → 替换
   if (oldV.type !== newV.type) {

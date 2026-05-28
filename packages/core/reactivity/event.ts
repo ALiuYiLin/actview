@@ -31,7 +31,11 @@ export class EventBus {
    */
   unsubscribe(callback: () => void, refs: Set<Ref<any>>) {
     for (const ref of refs) {
-      this.subscribers.get(ref)?.delete(callback);
+      const set = this.subscribers.get(ref);
+      if (set) {
+        set.delete(callback);
+        if (set.size === 0) this.subscribers.delete(ref);
+      }
     }
   }
 
@@ -40,6 +44,7 @@ export class EventBus {
    * 使用 publishing 集合防止同一 ref 的递归发布导致栈溢出
    */
   publish(ref: Ref<any>) {
+    console.log('this.subscribers: ', this.subscribers);
     if (this.publishing.has(ref)) return;
     this.publishing.add(ref);
     const callbacks = this.subscribers.get(ref);
@@ -54,15 +59,3 @@ export class EventBus {
 }
 
 export const eventBus = new EventBus();
-
-// setInterval(() => {
-//   const subs = eventBus['subscribers'] as Map<any, Set<()=>void>>;
-//   console.log('subs: ', subs);
-//   let total = 0;
-//   for (const [ref, set] of subs) {
-//     const label = (ref as any)._debug || 'ref#' + String(total);
-//     total += set.size;
-//     if (set.size > 0) console.log(`  [${label}] ${set.size}`);
-//   }
-//   console.log(`[EventBus] 共 ${total} 个订阅`);
-// }, 1000);
