@@ -54,11 +54,20 @@ export function mount(vnode: VNode, parent: Node): Node {
 function mountComponent(vnode: VNode, parent: Node): Node {
   const compType = vnode.type as Function;
   const instance = createCompInstance();
+  const lifecycleHooks = createLifecycleHooks();
 
   const slotProps = extractSlotProps(vnode.props ?? {}, vnode.children);
 
-  // 执行 setup，获取 render 函数
+  // 设置生命周期上下文后执行 setup
+  const prevHooks = getCurrentLifecycleHooks();
+  setCurrentLifecycleHooks(lifecycleHooks);
+
   const setupResult = compType(slotProps);
+
+  // created：setup 执行完毕
+  runHooks(lifecycleHooks.created);
+  setCurrentLifecycleHooks(prevHooks);
+
   const renderFn = typeof setupResult === 'function'
     ? setupResult as (props?: any) => VNode
     : (p?: any) => compType(p ?? slotProps);
@@ -69,7 +78,6 @@ function mountComponent(vnode: VNode, parent: Node): Node {
     setCurrentUpdateFn(componentUpdateFn);
     const prevInst = getCurrentInstance();
     setCurrentInstance(instance);
-    console.log('instance: ', instance);
 
     const props = (vnode as any)._capturedProps || slotProps;
     const newChild = renderFn(props);
@@ -102,8 +110,18 @@ function mountComponent(vnode: VNode, parent: Node): Node {
   (vnode as any)._instance = instance;
   (vnode as any)._renderFn = renderFn;
   (vnode as any)._parentNode = parent;
+  (vnode as any)._lifecycleHooks = lifecycleHooks;
 
-  return mount(child, parent);
+  const dom = mount(child, parent);
+
+  // mounted：DOM 挂载完毕，传入组件实例
+  runHooks(lifecycleHooks.mounted, instance);
+
+  return dom;
+}
+
+function runHooks(hooks: ((...args: any[]) => void)[], ...args: any[]) {
+  for (const fn of hooks) fn(...args);
 }
 
 // ======== Patch ========
@@ -220,6 +238,7 @@ function patchComponent(oldV: VNode, newV: VNode, parent: Node): Node {
   (newV as any)._instance = existingInstance;
   (newV as any)._renderFn = renderFn;
   (newV as any)._capturedProps = capturedProps;
+  (newV as any)._lifecycleHooks = (oldV as any)._lifecycleHooks;
   (newV as any)._parentNode = (oldV as any)._parentNode;
 
   if (oldResolved) return patch(oldResolved, newResolved, parent);
@@ -301,7 +320,10 @@ function reorderDOM(arr: VNode[], parent: Node): void {
 
 export function unmount(vnode: VNode): void {
   if (typeof vnode.type === 'function') {
+    // beforeUnmount：组件卸载前，传入组件实例
+    const hooks = (vnode as any)._lifecycleHooks as LifecycleHooks | undefined;
     const instance = (vnode as any)._instance as { refs: Set<any> } | undefined;
+    if (hooks) runHooks(hooks.beforeUnmount, instance);
     const updateFn = (vnode as any)._update as (() => void) | undefined;
     if (instance && updateFn && instance.refs.size > 0) {
       eventBus.unsubscribe(updateFn, instance.refs);
@@ -333,4 +355,6 @@ function toChildArray(children: VNode[] | string | null): VNode[] {
 }
 
 // 需要引用 getCurrentUpdateFn/setCurrentUpdateFn/getCurrentInstance/setCurrentInstance
-import { getCurrentUpdateFn, setCurrentUpdateFn, getCurrentInstance, setCurrentInstance } from '../hooks';
+import { getCurrentUpdateFn, setCurrentUpdateFn, getCurrentInstance, setCurrentInstance,
+  setCurrentLifecycleHooks, createLifecycleHooks, getCurrentLifecycleHooks } from '../hooks';
+import type { LifecycleHooks } from '../hooks/lifecycle';

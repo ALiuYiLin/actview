@@ -7,6 +7,7 @@ import {
   SlotDemo,
   KeyDiffDemo,
   BugsDemo,
+  LifecycleDemo,
 } from './Demo'
 import './app.css'
 
@@ -18,6 +19,7 @@ const navItems = [
   { path: '/slot',     label: 'Slot' },
   { path: '/keydiff',  label: 'Key Diff' },
   { path: '/bugs',     label: 'Bugs' },
+  { path: '/lifecycle', label: 'Lifecycle' },
 ]
 
 const router = new Router({
@@ -30,6 +32,7 @@ const router = new Router({
     { path: '/slot', component: SlotDemo },
     { path: '/keydiff', component: KeyDiffDemo },
     { path: '/bugs', component: BugsDemo },
+    { path: '/lifecycle', component: LifecycleDemo },
   ],
 })
 

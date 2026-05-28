@@ -8,3 +8,11 @@ const { getCurrentInstance, setCurrentInstance } = useCurrentInstance()
 export { useCurrentUpdateFn, getCurrentUpdateFn, setCurrentUpdateFn }
 export { useCurrentInstance, getCurrentInstance, setCurrentInstance }
 export { useApp } from './use-app'
+export {
+  onCreated,
+  onMounted,
+  onBeforeUnmount,
+  setCurrentLifecycleHooks,
+  createLifecycleHooks,
+  getCurrentLifecycleHooks,
+} from './lifecycle'
