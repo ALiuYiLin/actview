@@ -52,9 +52,18 @@ export function watch<T>(source: Ref<T> | (() => T) | object, callback: (newValu
     throw new Error('watch 只能监控 ref、reactive 返回值，或 getter 函数')
   }
 
-  let oldSnapshot = source as T
+  // shallowClone 在无 reactive 上下文中读取属性，避免 getter 副作用
+  function shallowClone(obj: any): any {
+    const prev = getCurrentUpdateFn()
+    setCurrentUpdateFn(null)
+    const clone = { ...obj }
+    setCurrentUpdateFn(prev)
+    return clone
+  }
+
+  let oldSnapshot = shallowClone(source) as T
   eventBus.subscribe(triggerRef, () => {
-    const newSnapshot = source as T
+    const newSnapshot = shallowClone(source) as T
     callback(newSnapshot, oldSnapshot)
     oldSnapshot = newSnapshot
   })

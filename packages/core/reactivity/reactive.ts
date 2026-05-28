@@ -3,6 +3,8 @@ import { eventBus } from "./event";
 import { getCurrentUpdateFn } from "../hooks";
 
 const reactiveTriggerMap = new WeakMap<object, Ref<any>>()
+/** 缓存 raw → proxy，避免嵌套对象每次 get 创建不同 Proxy */
+const proxyCache = new WeakMap<object, any>()
 
 export function getReactiveTriggerRef(target: unknown): Ref<any> | null {
   if(target && typeof target === 'object') return reactiveTriggerMap.get(target as object) ?? null
@@ -14,11 +16,17 @@ export function reactive<T extends object>(inittialValue: T): T {
 
   const createReactiveObject = (obj: any): any=> {
     if(obj === null || typeof obj !== 'object') return obj
-    
+
+    // 缓存命中，返回已有 Proxy（保证同一 raw 对象始终返回同一 proxy）
+    if (proxyCache.has(obj)) return proxyCache.get(obj)
+
     // 如果是数组，递归处理每个元素
     if(Array.isArray(obj)){
       return reactiveArray(obj)
     }
+
+    // 初始化保存 target 引用
+    triggerRef.value = obj
 
     // 处理普通对象
     const proxy = new Proxy(obj, {
@@ -45,12 +53,14 @@ export function reactive<T extends object>(inittialValue: T): T {
       deleteProperty(target, key){
         const result = Reflect.deleteProperty(target, key)
         eventBus.publish(triggerRef);
+        triggerRef.value = target
         return result;
       }
    
     })
 
     reactiveTriggerMap.set(proxy, triggerRef)
+    proxyCache.set(obj, proxy)
     return proxy
   }
   return createReactiveObject(inittialValue)
@@ -68,6 +78,7 @@ export function reactiveArray<T extends object>(inittialValue: T): T {
   const triggerRef = {value: null, __isRef: true as const} as Ref<any>
 
   if(Array.isArray(inittialValue)){
+    triggerRef.value = inittialValue
     const proxy = new Proxy(inittialValue.map(item=>reactive(item)),{
       get(target, key){
         const value = target[key as keyof typeof target]
@@ -78,6 +89,7 @@ export function reactiveArray<T extends object>(inittialValue: T): T {
           return  function(...args: any[]){
             const result = (value as Function).apply(target, args);
             eventBus.publish(triggerRef);
+            triggerRef.value = target
             return result;
           }
         }

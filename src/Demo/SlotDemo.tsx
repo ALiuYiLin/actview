@@ -1,13 +1,7 @@
-/**
- * 插槽示例 — 使用 <template slot="xxx"> 传递命名插槽
- *
- * Card 组件接收:
- *   - props.header  → 命名插槽 "header"
- *   - props.footer  → 命名插槽 "footer"
- *   - props.children → 默认插槽
- */
-function Card(props?: any) {
-  return () => (
+import './slot.css'
+
+function Card(_props?: any) {
+  return (props: any) => (
     <div class="slot-card">
       {props.header && <div class="slot-card-header">{props.header}</div>}
       <div class="slot-card-body">{props.children}</div>
@@ -24,14 +18,10 @@ export function SlotDemo() {
 
       <h3>基础 — 标题 + 内容 + 底部</h3>
       <Card>
-        <template slot="header">
-          <strong>卡片标题</strong>
-        </template>
-
+        <template slot="header"><strong>卡片标题</strong></template>
         <p>这是卡片的主体内容。</p>
-
         <template slot="footer">
-          <span style="color:#888;font-size:0.8rem;">底部信息</span>
+          <span class="slot-footer-text">底部信息</span>
         </template>
       </Card>
 
@@ -44,20 +34,15 @@ export function SlotDemo() {
       <Card>
         <template slot="header">
           <strong>用户名</strong>
-          <span style="color:#888;font-size:0.8rem;margin-left:8px;">@actview</span>
+          <span class="slot-user-tag">@actview</span>
         </template>
-
-        <div style="display:flex;gap:1rem;text-align:center;">
-          <div><strong>42</strong><br /><span style="font-size:0.75rem;color:#888;">文章</span></div>
-          <div><strong>128</strong><br /><span style="font-size:0.75rem;color:#888;">关注</span></div>
-          <div><strong>256</strong><br /><span style="font-size:0.75rem;color:#888;">粉丝</span></div>
+        <div class="slot-stats">
+          <div><strong>42</strong><br /><span class="slot-stat-label">文章</span></div>
+          <div><strong>128</strong><br /><span class="slot-stat-label">关注</span></div>
+          <div><strong>256</strong><br /><span class="slot-stat-label">粉丝</span></div>
         </div>
-
         <template slot="footer">
-          <button onClick={() => alert('已关注！')}
-            style="width:100%;padding:6px;border:1px solid #646cff;border-radius:6px;background:#646cff22;color:#646cff;cursor:pointer;">
-            + 关注
-          </button>
+          <button class="slot-follow-btn" onClick={() => alert('已关注！')}>+ 关注</button>
         </template>
       </Card>
 
@@ -66,34 +51,6 @@ export function SlotDemo() {
         <p><code>{'<template slot="xxx">'}</code> 中的内容提取为 <code>props.xxx</code>。</p>
         <p>未包裹在 <code>template[slot]</code> 的子元素归入 <code>props.children</code>（默认插槽）。</p>
       </div>
-
-      <style>{`
-        .slot-demo-page { padding: 2rem; max-width: 600px; margin: 0 auto; }
-        .slot-demo-page h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
-        .slot-demo-page h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; color: #ccc; }
-        .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 1rem; }
-        .subtitle code { background:#2a2a3e; padding:0.1rem 0.35rem; border-radius:3px; color:#c9a0ff; }
-        .slot-card {
-          border: 1px solid #333; border-radius: 10px; overflow: hidden;
-          background: #1e1e2e; margin-bottom: 1rem;
-        }
-        .slot-card-header {
-          padding: 0.75rem 1rem; background: #2a2a3e;
-          border-bottom: 1px solid #333; font-size: 0.95rem;
-        }
-        .slot-card-body { padding: 1rem; color: #ccc; font-size: 0.9rem; line-height: 1.6; }
-        .slot-card-footer {
-          padding: 0.6rem 1rem; background: #2a2a3e;
-          border-top: 1px solid #333;
-        }
-        .slot-desc {
-          background: #16162a; border: 1px solid #2a2a3e; border-radius: 8px;
-          padding: 1rem; font-size: 0.85rem; line-height: 1.8; color: #aaa;
-        }
-        .slot-desc code {
-          background: #2a2a3e; padding: 0.1rem 0.35rem; border-radius: 3px; color: #c9a0ff;
-        }
-      `}</style>
     </div>
   )
 }

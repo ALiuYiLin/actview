@@ -1,0 +1,17 @@
+.demo-nav {
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 16px;
+}
+.demo-nav a {
+  margin-right: 8px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+.demo-nav a.active {
+  font-weight: bold;
+  background: #e0e0e0;
+}

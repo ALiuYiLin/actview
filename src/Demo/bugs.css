@@ -1,0 +1,46 @@
+.bugs-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.bugs-page h2 {
+  color: #e44;
+  margin-bottom: 1rem;
+}
+.bugs-page > p {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.bug-card {
+  border: 1px solid #e44;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.bug-card .bug-title {
+  color: #e44;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.bug-card .bug-desc {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.bug-card .bug-log {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.bug-btn {
+  padding: 4px 12px;
+  border: 1px solid #e44;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #e44;
+  margin-top: 4px;
+}

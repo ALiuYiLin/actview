@@ -1,0 +1,36 @@
+.slot-demo-page { padding: 2rem; max-width: 600px; margin: 0 auto; }
+.slot-demo-page h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
+.slot-demo-page h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; color: #ccc; }
+.slot-demo-page .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 1rem; }
+.slot-demo-page .subtitle code { background: #2a2a3e; padding: 0.1rem 0.35rem; border-radius: 3px; color: #c9a0ff; }
+
+.slot-card {
+  border: 1px solid #333; border-radius: 10px; overflow: hidden;
+  background: #1e1e2e; margin-bottom: 1rem;
+}
+.slot-card-header {
+  padding: 0.75rem 1rem; background: #2a2a3e;
+  border-bottom: 1px solid #333; font-size: 0.95rem;
+}
+.slot-card-body { padding: 1rem; color: #ccc; font-size: 0.9rem; line-height: 1.6; }
+.slot-card-footer {
+  padding: 0.6rem 1rem; background: #2a2a3e;
+  border-top: 1px solid #333;
+}
+
+.slot-desc {
+  background: #16162a; border: 1px solid #2a2a3e; border-radius: 8px;
+  padding: 1rem; font-size: 0.85rem; line-height: 1.8; color: #aaa;
+}
+.slot-desc code {
+  background: #2a2a3e; padding: 0.1rem 0.35rem; border-radius: 3px; color: #c9a0ff;
+}
+
+.slot-footer-text { color: #888; font-size: 0.8rem; }
+.slot-user-tag { color: #888; font-size: 0.8rem; margin-left: 8px; }
+.slot-stats { display: flex; gap: 1rem; text-align: center; }
+.slot-stat-label { font-size: 0.75rem; color: #888; }
+.slot-follow-btn {
+  width: 100%; padding: 6px; border: 1px solid #646cff; border-radius: 6px;
+  background: #646cff22; color: #646cff; cursor: pointer;
+}
