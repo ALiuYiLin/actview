@@ -1,6 +1,6 @@
 {
   "name": "actview",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Configuration-driven MVVM born for Campaign/Marketing single pages: selector + config for automatic data binding, supporting reactive/ref, computed, watch/watchEffect, JSX rendering, and quick event mounting.",
   "type": "module",
   "main": "index.ts",

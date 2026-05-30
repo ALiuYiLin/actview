@@ -1,6 +1,6 @@
 {
   "name": "@actview/router",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Router module for Actview - history-based SPA routing with reactive route state",
   "type": "module",
   "main": "index.ts",
