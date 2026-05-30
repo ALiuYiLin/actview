@@ -1,71 +1,119 @@
-import { ref, onCreated, onMounted, onBeforeUnmount } from 'actview'
+/**
+ * LifecycleDemo 组件 — 演示生命周期钩子
+ *
+ * 学习要点:
+ *   - onCreated()    组件创建时触发
+ *   - onMounted()    组件挂载到 DOM 后触发
+ *   - onBeforeUnmount() 组件卸载前触发
+ *   - 条件渲染控制子组件的挂载/卸载
+ */
+import { ref, onCreated, onMounted, onBeforeUnmount } from "@actview/core";
 
 export function LifecycleDemo() {
-  const log = ref<string[]>([])
-  const show = ref(true)
+  const showChild = ref(true);
+  const logLines = ref<string[]>([]);
 
-  // 用微任务延迟更新 log，避免在 mount 中同步触发 reactive re-render
-  function add(msg: string) {
-    console.log('[lifecycle]', msg)
-    queueMicrotask(() => {
-      log.value = [...log.value, msg]
-    })
-  }
+  const addLog = (msg: string) => {
+    logLines.value = [...logLines.value, `[${getTime()}] ${msg}`];
+  };
 
-  function Child() {
-    const count = ref(0)
+  onCreated(() => {
+    addLog("LifecycleDemo 组件创建 (onCreated)");
+    console.log("[LifecycleDemo] onCreated");
+  });
 
-    onCreated(() => {
-        add('  [Child] created')
-        console.log('  [Child] created')
-      }
-    )
-    onMounted(
-      (inst) => {
-        add('  [Child] mounted')
-        console.log('  [Child] mounted, instance:', inst);
-      }
-    )
-    onBeforeUnmount((inst) => {
-      add('  [Child] beforeUnmount')
-      console.log('  [Child] beforeUnmount, instance:', inst);
-    })
+  onMounted(() => {
+    addLog("LifecycleDemo 组件挂载 (onMounted)");
+    console.log("[LifecycleDemo] onMounted");
+  });
 
-    return () => (
-      <div style="margin:8px 0;padding:8px;border:1px solid #646cff;border-radius:4px">
-        <span style="color:#646cff">Child 组件</span>
-        <button onClick={() => count.value += 1} style="margin-left:8px">count={count.value}</button>
-      </div>
-    )
-  }
-
-  onCreated(() => add('[Parent] created'))
-  onMounted((inst) => {
-    add('[Parent] mounted')
-    console.log('[Parent] mounted, instance:', inst)
-  })
-  onBeforeUnmount((inst) => {
-    add('[Parent] beforeUnmount')
-    console.log('[Parent] beforeUnmount, instance:', inst)
-  })
+  onBeforeUnmount(() => {
+    addLog("LifecycleDemo 组件卸载 (onBeforeUnmount)");
+    console.log("[LifecycleDemo] onBeforeUnmount");
+  });
 
   return () => (
-    <div style="max-width:600px;margin:0 auto;padding:1rem">
-      <h2 style="margin-bottom:0.5rem">Lifecycle Demo</h2>
-      <p style="color:#888;font-size:0.9rem;margin-bottom:1rem">
-        onCreated / onMounted / onBeforeUnmount 测试（查看控制台 + 下方日志）
+    <div class="page lifecycle-page">
+      <h2>🔄 生命周期</h2>
+      <p class="description">
+        演示 <code>onCreated</code>、<code>onMounted</code>、
+        <code>onBeforeUnmount</code> 生命周期钩子。
       </p>
 
-      <button onClick={() => show.value = !show.value}
-        style="padding:4px 12px;border:1px solid #333;border-radius:4px;cursor:pointer;margin-bottom:8px">
-        {show.value ? '卸载 Child' : '挂载 Child'}
-      </button>
+      <div class="demo-card">
+        {/* 控制子组件的显示/隐藏 */}
+        <div class="control-row">
+          <button
+            class="btn btn-warning"
+            onClick={() => (showChild.value = !showChild.value)}
+          >
+            {showChild.value ? "卸载子组件" : "挂载子组件"}
+          </button>
+        </div>
 
-      {show.value ? <Child /> : null}
+        {/* 条件渲染子组件 */}
+        {showChild.value && <ChildComponent addLog={addLog} />}
 
-      <div style="margin-top:1rem;font-size:0.8rem;color:#999;line-height:1.8;white-space:pre-wrap">
-        {log.value.map((l, i) => <div key={i}>{l}</div>)}
+        {/* 日志输出 */}
+        <div class="log-output">
+          <h4>📝 日志</h4>
+          <div class="log-list">
+            {logLines.value.length === 0 ? (
+              <span class="log-empty">暂无日志...</span>
+            ) : (
+              logLines.value.map((line, i) => (
+                <div key={i} class="log-line">
+                  {line}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
+}
+
+/**
+ * 子组件 — 演示子组件的生命周期
+ */
+function ChildComponent({ addLog }: { addLog: (msg: string) => void }) {
+  const elapsed = ref(0);
+
+  let timer: ReturnType<typeof setInterval> | null = null;
+
+  onCreated(() => {
+    addLog("子组件创建 (onCreated)");
+  });
+
+  onMounted((ins) => {
+    console.log('ins: ', ins);
+    addLog("子组件挂载 (onMounted)");
+    let seconds = 0;
+    timer = setInterval(() => {
+      seconds++;
+      elapsed.value = seconds;
+      if (seconds % 5 === 0) {
+        addLog(`子组件已挂载 ${seconds} 秒`);
+      }
+    }, 1000);
+  });
+
+  onBeforeUnmount(() => {
+    if (timer) clearInterval(timer);
+    addLog("子组件卸载 (onBeforeUnmount)");
+  });
+
+  return () => (
+    <div class="child-component">
+      <h4>🧒 子组件</h4>
+      <p>已挂载：{elapsed.value} 秒</p>
+    </div>
+  );
+}
+
+// 获取当前时间字符串 (HH:mm:ss)
+function getTime(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
 }
