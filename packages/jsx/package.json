@@ -1,6 +1,6 @@
 {
   "name": "@actview/jsx",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "JSX runtime for Actview - custom JSX factory with real DOM rendering",
   "type": "module",
   "main": "jsx-runtime.ts",
