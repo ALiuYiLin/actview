@@ -38,6 +38,11 @@ const packageConfigs = {
       index: 'index.ts',
     },
   },
+  router: {
+    entries: {
+      index: 'index.ts',
+    },
+  },
 };
 
 /**
@@ -226,6 +231,9 @@ async function buildPackage(packageName) {
       await build({
         configFile: false,
         root: packageDir,
+        esbuild: {
+          drop: ['console'],
+        },
         build: {
           outDir,
           emptyOutDir: isFirst, // Only clear on first build
@@ -290,7 +298,7 @@ async function generateDts(packageName) {
       forceConsistentCasingInFileNames: true,
       isolatedModules: true
     },
-    include: ["./*.ts", "./types/*.ts"],
+    include: ["./*.ts", "./*.tsx", "./types/*.ts", "./types/*.tsx"],
     exclude: ["./dist", "node_modules"]
   };
 
