@@ -5,9 +5,9 @@
 /** Fragment 标记 */
 export const Fragment: unique symbol = Symbol.for('actview.fragment')
 
-/** 组件类型（函数组件） */
+/** 组件类型：()=>()=>VNode，外层 setup 内层 render */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Component<P = any> = (props: P) => VNode
+export type Component<P = any> = (props: P) => () => VNode
 
 /** VNode 的可序列化 key */
 export type VNodeKey = string | number | null

@@ -3,32 +3,25 @@ import type { VNode } from '@actview/jsx'
 import './style.css'
 
 // ============================================================
-// 组件 — 使用 JSX 描述 UI
-// JSX 编译后自动调用 @actview/jsx 的 jsx() 返回 VNode
+// 组件：()=>()=>VNode
+// - 外层函数：setup，收 props 和创建响应式数据（只执行一次）
+// - 内层函数：render，返回 JSX / VNode（每次更新都执行）
 // ============================================================
 
-interface GreetProps {
-  name: string
-  age?: number
-}
-const age = ref(0)
 
-function Greet(props: GreetProps): VNode {
-  return (
+function Greet(props: { name: string }): () => VNode {
+  const age = ref(0)
+  return () => (
     <div class="greet">
       <h1>Hello, {props.name}!</h1>
-      {props.age && <p>Age: {props.age}</p>}
-      <button onclick={() => age.value++}>
-        Click me
-        {age.value}
-      </button>
+      <p>Age: {age.value}</p>
+      <button onclick={() => age.value++}>Click me</button>
     </div>
   )
 }
 
 // ============================================================
-// 挂载 — App.mount(Component, selector)
-// 内部执行 render(VNode) → 真实 DOM
+// 挂载
 // ============================================================
 
 const app = createApp()

@@ -42,10 +42,12 @@ export function render(vnode: VNodeChildren): Node | Node[] {
     return render(vnode.children)
   }
 
-  // 组件 → 执行组件函数获取 VNode，再递归渲染
+  // 组件 → setup() → render() → VNode → 递归渲染
   if (typeof vnode.type === 'function') {
-    const childVNode = vnode.type((vnode.props ?? {}) as Record<string, unknown>)
-    return render(childVNode)
+    const renderFn = (vnode.type as (props: unknown) => () => VNodeChildren)(
+      (vnode.props ?? {}) as Record<string, unknown>
+    )
+    return render(renderFn())
   }
 
   // ── 普通 HTML 标签 ──

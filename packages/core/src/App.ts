@@ -40,15 +40,18 @@ export class App {
       )
     }
 
-    // 渲染函数
+    // 组件 setup（只执行一次）
+    const componentRenderFn = component({})
+
+    // 渲染函数（每次更新都执行）
     const renderFn = () => {
       // 清空容器
       if (this.options.clearContainer) {
         container.innerHTML = ''
       }
 
-      // 执行组件 → VNode → 真实 DOM
-      const vnode = component({})
+      // 执行组件 render → VNode → 真实 DOM
+      const vnode = componentRenderFn()
       const dom = render(vnode)
 
       // 挂载

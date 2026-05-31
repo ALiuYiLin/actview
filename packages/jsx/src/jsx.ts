@@ -123,7 +123,7 @@ export function isVNode(val: unknown): val is VNode {
 // jsx — 生产环境单/动态子节点
 // ============================================================
 export function jsx(
-  type: string | typeof Fragment | ((props: unknown) => VNode),
+  type: string | typeof Fragment | ((props: unknown) => () => VNode),
   props: Record<string, unknown> | null,
   key?: string | null,
 ): VNode {
@@ -135,7 +135,7 @@ export function jsx(
 // jsxs — 生产环境静态多子节点（编译优化，children 已是数组）
 // ============================================================
 export function jsxs(
-  type: string | typeof Fragment | ((props: unknown) => VNode),
+  type: string | typeof Fragment | ((props: unknown) => () => VNode),
   props: Record<string, unknown> | null,
   key?: string | null,
 ): VNode {
@@ -146,7 +146,7 @@ export function jsxs(
 // jsxDEV — 开发模式（dev mode）
 // ============================================================
 export function jsxDEV(
-  type: string | typeof Fragment | ((props: unknown) => VNode),
+  type: string | typeof Fragment | ((props: unknown) => () => VNode),
   props: Record<string, unknown> | null,
   key?: string | null,
   _source?: { fileName: string; lineNumber: number },
