@@ -1,4 +1,4 @@
-import { createApp } from '@actview/core'
+import { createApp, ref } from '@actview/core'
 import type { VNode } from '@actview/jsx'
 import './style.css'
 
@@ -11,14 +11,16 @@ interface GreetProps {
   name: string
   age?: number
 }
+const age = ref(0)
 
 function Greet(props: GreetProps): VNode {
   return (
     <div class="greet">
       <h1>Hello, {props.name}!</h1>
       {props.age && <p>Age: {props.age}</p>}
-      <button onclick={() => console.log('clicked!')}>
+      <button onclick={() => age.value++}>
         Click me
+        {age.value}
       </button>
     </div>
   )

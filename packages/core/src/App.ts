@@ -4,6 +4,7 @@
 // ============================================================
 import type { Component } from '@actview/jsx'
 import { render } from './render'
+import { getCurrentUpdateFn, setCurrentUpdateFn } from './reactivity/update'
 
 export interface AppOptions {
   /** 挂载前清空容器（默认 true） */
@@ -27,7 +28,7 @@ export class App {
    * @param selector   CSS 选择器，如 '#app'、'.root'
    * @returns          挂载的根 DOM 节点
    */
-  mount(component: Component, selector: string): Node {
+  mount(component: Component, selector: string) {
     const container =
       typeof selector === 'string'
         ? document.querySelector(selector)
@@ -39,22 +40,36 @@ export class App {
       )
     }
 
-    // 清空容器
-    if (this.options.clearContainer) {
-      container.innerHTML = ''
+    // 渲染函数
+    const renderFn = () => {
+      // 清空容器
+      if (this.options.clearContainer) {
+        container.innerHTML = ''
+      }
+
+      // 执行组件 → VNode → 真实 DOM
+      const vnode = component({})
+      const dom = render(vnode)
+
+      // 挂载
+      const nodes = Array.isArray(dom) ? dom : [dom]
+      for (const node of nodes) {
+        container.appendChild(node)
+      }
     }
 
-    // 执行组件 → VNode → 真实 DOM
-    const vnode = component({})
-    const dom = render(vnode)
-
-    // 挂载
-    const nodes = Array.isArray(dom) ? dom : [dom]
-    for (const node of nodes) {
-      container.appendChild(node)
+    // 响应式更新函数：render 前把自己设为当前更新函数，
+    // 这样 ref 的 getter 访问时会把「自己」注册到事件总线，
+    // 下次 ref 变化时继续触发自己 → 循环订阅。
+    const update = () => {
+      const prev = getCurrentUpdateFn()
+      setCurrentUpdateFn(update)
+      renderFn()
+      setCurrentUpdateFn(prev)
     }
 
-    return nodes[0]
+    // 初次渲染 + 注册依赖
+    update()
   }
 }
 
