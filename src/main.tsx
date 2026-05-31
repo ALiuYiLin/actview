@@ -15,7 +15,7 @@ interface GreetProps {
 // 函数组件：接收 props → 返回 VNode
 function Greet(props: GreetProps): VNode {
   return (
-    <div class="greet">
+    <div class="greet" onclick={()=>console.log("@@@")}>
       <h1>Hello, {props.name}!</h1>
       {props.age && <p>Age: {props.age}</p>}
     </div>
