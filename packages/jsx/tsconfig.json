@@ -16,14 +16,8 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
 
-    "jsx": "react-jsx",
-    "jsxImportSource": "@actview/jsx",
-
-    "paths": {
-      "@/*": ["./src/*"],
-      "@actview/jsx": ["./packages/jsx/src/index.ts"],
-      "@actview/jsx/*": ["./packages/jsx/src/*"]
-    }
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": ["src"]
 }
