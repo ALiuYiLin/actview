@@ -2,6 +2,7 @@
 // VNode → 真实 DOM 的渲染器
 // ============================================================
 import { Fragment, type VNodeChildren } from '@actview/jsx'
+import { getCurrentUpdateFn, setCurrentUpdateFn } from './reactivity/update'
 
 // ============================================================
 // render：将 VNode 递归转换为真实 DOM 节点
@@ -48,7 +49,45 @@ export function render(vnode: VNodeChildren): Node | Node[] {
     const renderFn = (vnode.type as (props: unknown) => () => VNodeChildren)(
       (vnode.props ?? {}) as Record<string, unknown>
     )
-    return render(renderFn())
+
+    // 占位注释（挂载锚点，不可见）
+    const anchor = document.createComment('')
+    let currentNodes: Node[] = []
+
+    // 渲染并替换到 anchor 后方
+    const doRender = (): Node[] => {
+      // 移除旧节点
+      currentNodes.forEach(n => n.parentNode?.removeChild(n))
+      currentNodes = []
+
+      // 新渲染
+      const newDom = render(renderFn())
+      const nodes = Array.isArray(newDom) ? newDom : [newDom]
+      currentNodes = nodes
+
+      // 挂载到 anchor 后面（anchor 可能还未插入 DOM）
+      if (anchor.parentNode) {
+        nodes.forEach(n => anchor.parentNode!.insertBefore(n, anchor.nextSibling))
+      }
+
+      return nodes
+    }
+
+    // 响应式更新函数
+    const update = () => {
+      const prev = getCurrentUpdateFn()
+      setCurrentUpdateFn(update)
+      doRender()
+      setCurrentUpdateFn(prev)
+    }
+
+    // 初次渲染（在父级 currentUpdateFn 上下文中注册 update）
+    const prev = getCurrentUpdateFn()
+    setCurrentUpdateFn(update)
+    doRender()
+    setCurrentUpdateFn(prev)
+
+    return [anchor, ...currentNodes]
   }
 
   // ── 普通 HTML 标签 ──

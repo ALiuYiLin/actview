@@ -7,8 +7,9 @@ import './style.css'
 // - 内层函数：render，返回 JSX / VNode（每次更新都执行）
 // ============================================================
 
-function MyButton(props:{count: number}){
-  return ()=><div>{props.count}</div>
+function MyButton(){
+  const count = ref(1)
+  return ()=><button onclick={()=>count.value++}>{count.value}</button>
 }
 function Greet(props: { name: string }){
   const age = ref(0)
@@ -17,7 +18,7 @@ function Greet(props: { name: string }){
       <h1>Hello, {props.name}!</h1>
       <p>Age: {age.value}</p>
       <button onclick={() => age.value++}>Click me</button>
-      <MyButton count={age.value}></MyButton>
+      <MyButton></MyButton>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 export class EventBus {
   /** ref → 依赖它的回调集合 */
-  private subscribers = new Map<Object, Set<()=>void>>();
+  public subscribers = new Map<Object, Set<()=>void>>();
 
   subscribe(obj: Object, callback: () => void) {
     if (!this.subscribers.has(obj)) this.subscribers.set(obj, new Set());
@@ -19,3 +19,7 @@ export class EventBus {
 }
 
 export const eventBus = new EventBus()
+
+// setInterval(()=>{
+//   console.log('eventBus.subscribers: ', eventBus.subscribers);
+// },5000)
