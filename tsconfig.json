@@ -14,7 +14,18 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+
+    /* JSX — 使用自定义运行时 */
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+
+    /* 路径别名 */
+    "paths": {
+      "@/*": ["./src/*"],
+      "@actview/jsx": ["./packages/jsx/src/index.ts"],
+      "@actview/jsx/*": ["./packages/jsx/src/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "packages"]
 }
