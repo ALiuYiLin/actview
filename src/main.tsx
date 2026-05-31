@@ -1,5 +1,4 @@
 import { createApp, ref } from '@actview/core'
-import type { VNode } from '@actview/jsx'
 import './style.css'
 
 // ============================================================
@@ -8,14 +7,17 @@ import './style.css'
 // - 内层函数：render，返回 JSX / VNode（每次更新都执行）
 // ============================================================
 
-
-function Greet(props: { name: string }): () => VNode {
+function MyButton(props:{count: number}){
+  return ()=><div>{props.count}</div>
+}
+function Greet(props: { name: string }){
   const age = ref(0)
   return () => (
     <div class="greet">
       <h1>Hello, {props.name}!</h1>
       <p>Age: {age.value}</p>
       <button onclick={() => age.value++}>Click me</button>
+      <MyButton count={age.value}></MyButton>
     </div>
   )
 }

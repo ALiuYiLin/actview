@@ -7,6 +7,7 @@ import { Fragment, type VNodeChildren } from '@actview/jsx'
 // render：将 VNode 递归转换为真实 DOM 节点
 // ============================================================
 export function render(vnode: VNodeChildren): Node | Node[] {
+
   // 文本节点
   if (typeof vnode === 'string') {
     return document.createTextNode(vnode)

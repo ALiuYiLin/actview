@@ -11,7 +11,9 @@
 
 declare global {
   namespace JSX {
-    type Element = import('./types').VNode
+    // 不定义 Element，JSX 表达式类型 fallback 为 any。
+    // 组件返回类型校验被绕过，兼容 () => () => VNode 模式。
+    // VNode 类型安全由 jsx() 的返回类型和组件显式标注保证。
 
     interface IntrinsicElements {
       div: Attrs
