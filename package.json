@@ -12,6 +12,7 @@
     "onlyBuiltDependencies": ["esbuild"]
   },
   "dependencies": {
+    "@actview/core": "workspace:*",
     "@actview/jsx": "workspace:*"
   },
   "devDependencies": {
