@@ -1,50 +1,18 @@
 {
-  "name": "actview",
+  "name": "actview-v3",
   "private": true,
-  "version": "1.0.0",
-  "description": "Configuration-driven MVVM born for Campaign/Marketing single pages: selector + config for automatic data binding, supporting reactive/ref, computed, watch/watchEffect, JSX rendering, and quick event mounting.",
-  "keywords": [
-    "mvvm",
-    "h5",
-    "campaign",
-    "promo",
-    "reactive",
-    "jsx"
-  ],
-  "license": "MIT",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:packages": "node build/index.mjs",
-    "build:core": "node build/index.mjs core",
-    "build:jsx": "node build/index.mjs jsx",
-    "build:actview": "node build/index.mjs actview",
-    "build:router": "node build/index.mjs router",
-    "version:patch": "node build/bump-version.mjs patch",
-    "version:minor": "node build/bump-version.mjs minor",
-    "version:major": "node build/bump-version.mjs major",
-    "publish:core": "cd packages/core/dist && npm publish",
-    "publish:jsx": "cd packages/jsx/dist && npm publish",
-    "publish:actview": "cd packages/actview/dist && npm publish",
-    "publish:router": "cd packages/router/dist && npm publish",
-    "publish:all": "pnpm publish:core && pnpm publish:jsx && pnpm publish:actview && pnpm publish:router",
-    "release": "pnpm version:patch && pnpm build:packages && pnpm publish:all",
-    "release:minor": "pnpm version:minor && pnpm build:packages && pnpm publish:all",
-    "release:major": "pnpm version:major && pnpm build:packages && pnpm publish:all",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "@types/jquery": "^3.5.33",
-    "@types/node": "^25.2.1",
-    "typescript": "^5.9.3",
-    "vite": "^6.4.1"
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   },
-  "dependencies": {
-    "@actview/core": "workspace:*",
-    "@actview/jsx": "workspace:*",
-    "@actview/router": "workspace:*",
-    "actview": "workspace:*",
-    "jquery": "^4.0.0"
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.4.1"
   }
 }

@@ -1,8 +1,0 @@
-export { RefDemo } from './RefDemo'
-export { ReactiveDemo } from './ReactiveDemo'
-export { ComputedDemo } from './ComputedDemo'
-export { WatchDemo } from './WatchDemo'
-export { SlotDemo } from './SlotDemo'
-export { KeyDiffDemo } from './KeyDiffDemo'
-export { BugsDemo } from './BugsDemo'
-export { LifecycleDemo } from './LifecycleDemo'
