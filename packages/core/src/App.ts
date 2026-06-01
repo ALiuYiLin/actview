@@ -3,8 +3,7 @@
 // 负责将组件挂载到指定 DOM 容器
 // ============================================================
 import type { Component } from '@actview/jsx'
-import { render } from './render'
-import { getCurrentUpdateFn, setCurrentUpdateFn } from './reactivity/update'
+import { mountComponent } from './render'
 
 export interface AppOptions {
   /** 挂载前清空容器（默认 true） */
@@ -26,7 +25,6 @@ export class App {
    *
    * @param component  组件函数 (props) => VNode
    * @param selector   CSS 选择器，如 '#app'、'.root'
-   * @returns          挂载的根 DOM 节点
    */
   mount(component: Component, selector: string) {
     const container =
@@ -40,39 +38,18 @@ export class App {
       )
     }
 
-    // 组件 setup（只执行一次）
-    const componentRenderFn = component({})
-
-    // 渲染函数（每次更新都执行）
-    const renderFn = () => {
-      // 清空容器
-      if (this.options.clearContainer) {
-        container.innerHTML = ''
-      }
-
-      // 执行组件 render → VNode → 真实 DOM
-      const vnode = componentRenderFn()
-      const dom = render(vnode)
-
-      // 挂载
-      const nodes = Array.isArray(dom) ? dom : [dom]
-      for (const node of nodes) {
-        container.appendChild(node)
-      }
-    }
-
-    // 响应式更新函数：render 前把自己设为当前更新函数，
-    // 这样 ref 的 getter 访问时会把「自己」注册到事件总线，
-    // 下次 ref 变化时继续触发自己 → 循环订阅。
-    const update = () => {
-      const prev = getCurrentUpdateFn()
-      setCurrentUpdateFn(update)
-      renderFn()
-      setCurrentUpdateFn(prev)
-    }
-
-    // 初次渲染 + 注册依赖
-    update()
+    mountComponent(
+      () => component({}),
+      container,
+      {
+        update: (nodes, el) => {
+          if (this.options.clearContainer) {
+            (el as HTMLElement).innerHTML = ''
+          }
+          nodes.forEach(n => el.appendChild(n))
+        },
+      },
+    )
   }
 }
 
