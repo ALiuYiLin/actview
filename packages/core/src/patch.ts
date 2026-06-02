@@ -223,6 +223,11 @@ function patchProps(
       if (key === 'children' || key === 'key' || key === 'ref' || key === '__source') continue
       const oldVal = oldProps ? oldProps[key] : undefined
       if (oldVal !== value) {
+        // 事件处理：先移除旧 handler，再绑新 handler
+        if (key.startsWith('on') && typeof oldVal === 'function') {
+          const eventName = key.slice(2).toLowerCase()
+          el.removeEventListener(eventName, oldVal as EventListener)
+        }
         setProp(el, key, value)
       }
     }
