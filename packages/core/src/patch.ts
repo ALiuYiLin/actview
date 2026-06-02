@@ -7,7 +7,7 @@
 //   子节点数组 → 索引对齐递归 patch
 // ============================================================
 import { Fragment, type VNode, type VNodeChildren } from '@actview/jsx'
-import { render } from './render'
+import { render, mountEvent } from './render'
 
 // ============================================================
 // removeNode — 递归移除 VNode 关联的 DOM
@@ -223,11 +223,6 @@ function patchProps(
       if (key === 'children' || key === 'key' || key === 'ref' || key === '__source') continue
       const oldVal = oldProps ? oldProps[key] : undefined
       if (oldVal !== value) {
-        // 事件处理：先移除旧 handler，再绑新 handler
-        if (key.startsWith('on') && typeof oldVal === 'function') {
-          const eventName = key.slice(2).toLowerCase()
-          el.removeEventListener(eventName, oldVal as EventListener)
-        }
         setProp(el, key, value)
       }
     }
@@ -236,11 +231,14 @@ function patchProps(
 
 // ============================================================
 // setProp — 在元素上设置属性/事件
+//
+// 事件采用 invoker 模式（同 Vue）：
+//   首次绑一个固定的包装函数 invoker 到 DOM，
+//   后续更新只改 invoker.value 引用，不碰 DOM。
 // ============================================================
 function setProp(el: HTMLElement, key: string, value: unknown) {
   if (key.startsWith('on')) {
-    const eventName = key.slice(2).toLowerCase()
-    el.addEventListener(eventName, value as EventListener)
+    mountEvent(el, key, value as EventListener)
   } else if (key === 'className' || key === 'class') {
     el.setAttribute('class', value as string)
   } else if (key === 'style') {

@@ -112,9 +112,7 @@ export function applyProps(el: HTMLElement, props: Record<string, unknown>) {
     }
 
     if (key.startsWith('on')) {
-      // 事件绑定：onclick → click
-      const eventName = key.slice(2).toLowerCase() as string
-      el.addEventListener(eventName, value as EventListener)
+      mountEvent(el, key, value as EventListener)
     } else if (key === 'className') {
       el.setAttribute('class', value as string)
     } else if (key === 'class') {
@@ -149,5 +147,30 @@ export function applyProps(el: HTMLElement, props: Record<string, unknown>) {
       // 兜底：尝试 setAttribute
       el.setAttribute(key, String(value))
     }
+  }
+}
+
+// ============================================================
+// mountEvent — invoker 模式绑定事件
+// 首次绑一个固定的包装函数 invoker 到 DOM，
+// 后续更新只改 invoker.value 引用，不碰 DOM。
+// ============================================================
+export function mountEvent(el: HTMLElement, key: string, handler: EventListener) {
+  const elAny = el as unknown as Record<string, unknown>
+  let invokers = elAny._inv as Record<string, Function> | undefined
+  if (!invokers) {
+    invokers = {}
+    elAny._inv = invokers
+  }
+
+  let invoker = invokers[key] as undefined | (EventListener & { value: EventListener })
+
+  if (!invoker) {
+    invoker = ((e: Event) => invoker!.value(e)) as EventListener & { value: EventListener }
+    invoker.value = handler
+    ;(invokers as Record<string, unknown>)[key] = invoker
+    el.addEventListener(key.slice(2).toLowerCase(), invoker)
+  } else {
+    invoker.value = handler
   }
 }
