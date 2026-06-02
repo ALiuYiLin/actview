@@ -2,63 +2,7 @@
 // VNode → 真实 DOM 的渲染器
 // ============================================================
 import { Fragment, type VNodeChildren } from '@actview/jsx'
-import { getCurrentUpdateFn, setCurrentUpdateFn } from './reactivity/update'
-
-// ============================================================
-// MountTarget — 挂载策略接口
-// 将新旧 DOM 的替换逻辑剥离到外部，供 App.mount 和 render 组件分支各自实现。
-//
-//   nodes     新渲染出的 DOM 节点列表
-//   container 挂载容器（父节点或锚点所在容器）
-//
-// 未来 diff/patch 替换 doRender 即可，此接口不变。
-// ============================================================
-export interface MountTarget {
-  update(nodes: Node[], container: Node): void
-}
-
-// ============================================================
-// mountComponent — 统一组件挂载逻辑
-//
-// 负责：setup → render → mount → 响应式订阅
-// 被 App.mount 和 render() 的组件分支共同调用。
-//
-// 未来 diff/patch 改良点：
-//   doRender 中 render(renderFn()) 全量重建 → patch(oldVNode, renderFn())
-// ============================================================
-export function mountComponent(
-  componentFn: (props: Record<string, unknown>) => () => VNodeChildren,
-  container: Node,
-  apply: MountTarget,
-  props: Record<string, unknown> = {},
-): { refresh: () => void } {
-  // ① setup — 调用组件函数拿到 render 函数
-  const renderFn = componentFn(props)
-
-  // ② doRender — 执行 render → VNode → DOM → apply
-  const doRender = () => {
-    const vnode = renderFn()
-    const dom = render(vnode)
-    const nodes = Array.isArray(dom) ? dom : [dom]
-    apply.update(nodes, container)
-  }
-
-  // ③ refresh — 响应式更新函数
-  const refresh = () => {
-    const prev = getCurrentUpdateFn()
-    setCurrentUpdateFn(refresh)
-    doRender()
-    setCurrentUpdateFn(prev)
-  }
-
-  // ④ 初次渲染（劫持父级上下文，使 ref 订阅 refresh 而非父级的 update）
-  const prev = getCurrentUpdateFn()
-  setCurrentUpdateFn(refresh)
-  doRender()
-  setCurrentUpdateFn(prev)
-
-  return { refresh }
-}
+import { mountComponent } from './component'
 
 // ============================================================
 // render：将 VNode 递归转换为真实 DOM 节点
@@ -160,7 +104,7 @@ export function render(vnode: VNodeChildren): Node | Node[] {
 // ============================================================
 // 将 props 应用到 DOM 元素
 // ============================================================
-function applyProps(el: HTMLElement, props: Record<string, unknown>) {
+export function applyProps(el: HTMLElement, props: Record<string, unknown>) {
   for (const [key, value] of Object.entries(props)) {
     // 跳过内部属性
     if (key === 'children' || key === 'key' || key === 'ref' || key === '__source') {

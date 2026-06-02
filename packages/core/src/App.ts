@@ -3,7 +3,7 @@
 // 负责将组件挂载到指定 DOM 容器
 // ============================================================
 import type { Component } from '@actview/jsx'
-import { mountComponent } from './render'
+import { mountComponent } from './component'
 
 export interface AppOptions {
   /** 挂载前清空容器（默认 true） */
