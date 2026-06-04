@@ -9,6 +9,9 @@ export const Fragment: unique symbol = Symbol.for('actview.fragment')
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Component<P = any> = (props: P) => () => VNode
 
+/** VNode 的 type 字段允许的类型：HTML 标签名、组件函数、Fragment */
+export type VNodeTypes = string | Component | typeof Fragment
+
 /** VNode 的可序列化 key */
 export type VNodeKey = string | number | null
 

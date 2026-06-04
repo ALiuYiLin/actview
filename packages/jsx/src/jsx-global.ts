@@ -7,6 +7,8 @@
 // @actview/jsx（或通过 jsxImportSource 间接引用）就会生效。
 // ============================================================
 
+import { VNode, VNodeTypes } from './types';
+
 /* eslint-disable @typescript-eslint/no-namespace */
 
 declare global {
@@ -14,7 +16,13 @@ declare global {
     // 不定义 Element，JSX 表达式类型 fallback 为 any。
     // 组件返回类型校验被绕过，兼容 () => () => VNode 模式。
     // VNode 类型安全由 jsx() 的返回类型和组件显式标注保证。
+    type Element = VNode
+    type ElementType = VNodeTypes;
+    type ArrayElement = VNode[];
+    type Child = VNode | string | number | boolean | null | undefined;
+    type Children = Child | Child[];
 
+      
     interface IntrinsicElements {
       div: Attrs
       span: Attrs
