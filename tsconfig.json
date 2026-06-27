@@ -13,10 +13,6 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* Allow reading .js files for the JSX factory runtime */
-    "allowJs": true,
-    "checkJs": false,
-
     "jsx": "react-jsx",
     "jsxImportSource": "@local/jsx-factory",
 
@@ -32,5 +28,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
   },
-  "include": ["src", "packages/jsx/global.d.ts"]
+  "include": ["src", "packages/jsx/src/global.ts"]
 }

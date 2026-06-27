@@ -13,4 +13,4 @@ export {
   isLazyType,
   Fragment,
   ElementType,
-} from '../jsxFactory.js';
+} from './jsxFactory.js';

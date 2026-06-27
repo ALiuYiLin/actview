@@ -14,43 +14,42 @@
  *
  * Usage:
  *   // Configure at app startup (BEFORE any JSX calls):
- *   import { initJsxFactory } from './jsxFactory.js';
+ *   import { initJsxFactory } from './jsxFactory';
  *   initJsxFactory({ devMode: true });
  *
- *   // Automatic JSX transform (configure in tsconfig / Babel):
- *   { "jsxImportSource": "your-framework" }  // → imports jsx, jsxs, jsxDEV
+ *   // Automatic JSX transform:
+ *   { "jsxImportSource": "@local/jsx-factory" }
  *
  *   // Classic createElement:
- *   import { createElement } from './jsxFactory.js';
+ *   import { createElement } from '@local/jsx-factory';
  */
 
 // =============================================================================
 // Configuration (set via initJsxFactory() before first use)
 // =============================================================================
 
-/** @type {boolean} */
 let __DEV__ = false;
-
-/** @type {boolean} */
 let enableOptimisticKey = false;
-
-/** @type {boolean} */
 let enableViewTransition = true;
-
-/** @type {boolean} */
 let enableTransitionTracing = false;
 
-/** @type {{ getOwner?: () => any, recentlyCreatedOwnerStacks?: number }} */
-let dispatcher = {
+interface Dispatcher {
+  getOwner?: () => any;
+  recentlyCreatedOwnerStacks?: number;
+}
+
+let dispatcher: Dispatcher = {
   getOwner: () => null,
   recentlyCreatedOwnerStacks: 0,
 };
 
-/**
- * Initialize the JSX factory. Call this once at app startup before any
- * JSX calls. This is the only way to reliably set DEV mode and other flags.
- */
-export function initJsxFactory(options) {
+export function initJsxFactory(options?: {
+  devMode?: boolean;
+  enableOptimisticKey?: boolean;
+  enableViewTransition?: boolean;
+  enableTransitionTracing?: boolean;
+  dispatcher?: Dispatcher;
+}) {
   if (options) {
     __DEV__ = !!options.devMode;
     enableOptimisticKey = !!options.enableOptimisticKey;
@@ -64,13 +63,12 @@ export function initJsxFactory(options) {
       dispatcher = options.dispatcher;
     }
   }
-  // Lazily initialize DEV-only globals if we're in DEV mode now.
   if (__DEV__) {
     initDevGlobals();
   }
 }
 
-export function setDispatcher(d) {
+export function setDispatcher(d: Dispatcher) {
   dispatcher = d;
 }
 
@@ -86,8 +84,6 @@ const REACT_ELEMENT_TYPE = Symbol.for('react.transitional.element');
 const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment');
 const REACT_LAZY_TYPE = Symbol.for('react.lazy');
 const REACT_OPTIMISTIC_KEY = Symbol.for('react.optimistic_key');
-
-// Additional symbols used by getComponentNameFromType
 const REACT_PORTAL_TYPE = Symbol.for('react.portal');
 const REACT_CONTEXT_TYPE = Symbol.for('react.context');
 const REACT_CONSUMER_TYPE = Symbol.for('react.consumer');
@@ -110,11 +106,7 @@ const hasOwnProperty = Object.prototype.hasOwnProperty;
 const assign = Object.assign;
 const isArray = Array.isArray;
 
-/**
- * DEV-only: check that a value being coerced to string won't throw.
- * In production this is a no-op.
- */
-function checkKeyStringCoercion(value) {
+function checkKeyStringCoercion(value: any) {
   if (__DEV__) {
     if (willCoercionThrow(value)) {
       console.error(
@@ -122,24 +114,23 @@ function checkKeyStringCoercion(value) {
           ' This value must be coerced to a string before using it here.',
         typeName(value),
       );
-      // throw to help callers find troubleshooting comments
       testStringCoercion(value);
     }
   }
 }
 
-function typeName(value) {
+function typeName(value: any): string | undefined {
   if (__DEV__) {
     const hasToStringTag = typeof Symbol === 'function' && Symbol.toStringTag;
     const type =
       (hasToStringTag && value[Symbol.toStringTag]) ||
-      value.constructor.name ||
+      value.constructor?.name ||
       'Object';
     return type;
   }
 }
 
-function willCoercionThrow(value) {
+function willCoercionThrow(value: any): boolean | undefined {
   if (__DEV__) {
     try {
       testStringCoercion(value);
@@ -150,8 +141,7 @@ function willCoercionThrow(value) {
   }
 }
 
-/** @noinline */
-function testStringCoercion(value) {
+function testStringCoercion(value: any): string | undefined {
   if (__DEV__) {
     return '' + value;
   }
@@ -161,7 +151,7 @@ function testStringCoercion(value) {
 // getComponentNameFromType — adapted from React
 // =============================================================================
 
-function getWrappedName(outerType, innerType, wrapperName) {
+function getWrappedName(outerType: any, innerType: any, wrapperName: string) {
   const displayName = outerType.displayName;
   if (displayName) {
     return displayName;
@@ -172,11 +162,11 @@ function getWrappedName(outerType, innerType, wrapperName) {
     : wrapperName;
 }
 
-function getContextName(type) {
+function getContextName(type: any) {
   return type.displayName || 'Context';
 }
 
-export function getComponentNameFromType(type) {
+export function getComponentNameFromType(type: any): string | null {
   if (type == null) {
     return null;
   }
@@ -206,7 +196,7 @@ export function getComponentNameFromType(type) {
       if (enableViewTransition) {
         return 'ViewTransition';
       }
-    // Fall through
+      break;
     case REACT_TRACING_MARKER_TYPE:
       if (enableTransitionTracing) {
         return 'TracingMarker';
@@ -247,12 +237,12 @@ export function getComponentNameFromType(type) {
 // Owner / Debug utilities (DEV only)
 // =============================================================================
 
-const createTask =
-  typeof console !== 'undefined' && console.createTask
-    ? console.createTask
+const createTaskFn =
+  typeof console !== 'undefined' && (console as any).createTask
+    ? (console as any).createTask
     : () => null;
 
-function getTaskName(type) {
+function getTaskName(type: any): string {
   if (type === REACT_FRAGMENT_TYPE) {
     return '<>';
   }
@@ -279,28 +269,23 @@ function getOwner() {
 
 const ownerStackTraceLimit = 10;
 
-/** @noinline */
 function UnknownOwner() {
   return (() => Error('react-stack-top-frame'))();
 }
 
 const createFakeCallStack = {
-  react_stack_bottom_frame: function (callStackForError) {
+  react_stack_bottom_frame: function (callStackForError: () => Error) {
     return callStackForError();
   },
 };
 
 let _devInitialized = false;
-let specialPropKeyWarningShown;
-let didWarnAboutElementRef;
-let didWarnAboutOldJSXRuntime;
-let unknownOwnerDebugStack;
-let unknownOwnerDebugTask;
+let specialPropKeyWarningShown: boolean | undefined;
+let didWarnAboutElementRef: Record<string, boolean> | undefined;
+let didWarnAboutOldJSXRuntime: boolean | undefined;
+let unknownOwnerDebugStack: Error | undefined;
+let unknownOwnerDebugTask: any;
 
-/**
- * Lazily initialize DEV-only globals. Safe to call multiple times.
- * Must only be called when __DEV__ is true.
- */
 function initDevGlobals() {
   if (_devInitialized) return;
   _devInitialized = true;
@@ -310,14 +295,14 @@ function initDevGlobals() {
     createFakeCallStack,
     UnknownOwner,
   )();
-  unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
+  unknownOwnerDebugTask = createTaskFn(getTaskName(UnknownOwner));
 }
 
-function hasValidRef(config) {
+function hasValidRef(config: any) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'ref')) {
-      const getter = Object.getOwnPropertyDescriptor(config, 'ref').get;
-      if (getter && getter.isReactWarning) {
+      const getter = Object.getOwnPropertyDescriptor(config, 'ref')?.get;
+      if (getter && (getter as any).isReactWarning) {
         return false;
       }
     }
@@ -325,11 +310,11 @@ function hasValidRef(config) {
   return config.ref !== undefined;
 }
 
-function hasValidKey(config) {
+function hasValidKey(config: any) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'key')) {
-      const getter = Object.getOwnPropertyDescriptor(config, 'key').get;
-      if (getter && getter.isReactWarning) {
+      const getter = Object.getOwnPropertyDescriptor(config, 'key')?.get;
+      if (getter && (getter as any).isReactWarning) {
         return false;
       }
     }
@@ -337,9 +322,9 @@ function hasValidKey(config) {
   return config.key !== undefined;
 }
 
-function defineKeyPropWarningGetter(props, displayName) {
+function defineKeyPropWarningGetter(props: any, displayName: string) {
   if (__DEV__) {
-    const warnAboutAccessingKey = function () {
+    const warnAboutAccessingKey = function (this: any) {
       if (!specialPropKeyWarningShown) {
         specialPropKeyWarningShown = true;
         console.error(
@@ -351,7 +336,7 @@ function defineKeyPropWarningGetter(props, displayName) {
         );
       }
     };
-    warnAboutAccessingKey.isReactWarning = true;
+    (warnAboutAccessingKey as any).isReactWarning = true;
     Object.defineProperty(props, 'key', {
       get: warnAboutAccessingKey,
       configurable: true,
@@ -359,10 +344,10 @@ function defineKeyPropWarningGetter(props, displayName) {
   }
 }
 
-function elementRefGetterWithDeprecationWarning() {
+function elementRefGetterWithDeprecationWarning(this: any) {
   if (__DEV__) {
     const componentName = getComponentNameFromType(this.type);
-    if (!didWarnAboutElementRef[componentName]) {
+    if (didWarnAboutElementRef && componentName && !didWarnAboutElementRef[componentName]) {
       didWarnAboutElementRef[componentName] = true;
       console.error(
         'Accessing element.ref was removed in React 19. ref is now a ' +
@@ -379,15 +364,24 @@ function elementRefGetterWithDeprecationWarning() {
 // Core: ReactElement
 // =============================================================================
 
-/**
- * Factory method to create a new React element.
- * @internal
- */
-function ReactElement(type, key, props, owner, debugStack, debugTask) {
+interface ReactElement {
+  $$typeof: symbol;
+  type: any;
+  key: any;
+  ref?: any;
+  props: any;
+  _owner?: any;
+  _store?: any;
+  _debugInfo?: any;
+  _debugStack?: any;
+  _debugTask?: any;
+}
+
+function ReactElement(type: any, key: any, props: any, owner: any, debugStack: any, debugTask: any): ReactElement {
   const refProp = props.ref;
   const ref = refProp !== undefined ? refProp : null;
 
-  let element;
+  let element: ReactElement;
   if (__DEV__) {
     element = {
       $$typeof: REACT_ELEMENT_TYPE,
@@ -454,17 +448,13 @@ function ReactElement(type, key, props, owner, debugStack, debugTask) {
 
 // ── Lazy VNode marker & helpers ──
 const LAZY_VNODE = Symbol('lazy.vnode');
-const resolveChild = c => c?.[LAZY_VNODE] ? c() : c;
+const resolveChild = (c: any) => c?.[LAZY_VNODE] ? c() : c;
 
 // =============================================================================
 // JSX Runtime API (automatic transform target)
 // =============================================================================
 
-/**
- * Production JSX factory — also used in DEV for the hot path.
- * Signature matches what the automatic JSX transform calls.
- */
-export function jsx(type, config, maybeKey) {
+export function jsx(type: any, config: any, maybeKey?: any) {
   let key = null;
 
   if (maybeKey !== undefined) {
@@ -489,7 +479,7 @@ export function jsx(type, config, maybeKey) {
     }
   }
 
-  let props;
+  let props: any;
   if (!('key' in config)) {
     props = config;
   } else {
@@ -504,7 +494,7 @@ export function jsx(type, config, maybeKey) {
   // Resolve lazy children
   if (props) {
     if (Array.isArray(props.children)) {
-      props.children = props.children.map(c => resolveChild(c));
+      props.children = props.children.map((c: any) => resolveChild(c));
     } else {
       props.children = resolveChild(props.children);
     }
@@ -512,18 +502,11 @@ export function jsx(type, config, maybeKey) {
 
   const _el = ReactElement(type, key, props, getOwner(), undefined, undefined);
   const lazy = () => _el;
-  lazy[LAZY_VNODE] = true;
+  (lazy as any)[LAZY_VNODE] = true;
   return lazy;
 }
 
-/**
- * Alias for the dynamic-children variant (jsxs).
- * In the original code, `jsxs` is `jsxProdSignatureRunningInDevWithStaticChildren`
- * or just `jsxProd` — here `jsxs` is identical to `jsx` except in DEV mode
- * where it validates that children are in an array.
- */
-export function jsxs(type, config, maybeKey) {
-  // In production, jsxs is identical to jsx.
+export function jsxs(type: any, config: any, maybeKey?: any) {
   if (__DEV__) {
     const isStaticChildren = true;
     return jsxDEVImpl(
@@ -532,7 +515,7 @@ export function jsxs(type, config, maybeKey) {
       maybeKey,
       isStaticChildren,
       getDebugStack(),
-      __DEV__ ? createTask(getTaskName(type)) : undefined,
+      __DEV__ ? createTaskFn(getTaskName(type)) : undefined,
     );
   }
   return jsx(type, config, maybeKey);
@@ -540,18 +523,18 @@ export function jsxs(type, config, maybeKey) {
 
 // --- DEV-only helpers ---
 
-export function jsxProdSignatureRunningInDevWithDynamicChildren(type, config, maybeKey) {
+export function jsxProdSignatureRunningInDevWithDynamicChildren(type: any, config: any, maybeKey?: any) {
   if (__DEV__) {
     const isStaticChildren = false;
     const trackActualOwner =
-      __DEV__ && dispatcher.recentlyCreatedOwnerStacks++ < 1e4;
-    let debugStackDEV = false;
+      __DEV__ && dispatcher.recentlyCreatedOwnerStacks!++ < 1e4;
+    let debugStackDEV: any = false;
     if (__DEV__) {
       if (trackActualOwner) {
-        const previousStackTraceLimit = Error.stackTraceLimit;
-        Error.stackTraceLimit = ownerStackTraceLimit;
+        const previousStackTraceLimit = (Error as any).stackTraceLimit;
+        (Error as any).stackTraceLimit = ownerStackTraceLimit;
         debugStackDEV = Error('react-stack-top-frame');
-        Error.stackTraceLimit = previousStackTraceLimit;
+        (Error as any).stackTraceLimit = previousStackTraceLimit;
       } else {
         debugStackDEV = unknownOwnerDebugStack;
       }
@@ -564,24 +547,24 @@ export function jsxProdSignatureRunningInDevWithDynamicChildren(type, config, ma
       debugStackDEV,
       __DEV__ &&
         (trackActualOwner
-          ? createTask(getTaskName(type))
+          ? createTaskFn(getTaskName(type))
           : unknownOwnerDebugTask),
     );
   }
 }
 
-export function jsxProdSignatureRunningInDevWithStaticChildren(type, config, maybeKey) {
+export function jsxProdSignatureRunningInDevWithStaticChildren(type: any, config: any, maybeKey?: any) {
   if (__DEV__) {
     const isStaticChildren = true;
     const trackActualOwner =
-      __DEV__ && dispatcher.recentlyCreatedOwnerStacks++ < 1e4;
-    let debugStackDEV = false;
+      __DEV__ && dispatcher.recentlyCreatedOwnerStacks!++ < 1e4;
+    let debugStackDEV: any = false;
     if (__DEV__) {
       if (trackActualOwner) {
-        const previousStackTraceLimit = Error.stackTraceLimit;
-        Error.stackTraceLimit = ownerStackTraceLimit;
+        const previousStackTraceLimit = (Error as any).stackTraceLimit;
+        (Error as any).stackTraceLimit = ownerStackTraceLimit;
         debugStackDEV = Error('react-stack-top-frame');
-        Error.stackTraceLimit = previousStackTraceLimit;
+        (Error as any).stackTraceLimit = previousStackTraceLimit;
       } else {
         debugStackDEV = unknownOwnerDebugStack;
       }
@@ -594,25 +577,22 @@ export function jsxProdSignatureRunningInDevWithStaticChildren(type, config, may
       debugStackDEV,
       __DEV__ &&
         (trackActualOwner
-          ? createTask(getTaskName(type))
+          ? createTaskFn(getTaskName(type))
           : unknownOwnerDebugTask),
     );
   }
 }
 
-/**
- * Development-only JSX factory entry point.
- */
-export function jsxDEV(type, config, maybeKey, isStaticChildren) {
+export function jsxDEV(type: any, config: any, maybeKey?: any, isStaticChildren?: any) {
   const trackActualOwner =
-    __DEV__ && dispatcher.recentlyCreatedOwnerStacks++ < 1e4;
-  let debugStackDEV = false;
+    __DEV__ && dispatcher.recentlyCreatedOwnerStacks!++ < 1e4;
+  let debugStackDEV: any = false;
   if (__DEV__) {
     if (trackActualOwner) {
-      const previousStackTraceLimit = Error.stackTraceLimit;
-      Error.stackTraceLimit = ownerStackTraceLimit;
+      const previousStackTraceLimit = (Error as any).stackTraceLimit;
+      (Error as any).stackTraceLimit = ownerStackTraceLimit;
       debugStackDEV = Error('react-stack-top-frame');
-      Error.stackTraceLimit = previousStackTraceLimit;
+      (Error as any).stackTraceLimit = previousStackTraceLimit;
     } else {
       debugStackDEV = unknownOwnerDebugStack;
     }
@@ -625,24 +605,24 @@ export function jsxDEV(type, config, maybeKey, isStaticChildren) {
     debugStackDEV,
     __DEV__ &&
       (trackActualOwner
-        ? createTask(getTaskName(type))
+        ? createTaskFn(getTaskName(type))
         : unknownOwnerDebugTask),
   );
 }
 
 // --- Internal DEV implementation ---
 
-const didWarnAboutKeySpread = {};
+const didWarnAboutKeySpread: Record<string, boolean> = {};
 
 function getDebugStack() {
   const trackActualOwner =
-    __DEV__ && dispatcher.recentlyCreatedOwnerStacks++ < 1e4;
+    __DEV__ && dispatcher.recentlyCreatedOwnerStacks!++ < 1e4;
   if (__DEV__) {
     if (trackActualOwner) {
-      const previousStackTraceLimit = Error.stackTraceLimit;
-      Error.stackTraceLimit = ownerStackTraceLimit;
+      const previousStackTraceLimit = (Error as any).stackTraceLimit;
+      (Error as any).stackTraceLimit = ownerStackTraceLimit;
       const stack = Error('react-stack-top-frame');
-      Error.stackTraceLimit = previousStackTraceLimit;
+      (Error as any).stackTraceLimit = previousStackTraceLimit;
       return stack;
     } else {
       return unknownOwnerDebugStack;
@@ -650,7 +630,7 @@ function getDebugStack() {
   }
 }
 
-function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugTask) {
+function jsxDEVImpl(type: any, config: any, maybeKey: any, isStaticChildren: any, debugStack: any, debugTask: any) {
   // ── DEV validation ──
   if (__DEV__) {
     const children = config.children;
@@ -675,7 +655,6 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
       }
     }
 
-    // Warn about key spread
     if (hasOwnProperty.call(config, 'key')) {
       const componentName = getComponentNameFromType(type);
       const keys = Object.keys(config).filter(k => k !== 'key');
@@ -683,7 +662,7 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
         keys.length > 0
           ? '{key: someKey, ' + keys.join(': ..., ') + ': ...}'
           : '{key: someKey}';
-      if (!didWarnAboutKeySpread[componentName + beforeExample]) {
+      if (componentName && !didWarnAboutKeySpread[componentName + beforeExample]) {
         const afterExample =
           keys.length > 0 ? '{' + keys.join(': ..., ') + ': ...}' : '{}';
         console.error(
@@ -704,7 +683,7 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
   }
 
   // ── Core element creation (always runs) ──
-  let key = null;
+  let key: any = null;
 
   if (maybeKey !== undefined) {
     if (enableOptimisticKey && maybeKey === REACT_OPTIMISTIC_KEY) {
@@ -728,7 +707,7 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
     }
   }
 
-  let props;
+  let props: any;
   if (!('key' in config)) {
     props = config;
   } else {
@@ -743,7 +722,7 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
   // Resolve lazy children
   if (props) {
     if (Array.isArray(props.children)) {
-      props.children = props.children.map(c => resolveChild(c));
+      props.children = props.children.map((c: any) => resolveChild(c));
     } else {
       props.children = resolveChild(props.children);
     }
@@ -759,7 +738,7 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
 
   const _el = ReactElement(type, key, props, getOwner(), debugStack, debugTask);
   const lazy = () => _el;
-  lazy[LAZY_VNODE] = true;
+  (lazy as any)[LAZY_VNODE] = true;
   return lazy;
 }
 
@@ -767,20 +746,16 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
 // Classic API: createElement / cloneElement
 // =============================================================================
 
-/**
- * Create and return a new ReactElement of the given type.
- * See https://reactjs.org/docs/react-api.html#createelement
- */
-export function createElement(type, config, children) {
+export function createElement(type: any, config: any, children?: any) {
   if (__DEV__) {
     for (let i = 2; i < arguments.length; i++) {
       validateChildKeys(arguments[i]);
     }
   }
 
-  let propName;
-  const props = {};
-  let key = null;
+  let propName: string | undefined;
+  const props: Record<string, any> = {};
+  let key: any = null;
 
   if (config != null) {
     if (__DEV__) {
@@ -857,20 +832,20 @@ export function createElement(type, config, children) {
   }
 
   const trackActualOwner =
-    __DEV__ && dispatcher.recentlyCreatedOwnerStacks++ < 1e4;
-  let debugStackDEV = false;
+    __DEV__ && dispatcher.recentlyCreatedOwnerStacks!++ < 1e4;
+  let debugStackDEV: any = false;
   if (__DEV__) {
     if (trackActualOwner) {
-      const previousStackTraceLimit = Error.stackTraceLimit;
-      Error.stackTraceLimit = ownerStackTraceLimit;
+      const previousStackTraceLimit = (Error as any).stackTraceLimit;
+      (Error as any).stackTraceLimit = ownerStackTraceLimit;
       debugStackDEV = Error('react-stack-top-frame');
-      Error.stackTraceLimit = previousStackTraceLimit;
+      (Error as any).stackTraceLimit = previousStackTraceLimit;
     } else {
       debugStackDEV = unknownOwnerDebugStack;
     }
   }
 
-  return ReactElement(
+  const _el = ReactElement(
     type,
     key,
     props,
@@ -878,12 +853,15 @@ export function createElement(type, config, children) {
     debugStackDEV,
     __DEV__ &&
       (trackActualOwner
-        ? createTask(getTaskName(type))
+        ? createTaskFn(getTaskName(type))
         : unknownOwnerDebugTask),
   );
+  const lazy = () => _el;
+  (lazy as any)[LAZY_VNODE] = true;
+  return lazy;
 }
 
-export function cloneAndReplaceKey(oldElement, newKey) {
+export function cloneAndReplaceKey(oldElement: any, newKey: any) {
   const clonedElement = ReactElement(
     oldElement.type,
     newKey,
@@ -894,24 +872,20 @@ export function cloneAndReplaceKey(oldElement, newKey) {
   );
   if (__DEV__) {
     if (oldElement._store) {
-      clonedElement._store.validated = oldElement._store.validated;
+      clonedElement._store!.validated = oldElement._store.validated;
     }
   }
   return clonedElement;
 }
 
-/**
- * Clone and return a new ReactElement using element as the starting point.
- * See https://reactjs.org/docs/react-api.html#cloneelement
- */
-export function cloneElement(element, config, children) {
+export function cloneElement(element: any, config: any, children?: any) {
   if (element === null || element === undefined) {
     throw new Error(
       'The argument must be a React element, but you passed ' + element + '.',
     );
   }
 
-  let propName;
+  let propName: string | undefined;
   const props = assign({}, element.props);
   let key = element.key;
   let owner = !__DEV__ ? undefined : element._owner;
@@ -975,7 +949,7 @@ export function cloneElement(element, config, children) {
 // Validation
 // =============================================================================
 
-function validateChildKeys(node) {
+function validateChildKeys(node: any) {
   if (__DEV__) {
     if (isValidElement(node)) {
       if (node._store) {
@@ -993,11 +967,7 @@ function validateChildKeys(node) {
   }
 }
 
-/**
- * Verifies the object is a ReactElement.
- * See https://reactjs.org/docs/react-api.html#isvalidelement
- */
-export function isValidElement(object) {
+export function isValidElement(object: any) {
   return (
     typeof object === 'object' &&
     object !== null &&
@@ -1005,7 +975,7 @@ export function isValidElement(object) {
   );
 }
 
-export function isLazyType(object) {
+export function isLazyType(object: any) {
   return (
     typeof object === 'object' &&
     object !== null &&
