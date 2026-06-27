@@ -1,7 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vite'
+import path from 'path'
 
 export default defineConfig({
   esbuild: {
-    jsxFactory: 'createElement',
+    jsx: 'automatic',
+    jsxImportSource: '@local/jsx-factory',
   },
-});
+  resolve: {
+    alias: {
+      '@local/jsx-factory': path.resolve(__dirname, 'packages/jsx/src'),
+    },
+  },
+})

@@ -452,6 +452,10 @@ function ReactElement(type, key, props, owner, debugStack, debugTask) {
   return element;
 }
 
+// ── Lazy VNode marker & helpers ──
+const LAZY_VNODE = Symbol('lazy.vnode');
+const resolveChild = c => c?.[LAZY_VNODE] ? c() : c;
+
 // =============================================================================
 // JSX Runtime API (automatic transform target)
 // =============================================================================
@@ -497,7 +501,19 @@ export function jsx(type, config, maybeKey) {
     }
   }
 
-  return ReactElement(type, key, props, getOwner(), undefined, undefined);
+  // Resolve lazy children
+  if (props) {
+    if (Array.isArray(props.children)) {
+      props.children = props.children.map(c => resolveChild(c));
+    } else {
+      props.children = resolveChild(props.children);
+    }
+  }
+
+  const _el = ReactElement(type, key, props, getOwner(), undefined, undefined);
+  const lazy = () => _el;
+  lazy[LAZY_VNODE] = true;
+  return lazy;
 }
 
 /**
@@ -635,6 +651,7 @@ function getDebugStack() {
 }
 
 function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugTask) {
+  // ── DEV validation ──
   if (__DEV__) {
     const children = config.children;
     if (children !== undefined) {
@@ -684,49 +701,66 @@ function jsxDEVImpl(type, config, maybeKey, isStaticChildren, debugStack, debugT
         didWarnAboutKeySpread[componentName + beforeExample] = true;
       }
     }
-
-    let key = null;
-
-    if (maybeKey !== undefined) {
-      if (enableOptimisticKey && maybeKey === REACT_OPTIMISTIC_KEY) {
-        key = REACT_OPTIMISTIC_KEY;
-      } else {
-        checkKeyStringCoercion(maybeKey);
-        key = '' + maybeKey;
-      }
-    }
-
-    if (hasValidKey(config)) {
-      if (enableOptimisticKey && config.key === REACT_OPTIMISTIC_KEY) {
-        key = REACT_OPTIMISTIC_KEY;
-      } else {
-        checkKeyStringCoercion(config.key);
-        key = '' + config.key;
-      }
-    }
-
-    let props;
-    if (!('key' in config)) {
-      props = config;
-    } else {
-      props = {};
-      for (const propName in config) {
-        if (propName !== 'key') {
-          props[propName] = config[propName];
-        }
-      }
-    }
-
-    if (key) {
-      const displayName =
-        typeof type === 'function'
-          ? type.displayName || type.name || 'Unknown'
-          : type;
-      defineKeyPropWarningGetter(props, displayName);
-    }
-
-    return ReactElement(type, key, props, getOwner(), debugStack, debugTask);
   }
+
+  // ── Core element creation (always runs) ──
+  let key = null;
+
+  if (maybeKey !== undefined) {
+    if (enableOptimisticKey && maybeKey === REACT_OPTIMISTIC_KEY) {
+      key = REACT_OPTIMISTIC_KEY;
+    } else {
+      if (__DEV__) {
+        checkKeyStringCoercion(maybeKey);
+      }
+      key = '' + maybeKey;
+    }
+  }
+
+  if (hasValidKey(config)) {
+    if (enableOptimisticKey && config.key === REACT_OPTIMISTIC_KEY) {
+      key = REACT_OPTIMISTIC_KEY;
+    } else {
+      if (__DEV__) {
+        checkKeyStringCoercion(config.key);
+      }
+      key = '' + config.key;
+    }
+  }
+
+  let props;
+  if (!('key' in config)) {
+    props = config;
+  } else {
+    props = {};
+    for (const propName in config) {
+      if (propName !== 'key') {
+        props[propName] = config[propName];
+      }
+    }
+  }
+
+  // Resolve lazy children
+  if (props) {
+    if (Array.isArray(props.children)) {
+      props.children = props.children.map(c => resolveChild(c));
+    } else {
+      props.children = resolveChild(props.children);
+    }
+  }
+
+  if (__DEV__ && key) {
+    const displayName =
+      typeof type === 'function'
+        ? type.displayName || type.name || 'Unknown'
+        : type;
+    defineKeyPropWarningGetter(props, displayName);
+  }
+
+  const _el = ReactElement(type, key, props, getOwner(), debugStack, debugTask);
+  const lazy = () => _el;
+  lazy[LAZY_VNODE] = true;
+  return lazy;
 }
 
 // =============================================================================

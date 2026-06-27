@@ -10,7 +10,8 @@
   },
   "devDependencies": {
     "@local/jsx-factory": "workspace:*",
+    "@types/node": "^26.0.1",
     "typescript": "~6.0.2",
-    "vite": "^8.1.0"
+    "vite": "^6.4.3"
   }
 }

@@ -17,14 +17,20 @@
     "allowJs": true,
     "checkJs": false,
 
-    "jsx": "react",
-    "jsxFactory": "createElement",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@local/jsx-factory",
+
+    /* Path aliases — resolves @local/jsx-factory to packages/jsx/src */
+    "paths": {
+      "@local/jsx-factory": ["./packages/jsx/src/index.ts"],
+      "@local/jsx-factory/*": ["./packages/jsx/src/*"]
+    },
 
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
   },
   "include": ["src", "packages/jsx/global.d.ts"]
 }
