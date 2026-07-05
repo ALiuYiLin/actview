@@ -1,8 +1,19 @@
 
 
 
-let a = 1
-const app = (<div onclick={()=>a++}>{a}</div>)
+import { reactive } from '@local/core'
+import { runEffect } from '../packages/core/src/runtime/reactive-system'
 
-console.log('app: ', app);
-console.log('app: ', app());
+const state = reactive({ count: 0, ok: false })
+
+
+runEffect(()=>{
+  if(!state.ok){
+    console.log('count', state.count);
+  }
+})
+state.count++
+state.ok = true
+state.count++
+
+

@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@local/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@local/jsx-factory':
         specifier: workspace:*
         version: link:packages/jsx

@@ -1,17 +1,17 @@
-import { Dep } from "../types"
+import type { Dep } from "../types"
 
 export class ReactiveEffect {
-  deps: Dep[] | null
+  deps: Dep[]
   private fn: ()=> void
   constructor(fn: ()=> void){
     this.fn = fn
-    this.deps = null
+    this.deps = []
   }
   public run(){
     cleanupEffect(this)
     const preEffect = activeEffect
     activeEffect = this
-    this.run()
+    this.fn()
     activeEffect = preEffect
   }
 }
@@ -29,18 +29,34 @@ let activeEffect: ReactiveEffect | null = null
 const targetMap = new WeakMap<object,Map<PropertyKey,Dep>>()
 
 export function track(target: object, key: PropertyKey){
-  if(activeEffect === null) return
-  const keyDepMap = targetMap.get(target) || new Map<PropertyKey, Dep>()
-  const dep = keyDepMap.get(key) || new Set<ReactiveEffect>()
-  dep.add(activeEffect)
+  if(!activeEffect) return
+  let depsMap = targetMap.get(target)
+
+  if(!depsMap){
+    depsMap = new Map()
+    targetMap.set(target,depsMap)
+  }
+
+  let dep = depsMap.get(key)
+
+  if(!dep){
+    dep = new Set()
+    depsMap.set(key, dep)
+  }
+
+  if(!dep.has(activeEffect)){
+    dep.add(activeEffect)
+    activeEffect.deps.push(dep)
+  }
 }
 
+
 export function trigger(target: object, key: PropertyKey){
-  const keyDepMap = targetMap.get(target)
-  if(!keyDepMap) return
-  const dep = keyDepMap.get(key)
+  const depsMap = targetMap.get(target)
+  if(!depsMap) return
+  const dep = depsMap.get(key)
   if(!dep) return
-  const effects = Array.from(dep)
+  const effects = new Set(dep)
   effects.forEach(effect => effect.run())
 }
 
