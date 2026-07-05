@@ -21,6 +21,12 @@ importers:
         specifier: ^6.4.3
         version: 6.4.3(@types/node@26.0.1)
 
+  packages/core:
+    dependencies:
+      '@local/jsx-factory':
+        specifier: workspace:*
+        version: link:../jsx
+
   packages/jsx: {}
 
 packages:

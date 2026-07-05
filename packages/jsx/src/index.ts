@@ -14,3 +14,6 @@ export {
   Fragment,
   ElementType,
 } from './jsxFactory.js';
+
+export type { VNode, VNodeTypes, VNodeKey, VNodeChild, VNodeChildren, LazyVNode } from './types.js';
+export type { HtmlProps, InputProps } from './types.js';
