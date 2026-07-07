@@ -1,19 +1,20 @@
 
 
 
-import { reactive } from '@local/core'
-import { runEffect } from '../packages/core/src/runtime/reactive-system'
-
-const state = reactive({ count: 0, ok: false })
-
-
-runEffect(()=>{
-  if(!state.ok){
-    console.log('count', state.count);
-  }
-})
-state.count++
-state.ok = true
-state.count++
+import { mountComponent } from '@local/core'
+function MyButton(){
+  console.log("@@@");
+  return <button>1234</button>
+}
+function App(){
+  return (
+  <div class="app">
+    <span>111</span>
+    <MyButton></MyButton>
+  </div>
+  )
+}
+const container = document.getElementById('app')!
+mountComponent(App, container)
 
 

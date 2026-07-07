@@ -3,4 +3,4 @@ import { ReactiveEffect } from "./runtime/reactive-system";
 
 type Dep = Set<ReactiveEffect>
 
-type ActViewComponent = () => LazyVNode
+export type ActViewComponent = (props?: Record<string, any>) => LazyVNode

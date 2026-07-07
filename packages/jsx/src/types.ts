@@ -11,8 +11,9 @@ export type VNodeTypes = string | symbol | ((props: any) => any);
 /** VNode 的可序列化 key */
 export type VNodeKey = string | number | null;
 
-/** VNode 子节点 */
-export type VNodeChild = any;
+/** VNode 子节点基础单元 */
+export type VNodeChild = VNode | string | number | boolean | null | undefined;
+/** VNode 子节点 — 单个或数组 */
 export type VNodeChildren = VNodeChild | VNodeChild[];
 
 // ============================================================
@@ -25,6 +26,8 @@ export interface VNode<Type = VNodeTypes> {
   ref: any;
   props: Record<string, any> | null;
   _owner?: any;
+  /** 指向真实 DOM（渲染后挂载） */
+  el?: Node | null;
 }
 
 /** Lazy VNode — JSX 表达式实际返回的函数类型 */

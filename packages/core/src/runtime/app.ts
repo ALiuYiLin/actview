@@ -1,6 +1,7 @@
-import type { LazyVNode } from '@local/jsx-factory'
+import type { LazyVNode, VNode } from '@local/jsx-factory'
 import { runEffect } from './reactive-system'
 import { ActViewComponent } from '../types'
+import { patch } from './patch'
 
 class App {
   private rootComponent: ActViewComponent | null
@@ -11,13 +12,15 @@ class App {
     this.rootComponent = rootComponent
     return this
   }
-  public mount(rootContainer: string) {
-    const container = document.querySelector('#app')
+  public mount(selector: string) {
+    const container = document.querySelector(selector)
+    if(!container) return
     if(!this.rootComponent) return
     const render = this.rootComponent()
+    let oldVnode: VNode | null = null
     runEffect(()=>{
-      let vnode = render()
-      
+      const newVnode = render()
+      patch(oldVnode, newVnode, container)
     })
   }
 }
