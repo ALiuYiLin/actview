@@ -7,14 +7,25 @@ function MyButton(){
   return <button>1234</button>
 }
 function App(){
+  console.log('App');
   return (
-  <div class="app">
+    <div class="app">
     <span>111</span>
-    <MyButton></MyButton>
+    <MyButton class="abc"></MyButton>
   </div>
   )
 }
-const container = document.getElementById('app')!
-mountComponent(App, container)
+
+const { __setup } = App as any
+console.log('__setup: ', __setup);
+const render = __setup()
+console.log('render: ', render);
+const vnode = render()
+console.log('vnode: ', vnode);
+
+
+
+
+
 
 

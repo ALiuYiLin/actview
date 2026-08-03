@@ -5,7 +5,7 @@
 //   patch(old, new, parent)      → 更新
 //   组件函数 → 递归 mount
 // ============================================================
-import { isValidElement, Fragment, LAZY_VNODE, type VNodeChildren } from '@local/jsx-factory'
+import { isValidElement, Fragment, type VNodeChildren } from '@local/jsx-factory'
 import { runEffect } from './reactive-system'
 import type { ActViewComponent } from '../types'
 
@@ -112,10 +112,6 @@ function createDOM(vnode: any): Node[] {
     for (const child of vnode) result.push(...createDOM(child))
     return result
   }
-
-  // LazyVNode → 解包成 VNode 对象再处理
-  // 注意：vnode() 不执行组件 setup，只取出 { $$typeof, type, props }
-  if (vnode?.[LAZY_VNODE]) return createDOM(vnode())
 
   // 必须是有效元素
   if (!isValidElement(vnode)) return [document.createTextNode('')]

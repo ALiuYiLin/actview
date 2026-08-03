@@ -10,8 +10,7 @@ import type { VNode, VNodeTypes, HtmlProps, InputProps, LazyVNode } from './type
 
 declare global {
   namespace JSX {
-    // JSX 表达式返回 () => VNode（lazy wrapper）
-    type Element = LazyVNode;
+    type Element = VNode;
     type ElementType = VNodeTypes;
     type ArrayElement = VNode[];
     type Child = VNode | string | number | boolean | null | undefined;

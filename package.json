@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@local/jsx-factory": "workspace:*",
+    "@babel/core": "^8.0.1",
     "@local/core": "workspace:*",
+    "@local/jsx-factory": "workspace:*",
     "@types/node": "^26.0.1",
     "typescript": "~6.0.2",
     "vite": "^6.4.3"

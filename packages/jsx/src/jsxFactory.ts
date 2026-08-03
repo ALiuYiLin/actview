@@ -446,9 +446,7 @@ function ReactElement(type: any, key: any, props: any, owner: any, debugStack: a
   return element;
 }
 
-// ── Lazy VNode marker & helpers ──
-const LAZY_VNODE = Symbol('lazy.vnode');
-const resolveChild = (c: any) => c?.[LAZY_VNODE] ? c() : c;
+// ── Helper (reserved) ──
 
 // =============================================================================
 // JSX Runtime API (automatic transform target)
@@ -491,19 +489,7 @@ export function jsx(type: any, config: any, maybeKey?: any) {
     }
   }
 
-  // Resolve lazy children
-  if (props) {
-    if (Array.isArray(props.children)) {
-      props.children = props.children.map((c: any) => resolveChild(c));
-    } else {
-      props.children = resolveChild(props.children);
-    }
-  }
-
-  const _el = ReactElement(type, key, props, getOwner(), undefined, undefined);
-  const lazy = () => _el;
-  (lazy as any)[LAZY_VNODE] = true;
-  return lazy;
+  return ReactElement(type, key, props, getOwner(), undefined, undefined);
 }
 
 export function jsxs(type: any, config: any, maybeKey?: any) {
@@ -719,15 +705,6 @@ function jsxDEVImpl(type: any, config: any, maybeKey: any, isStaticChildren: any
     }
   }
 
-  // Resolve lazy children
-  if (props) {
-    if (Array.isArray(props.children)) {
-      props.children = props.children.map((c: any) => resolveChild(c));
-    } else {
-      props.children = resolveChild(props.children);
-    }
-  }
-
   if (__DEV__ && key) {
     const displayName =
       typeof type === 'function'
@@ -736,10 +713,7 @@ function jsxDEVImpl(type: any, config: any, maybeKey: any, isStaticChildren: any
     defineKeyPropWarningGetter(props, displayName);
   }
 
-  const _el = ReactElement(type, key, props, getOwner(), debugStack, debugTask);
-  const lazy = () => _el;
-  (lazy as any)[LAZY_VNODE] = true;
-  return lazy;
+  return ReactElement(type, key, props, getOwner(), debugStack, debugTask);
 }
 
 // =============================================================================
@@ -845,7 +819,7 @@ export function createElement(type: any, config: any, children?: any) {
     }
   }
 
-  const _el = ReactElement(
+  return ReactElement(
     type,
     key,
     props,
@@ -856,9 +830,6 @@ export function createElement(type: any, config: any, children?: any) {
         ? createTaskFn(getTaskName(type))
         : unknownOwnerDebugTask),
   );
-  const lazy = () => _el;
-  (lazy as any)[LAZY_VNODE] = true;
-  return lazy;
 }
 
 export function cloneAndReplaceKey(oldElement: any, newKey: any) {
