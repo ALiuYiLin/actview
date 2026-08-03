@@ -21,15 +21,6 @@ declare global {
       children: unknown
     }
   }
-
-  // ============================================================
-  // Babel 组件转换类型增强
-  // function Component() → defineComponent() 返回 { __setup }
-  // 让 App.__setup()() 调用不报类型错误
-  // ============================================================
-  interface Function {
-    __setup: (props?: Record<string, any>) => () => VNode
-  }
 }
 
 export {}
