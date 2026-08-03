@@ -1,24 +1,26 @@
-/**
- * @local/jsx-factory — main entry
- */
+// ============================================================
+// @local/jsx-factory — 包入口
+// ============================================================
+
 export {
+  jsx,
+  jsxs,
+  jsxDEV,
   createElement,
-  initJsxFactory,
-  setDispatcher,
-  getDispatcher,
-  getComponentNameFromType,
-  cloneElement,
-  cloneAndReplaceKey,
   isValidElement,
-  isLazyType,
   Fragment,
-  ElementType,
-} from './jsxFactory.js';
+  REACT_ELEMENT_TYPE,
+  REACT_FRAGMENT_TYPE,
+} from './jsxFactory.js'
 
-export type { VNode, VNodeTypes, VNodeKey, VNodeChild, VNodeChildren, LazyVNode } from './types.js';
-export type { HtmlProps, InputProps, FormEvent } from './types.js';
-
-/** 组件定义包装器 */
-export function defineComponent(setup: (...args: any[]) => any): { __setup: (...args: any[]) => any } {
-  return { __setup: setup };
-}
+export type {
+  VNode,
+  VNodeTypes,
+  VNodeKey,
+  VNodeChild,
+  VNodeChildren,
+  LazyVNode,
+  HtmlProps,
+  InputProps,
+  FormEvent,
+} from './types.js'

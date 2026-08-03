@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
+    "@actview/plugin": "workspace:*",
     "@local/core": "workspace:*",
     "@local/jsx-factory": "workspace:*",
     "@types/node": "^26.0.1",

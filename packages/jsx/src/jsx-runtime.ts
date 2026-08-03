@@ -1,4 +1,2 @@
-/**
- * JSX automatic transform runtime.
- */
-export { jsx, jsxs, Fragment } from './jsxFactory.js';
+// JSX automatic transform runtime（生产）
+export { jsx, jsxs, Fragment } from './jsxFactory.js'

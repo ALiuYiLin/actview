@@ -21,7 +21,8 @@
       "@local/jsx-factory": ["./packages/jsx/src/index.ts"],
       "@local/jsx-factory/*": ["./packages/jsx/src/*"],
       "@local/core": ["./packages/core/src/index.ts"],
-      "@local/core/*": ["./packages/core/src/*"]
+      "@local/core/*": ["./packages/core/src/*"],
+      "@actview/plugin": ["./plugins/plugin/src/index.ts"]
     },
 
     /* Linting */

@@ -8,9 +8,9 @@ importers:
 
   .:
     devDependencies:
-      '@babel/core':
-        specifier: ^8.0.1
-        version: 8.0.1
+      '@actview/plugin':
+        specifier: workspace:*
+        version: link:plugins/plugin
       '@local/core':
         specifier: workspace:*
         version: link:packages/core
@@ -34,6 +34,12 @@ importers:
         version: link:../jsx
 
   packages/jsx: {}
+
+  plugins/plugin:
+    dependencies:
+      '@babel/core':
+        specifier: ^8.0.1
+        version: 8.0.1
 
 packages:
 

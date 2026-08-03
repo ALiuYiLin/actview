@@ -1,4 +1,2 @@
-/**
- * JSX automatic transform runtime (development).
- */
-export { jsxDEV, Fragment } from './jsxFactory.js';
+// JSX automatic transform runtime（开发）
+export { jsxDEV, Fragment } from './jsxFactory.js'
