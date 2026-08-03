@@ -16,10 +16,12 @@
     "jsx": "react-jsx",
     "jsxImportSource": "@local/jsx-factory",
 
-    /* Path aliases — resolves @local/jsx-factory to packages/jsx/src */
+    /* Path aliases — resolves workspace packages */
     "paths": {
       "@local/jsx-factory": ["./packages/jsx/src/index.ts"],
-      "@local/jsx-factory/*": ["./packages/jsx/src/*"]
+      "@local/jsx-factory/*": ["./packages/jsx/src/*"],
+      "@local/core": ["./packages/core/src/index.ts"],
+      "@local/core/*": ["./packages/core/src/*"]
     },
 
     /* Linting */
@@ -28,5 +30,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
   },
-  "include": ["src", "packages/jsx/src/global.ts"]
+  "include": ["src", "packages/jsx/src/global.ts", "packages/core"]
 }

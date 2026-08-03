@@ -16,7 +16,7 @@ export {
 } from './jsxFactory.js';
 
 export type { VNode, VNodeTypes, VNodeKey, VNodeChild, VNodeChildren, LazyVNode } from './types.js';
-export type { HtmlProps, InputProps } from './types.js';
+export type { HtmlProps, InputProps, FormEvent } from './types.js';
 
 /** 组件定义包装器 */
 export function defineComponent(setup: (...args: any[]) => any): { __setup: (...args: any[]) => any } {

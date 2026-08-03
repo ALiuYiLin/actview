@@ -1,5 +1,5 @@
-import { VNode } from "@local/jsx-factory";
+import type { VNode } from "@local/jsx-factory";
 
-export function patch(oldVnode: VNode | null, newVnode: VNode, container: Element){
+export function patch(_oldVnode: VNode | null, _newVnode: VNode, _container: Element){
   // diff and update RealDOM
 }

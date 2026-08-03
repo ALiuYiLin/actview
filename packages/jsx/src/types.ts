@@ -37,6 +37,14 @@ export type LazyVNode = () => VNode;
 // 属性类型 — 用于 JSX.IntrinsicElements
 // ============================================================
 
+/** 表单事件 — target 上带 value/checked 等输入属性 */
+export interface FormEvent extends Event {
+  target: EventTarget & {
+    value: string;
+    checked: boolean;
+  };
+}
+
 /** 通用 HTML 元素属性 */
 export interface HtmlProps {
   id?: string;
@@ -83,6 +91,7 @@ export interface HtmlProps {
   fetchpriority?: 'high' | 'low' | 'auto';
 
   // 事件处理器
+  // 表单事件用 FormEvent —— target 上带有 value/checked 属性
   onclick?: (e: MouseEvent) => void;
   ondblclick?: (e: MouseEvent) => void;
   onmousedown?: (e: MouseEvent) => void;
@@ -97,9 +106,9 @@ export interface HtmlProps {
   onkeydown?: (e: KeyboardEvent) => void;
   onkeyup?: (e: KeyboardEvent) => void;
   onkeypress?: (e: KeyboardEvent) => void;
-  onchange?: (e: Event) => void;
-  oninput?: (e: Event) => void;
-  onsubmit?: (e: SubmitEvent) => void;
+  onchange?: (e: FormEvent) => void;
+  oninput?: (e: FormEvent) => void;
+  onsubmit?: (e: FormEvent) => void;
   onscroll?: (e: Event) => void;
   onwheel?: (e: WheelEvent) => void;
   onload?: (e: Event) => void;
@@ -132,8 +141,8 @@ export interface HtmlProps {
   onwaiting?: (e: Event) => void;
   onseeking?: (e: Event) => void;
   onseeked?: (e: Event) => void;
-  onselect?: (e: Event) => void;
-  oninvalid?: (e: Event) => void;
+  onselect?: (e: FormEvent) => void;
+  oninvalid?: (e: FormEvent) => void;
 
   [key: `data-${string}`]: unknown;
   [key: string]: unknown;

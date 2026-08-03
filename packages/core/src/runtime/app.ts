@@ -1,9 +1,9 @@
-import type { LazyVNode, VNode } from '@local/jsx-factory'
+import type { VNode } from '@local/jsx-factory'
 import { runEffect } from './reactive-system'
-import { ActViewComponent } from '../types'
+import type { ActViewComponent } from '../types'
 import { patch } from './patch'
 
-class App {
+export class App {
   private rootComponent: ActViewComponent | null
   constructor(){
     this.rootComponent = null

@@ -6,7 +6,7 @@
 // 此文件通过 tsconfig include 加载，全局生效。
 // ============================================================
 
-import type { VNode, VNodeTypes, HtmlProps, InputProps, LazyVNode } from './types.js';
+import type { VNode, VNodeTypes, HtmlProps, InputProps } from './types.js';
 
 declare global {
   namespace JSX {
