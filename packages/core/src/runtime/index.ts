@@ -1,2 +1,5 @@
 export * from './reactive-system'
 export * from './component'
+export * from './createApp'
+export * from './renderer'
+export * from './mountComponent'

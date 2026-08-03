@@ -14,6 +14,11 @@ export class ReactiveEffect {
     this.fn()
     activeEffect = preEffect
   }
+  /** 停止该 effect：清空所有依赖，之后不再响应 */
+  public stop(){
+    cleanupEffect(this)
+    this.deps = []
+  }
 }
 
 

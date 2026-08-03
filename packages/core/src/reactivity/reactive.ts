@@ -13,6 +13,14 @@ export function reactive<T extends object>(obj: T){
         trigger(target, key)
       }
       return result
+    },
+    deleteProperty(target, key){
+      const had = Reflect.has(target, key)
+      const result = Reflect.deleteProperty(target, key)
+      if(had){
+        trigger(target, key)
+      }
+      return result
     }
   })
 }
