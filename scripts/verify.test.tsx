@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive } from 'actview'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -603,5 +603,91 @@ describe('场景 13：computed / ref / watch', () => {
       'ref:0->5',
       'ref:5->9',
     ])
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 14：插槽 / 动态组件 / keep-alive
+// ------------------------------------------------------------
+describe('场景 14：插槽与动态组件', () => {
+  it('默认插槽透传 + 作用域插槽（函数 children）', () => {
+    // 作用域插槽：children 是函数，组件内调用并传入作用域数据（render-prop）
+    function List(props: any) {
+      return (
+        <ul>
+          {props.items.map((item: string, i: number) => (
+            <li key={item}>{props.children({ item, i })}</li>
+          ))}
+        </ul>
+      )
+    }
+    function App() {
+      return (
+        <div>
+          <List items={['a', 'b']}>
+            {(scope: any) => <b>{scope.i}:{scope.item}</b>}
+          </List>
+        </div>
+      )
+    }
+    const host = mount('#s14a', App)
+    expect(collectText(host)).toContain('0:a')
+    expect(collectText(host)).toContain('1:b')
+  })
+
+  it('动态组件 <component is> 切换', async () => {
+    const state = reactive({ view: 'a' })
+    function A() {
+      return <span>CompA</span>
+    }
+    function B() {
+      return <span>CompB</span>
+    }
+    function App() {
+      return <div><component is={state.view === 'a' ? A : B} /></div>
+    }
+    const host = mount('#s14b', App)
+    expect(collectText(host)).toContain('CompA')
+    state.view = 'b'
+    await nextTick()
+    expect(collectText(host)).toContain('CompB')
+    state.view = 'a'
+    await nextTick()
+    expect(collectText(host)).toContain('CompA')
+  })
+
+  it('keep-alive 缓存实例：切换不重建、缓存期间更新仍生效', async () => {
+    const state = reactive({ view: 'a', count: 0 })
+    let aMounted = 0
+    function A() {
+      onMounted(() => aMounted++)
+      return <div>CompA({state.count})</div>
+    }
+    function B() {
+      return <div>CompB</div>
+    }
+    function App() {
+      return (
+        <div><KeepAlive><component is={state.view === 'a' ? A : B} /></KeepAlive></div>
+      )
+    }
+    const host = mount('#s14c', App)
+    expect(collectText(host)).toContain('CompA(0)')
+    expect(aMounted).toBe(1)
+    const aDiv = host.children[0].children[0] // A 的根 DOM
+
+    state.view = 'b'
+    await nextTick()
+    expect(collectText(host)).toContain('CompB')
+    expect(aDiv.parentNode).not.toBe(host.children[0]) // A 的 DOM 已移入隐藏容器
+
+    state.count = 5 // 缓存期间 A 的 effect 仍响应（隐藏容器内更新）
+    await nextTick()
+
+    state.view = 'a'
+    await nextTick()
+    expect(collectText(host)).toContain('CompA(5)')
+    expect(aMounted).toBe(1) // 不重建：onMounted 只触发一次
+    expect(host.children[0].children[0]).toBe(aDiv) // DOM 复用
   })
 })

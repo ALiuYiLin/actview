@@ -32,8 +32,8 @@
 | 限制 | 现状 | 优先级 |
 |---|---|---|
 | ~~**无生命周期钩子**~~ | ✅ 已实现：`onMounted` / `onUpdated` / `onBeforeUnmount`（模块级 `currentInstance` 上下文），卸载时执行清理钩子 | 外部资源（事件、定时器、订阅）无清理钩子 | ~~P0~~ ✅ |
-| **无插槽体系** | `props.children` 可透传，但无具名/作用域插槽 | P2 |
-| **无动态组件 / keep-alive** | `<component is>`、缓存组件未实现 | P2 |
+| ~~**无插槽体系**~~ | ✅ 已支持：默认插槽（`props.children` 静态透传）+ 作用域插槽（函数 children，render-prop 模式）；具名插槽未实现 | 内容分发 | ~~P2~~ ✅ |
+| ~~**无动态组件 / keep-alive**~~ | ✅ 已实现：`<component is={...}>`（renderer 解析 props.is）；`KeepAlive` 缓存实例与 DOM（隐藏容器 + 卸载拦截 + 复用） | 动态切换 / 状态保留 | ~~P2~~ ✅ |
 | **无错误边界 / Suspense** | 组件渲染抛错无兜底 | P2 |
 | **`ref` 字段闲置** | VNode.ref 已留字段未实现模板引用 | P2 |
 | **无异步组件** | 无 lazy 加载 | P3 |
@@ -77,7 +77,11 @@
 ### 阶段三：能力扩展（P2）
 
 8. ~~**事件系统升级**~~ ✅：`addEventListener` + capture + 统一解绑（invoker 模式）
-9. 插槽、动态组件、keep-alive
+9. ~~**插槽、动态组件、keep-alive**~~ ✅（本次提交，verify 场景 14）
+   - 插槽：默认插槽（children 透传）+ 作用域插槽（函数 children）；具名插槽待定
+   - 动态组件：`<component is={Comp}>`，renderer `resolveDynamicVNode` 解析 props.is
+   - keep-alive：`KeepAlive` 内置组件（隐藏容器缓存 DOM + 实例保留），patch 复用分支 `newVnode.component` 优先
+   - 顺带修复：`replace` 原不调用 `unmount`（组件替换时旧实例泄漏），现先卸载再挂载
 10. 错误边界 / Suspense
 
 ### 阶段四：工程化（P2-P3）
@@ -100,3 +104,4 @@
 | 本次提交 | LIS 最小移动 diff | `getSequence`（贪心+二分+前驱回溯）定位不动节点，仅移动非 LIS 节点；verify 场景 2 增强（insertBefore 次数断言） |
 | 本次提交 | 事件系统升级 | `patchEvent` + invoker 缓存（`el._vei`）；`onClickCapture` 支持 capture；handler 更新不重绑、null 解绑；verify 场景 11 |
 | 本次提交 | 生命周期钩子 + computed/ref/watch | `onMounted`/`onUpdated`/`onBeforeUnmount`（currentInstance 上下文）；`computed`（脏标记惰性缓存）；`ref`/`isRef`/`unref`；`watch`（immediate/cleanup/stop）；verify 场景 12、13 |
+| 本次提交 | 插槽 / 动态组件 / keep-alive | 默认+作用域插槽；`<component is>`；`KeepAlive`（隐藏容器缓存 + 实例复用）；修复 replace 不卸载旧组件的泄漏；verify 场景 14 |

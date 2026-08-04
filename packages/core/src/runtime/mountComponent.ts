@@ -22,6 +22,8 @@ export interface ComponentInstance {
   unmount: () => void
   /** 是否已完成首次挂载（区分 mounted / updated） */
   isMounted: boolean
+  /** 挂载容器（keep-alive 恢复 DOM 时使用） */
+  container: Element | null
   /** 生命周期钩子数组（setup 执行期间注册） */
   mounted: (() => void)[]
   updated: (() => void)[]
@@ -46,6 +48,7 @@ export function mountComponent(vnode: any, container: Element | null) {
     update: () => {},
     unmount: () => {},
     isMounted: false,
+    container: container as Element | null,
     mounted: [],
     updated: [],
     beforeUnmount: [],

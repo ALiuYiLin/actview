@@ -49,7 +49,17 @@ function normalizeChildren(children: any): any[] {
 // patch 入口
 // ------------------------------------------------------------
 
+/** 动态组件：type === 'component'（`<component is={...} />`）时解析 props.is 为真实类型 */
+function resolveDynamicVNode(vnode: any): any {
+  if (vnode && vnode.type === 'component') {
+    const is = vnode.props?.is
+    vnode.type = is && typeof is === 'object' ? is : typeof is === 'string' ? is : 'div'
+  }
+  return vnode
+}
+
 export function patch(oldVnode: any, newVnode: any, container: Element, index?: number) {
+  newVnode = resolveDynamicVNode(newVnode)
   if (oldVnode == null) {
     mountVNode(newVnode, container)
     return
@@ -61,6 +71,11 @@ export function patch(oldVnode: any, newVnode: any, container: Element, index?: 
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
     patchVNode(oldVnode, newVnode, container, index)
+  } else if (newVnode.component) {
+    // keep-alive 缓存命中：旧组件先卸载（走缓存分支，DOM 移入隐藏容器），
+    // 再复用缓存实例更新
+    unmount(oldVnode, container, index)
+    patchComponent(oldVnode, newVnode, container)
   } else {
     replace(oldVnode, newVnode, container, index)
   }
@@ -75,6 +90,7 @@ export function render(vnode: any, container: Element) {
 // ------------------------------------------------------------
 
 export function mountVNode(vnode: any, container: Element | null): any {
+  vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
 
   // 组件
@@ -140,7 +156,9 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
  *  子组件 update()，完成精确更新（不再整组件卸载重挂）。
  *  props 用普通对象 + 显式调度，避免响应式 track/set 引发的 effect 递归重入 */
 function patchComponent(oldVnode: any, newVnode: any, container: Element) {
-  const instance = oldVnode.component
+  // keep-alive 缓存复用：newVnode 已带自己的实例（缓存实例）→ 优先使用；
+  // 普通组件更新：newVnode 无实例 → 沿用旧 vnode 的实例
+  const instance = newVnode.component ?? oldVnode.component
   if (!instance) {
     // 异常情况：旧节点没有实例，直接重挂
     mountComponent(newVnode, container)
@@ -159,7 +177,7 @@ function patchComponent(oldVnode: any, newVnode: any, container: Element) {
 }
 
 /** 把新 props 增量写入旧 props，返回是否有变化 */
-function updateProps(oldProps: any, newProps: any): boolean {
+export function updateProps(oldProps: any, newProps: any): boolean {
   newProps = newProps || {}
   let changed = false
   for (const key in newProps) {
@@ -429,17 +447,32 @@ function setInputValue(el: any, value: any) {
 // ------------------------------------------------------------
 
 function replace(oldVnode: any, newVnode: any, container: Element, index?: number) {
-  const newEl = mountVNode(newVnode, null)
-  // 文本旧节点无 el，同样按索引从 childNodes 恢复
   const oldEl = oldVnode.el ?? (index != null ? container.childNodes[index] : null)
   const parent = oldEl?.parentNode
-  if (parent && newEl) {
-    parent.replaceChild(newEl, oldEl)
+  const anchor = oldEl?.nextSibling ?? null
+  // 先卸载旧节点：keep-alive 缓存的组件走缓存分支（DOM 移入隐藏容器、实例保留），
+  // 否则组件停止 effect 并触发 beforeUnmount、元素移除 DOM
+  unmount(oldVnode, container, index)
+  // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）
+  const newEl = mountVNode(newVnode, container)
+  if (parent && newEl && newEl.parentNode === parent && anchor && anchor.parentNode === parent) {
+    parent.insertBefore(newEl, anchor)
   }
 }
 
 export function unmount(vnode: any, container?: Element, index?: number) {
   if (vnode == null) return
+  // keep-alive 缓存：DOM 移入隐藏容器、实例保留（不销毁、不停 effect），
+  // 重新激活时从缓存恢复
+  const keepAlive = vnode.__keepAlive
+  if (keepAlive) { console.log('[unmount] 缓存分支 key=', keepAlive.key, 'el=', !!vnode.component?.subTree?.el)
+    const { cache, storage, key } = keepAlive
+    const el = vnode.component?.subTree?.el ?? vnode.el
+    if (el && el.parentNode) storage.appendChild(el)
+    cache.set(key, vnode)
+    delete vnode.__keepAlive
+    return
+  }
   // 组件：先停止其更新 effect，防止响应式变化操作已移除的 DOM
   if (isComponentVNode(vnode)) {
     vnode.component?.unmount?.()

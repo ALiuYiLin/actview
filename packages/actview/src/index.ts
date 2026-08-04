@@ -19,6 +19,7 @@ export {
   onMounted,
   onUpdated,
   onBeforeUnmount,
+  KeepAlive,
 } from '@actview/core'
 
 export type { App } from '@actview/core'
