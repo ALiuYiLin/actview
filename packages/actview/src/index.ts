@@ -11,6 +11,14 @@ export {
   readonly,
   markRaw,
   nextTick,
+  computed,
+  ref,
+  isRef,
+  unref,
+  watch,
+  onMounted,
+  onUpdated,
+  onBeforeUnmount,
 } from '@actview/core'
 
 export type { App } from '@actview/core'

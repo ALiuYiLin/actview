@@ -31,7 +31,7 @@
 
 | 限制 | 现状 | 优先级 |
 |---|---|---|
-| **无生命周期钩子** | 无 `onMounted`/`onBeforeUnmount` 等；卸载时只有 effect 停止，外部资源（事件、定时器、订阅）无清理钩子 | P0 |
+| ~~**无生命周期钩子**~~ | ✅ 已实现：`onMounted` / `onUpdated` / `onBeforeUnmount`（模块级 `currentInstance` 上下文），卸载时执行清理钩子 | 外部资源（事件、定时器、订阅）无清理钩子 | ~~P0~~ ✅ |
 | **无插槽体系** | `props.children` 可透传，但无具名/作用域插槽 | P2 |
 | **无动态组件 / keep-alive** | `<component is>`、缓存组件未实现 | P2 |
 | **无错误边界 / Suspense** | 组件渲染抛错无兜底 | P2 |
@@ -59,12 +59,13 @@
    - 说明：未实现 `pauseTracking`（仅影响「effect 内改数组」的边界场景，事件 handler 场景不受影响）
 2. ~~**受控 input 光标保位**~~ ✅（提交 caa6931，verify 场景 9）
    - 已实现：`setInputValue` 赋值前记录、赋值后恢复 `selectionStart/End`
-3. **生命周期钩子**（`onMounted` / `onUpdated` / `onBeforeUnmount`）
-   - 模块级 `currentInstance` 上下文 + `ComponentInstance` 挂钩子数组
-   - 配合「卸载时清理事件/定时器」解决资源泄漏
-4. **computed + ref**
-   - `computed`：基于 effect + 脏标记缓存
-   - `ref`：`{ value }` 对象包装，`ref.value` 响应式
+3. ~~**生命周期钩子**~~ ✅（本次提交，verify 场景 12）
+   - 已实现：`onMounted` / `onUpdated` / `onBeforeUnmount`；模块级 `currentInstance` 上下文，setup 执行期间注册钩子
+   - 触发时机：首次渲染后 mounted（子先于父，同步挂载）；每次重渲染 updated；卸载前 beforeUnmount
+4. ~~**computed + ref + watch**~~ ✅（本次提交，verify 场景 13）
+   - `computed`：基于 effect + 脏标记的惰性缓存计算值，computed 本身也是依赖源
+   - `ref`：`{ value }` 包装，`ref.value` 响应式；附 `isRef` / `unref`
+   - `watch`：源可为 ref / getter / 对象（深遍历）/ 数组；`immediate`；回调 `onCleanup` 清理；返回 stop 函数
 
 ### 阶段二：正确性与性能（P1）
 
@@ -98,3 +99,4 @@
 | 提交 53b4af6 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
 | 本次提交 | LIS 最小移动 diff | `getSequence`（贪心+二分+前驱回溯）定位不动节点，仅移动非 LIS 节点；verify 场景 2 增强（insertBefore 次数断言） |
 | 本次提交 | 事件系统升级 | `patchEvent` + invoker 缓存（`el._vei`）；`onClickCapture` 支持 capture；handler 更新不重绑、null 解绑；verify 场景 11 |
+| 本次提交 | 生命周期钩子 + computed/ref/watch | `onMounted`/`onUpdated`/`onBeforeUnmount`（currentInstance 上下文）；`computed`（脏标记惰性缓存）；`ref`/`isRef`/`unref`；`watch`（immediate/cleanup/stop）；verify 场景 12、13 |

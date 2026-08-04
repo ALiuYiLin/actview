@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount } from 'actview'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -510,5 +510,98 @@ describe('场景 11：事件系统', () => {
 
     addSpy.mockRestore()
     removeSpy.mockRestore()
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 12：生命周期钩子
+// ------------------------------------------------------------
+describe('场景 12：生命周期钩子', () => {
+  it('onMounted / onUpdated / onBeforeUnmount 按时机触发', async () => {
+    const log: string[] = []
+    const state = reactive({ show: true, count: 0 })
+    function Child() {
+      onMounted(() => log.push('mounted'))
+      onUpdated(() => log.push('updated'))
+      onBeforeUnmount(() => log.push('beforeUnmount'))
+      return <span>{state.count}</span>
+    }
+    function App() {
+      return <div>{state.show ? <Child /> : null}</div>
+    }
+    const host = mount('#s12', App)
+
+    expect(log).toEqual(['mounted']) // 首次挂载只触发 mounted
+
+    state.count = 1
+    await nextTick()
+    expect(log).toEqual(['mounted', 'updated']) // 状态变化触发 updated
+
+    state.show = false // 卸载 Child
+    await nextTick()
+    expect(log).toEqual(['mounted', 'updated', 'beforeUnmount'])
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 13：computed / ref / watch
+// ------------------------------------------------------------
+describe('场景 13：computed / ref / watch', () => {
+  it('computed 缓存 + ref 响应式 + watch 回调与 cleanup', async () => {
+    const state = reactive({ count: 1 })
+    const double = computed(() => state.count * 2)
+    const countRef = ref(0)
+    const watchLog: string[] = []
+    let cleanupRan = false
+
+    watch(() => state.count, (n, o) => watchLog.push(`count:${o}->${n}`))
+    watch(
+      countRef,
+      (n, o, onCleanup) => {
+        onCleanup(() => {
+          cleanupRan = true
+        })
+        watchLog.push(`ref:${o}->${n}`)
+      },
+      { immediate: true },
+    )
+
+    function App() {
+      return (
+        <div>
+          <span>double:{double.value}</span>
+          <span>ref:{countRef.value}</span>
+        </div>
+      )
+    }
+    const host = mount('#s13', App)
+    expect(collectText(host)).toContain('double:2')
+    expect(collectText(host)).toContain('ref:0')
+    expect(watchLog).toEqual(['ref:undefined->0']) // immediate 首次触发
+
+    state.count = 3
+    countRef.value = 5
+    await nextTick()
+    expect(collectText(host)).toContain('double:6')
+    expect(collectText(host)).toContain('ref:5')
+    await nextTick() // watch 独立微任务，等其跑完
+    expect(watchLog).toEqual([
+      'ref:undefined->0',
+      'count:1->3',
+      'ref:0->5',
+    ])
+
+    // cleanup：下一次触发前执行上一次注册的清理
+    cleanupRan = false
+    countRef.value = 9
+    await nextTick()
+    await nextTick()
+    expect(cleanupRan).toBe(true)
+    expect(watchLog).toEqual([
+      'ref:undefined->0',
+      'count:1->3',
+      'ref:0->5',
+      'ref:5->9',
+    ])
   })
 })

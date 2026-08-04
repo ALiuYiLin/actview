@@ -54,13 +54,14 @@ export class ReactiveEffect {
     this.scheduler = scheduler
     this.deps = []
   }
-  public run(){
+  public run(): any {
     if (!this.active) return
     cleanupEffect(this)
     const preEffect = activeEffect
     activeEffect = this
-    this.fn()
+    const result = this.fn()
     activeEffect = preEffect
+    return result
   }
   /** 停止该 effect：清空所有依赖，之后不再响应 */
   public stop(){
