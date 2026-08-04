@@ -8,14 +8,15 @@ import { defineComponent } from '@local/core'
 import { jsx } from '@local/jsx-factory'
 import { currentRouter } from './router'
 
-/** 渲染为 <a>，点击拦截默认跳转并走 router.push */
-export function RouterLink(props: { to: string; children?: any }) {
+/** 渲染为 <a>，点击拦截默认跳转并走 router.push；style/class 等其余 props 透传 */
+export function RouterLink(props: { to: string; children?: any; [key: string]: any }) {
+  const { to, children, ...rest } = props
   return (
-    <a href={props.to} onclick={(e) => {
+    <a href={to} {...rest} onclick={(e) => {
       e.preventDefault()
-      currentRouter.push(props.to)
+      currentRouter.push(to)
     }}>
-      {props.children}
+      {children}
     </a>
   )
 }

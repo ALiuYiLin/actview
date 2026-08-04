@@ -7,7 +7,8 @@ import type { VNode, VNodeTypes, HtmlProps, InputProps } from './types.js'
 declare global {
   namespace JSX {
     type Element = VNode
-    type ElementType = VNodeTypes
+    /** 组件对象（defineComponent 产物 { __setup }）也可作为 JSX 元素 */
+    type ElementType = VNodeTypes | { __setup: (...args: any[]) => any }
     type ArrayElement = VNode[]
     type Child = VNode | string | number | boolean | null | undefined
     type Children = Child | Child[]

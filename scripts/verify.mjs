@@ -62,6 +62,13 @@ globalThis.document = {
     return null
   },
 }
+// createWebHistory 所需的最小 window stub（初始路径 /）
+globalThis.window = {
+  addEventListener() {},
+  removeEventListener() {},
+  location: { pathname: '/', search: '' },
+  history: { pushState() {}, replaceState() {}, go() {} },
+}
 
 // ---------- 挂载并验证 ----------
 const { createServer } = await import('vite')
@@ -179,18 +186,19 @@ try {
   check('RouterLink 点击导航到 Home', collectText(routerHost).includes('Home page'))
   check('href 属性正确', navLinks[0].attrs.href === '/')
 
-  // ---------- 冒烟：src/main.tsx 检验页能正常渲染 ----------
-  console.log('--- 冒烟：src/main.tsx 检验页 ---')
+  // ---------- 冒烟：src/main.tsx 检验页（路由版） ----------
+  console.log('--- 冒烟：src/main.tsx 检验页（路由版） ---')
   await server.ssrLoadModule('/src/main.tsx')
+  const routerMod = await server.ssrLoadModule('/src/router.ts')
   const pageHost = hosts.get('#app')
   const appRoot = pageHost.children[0]
   check('页面根元素已挂载', !!appRoot && appRoot.tagName === 'div')
-  const titles = appRoot.children.map((c) => c.children[0] && c.children[0].textContent)
-  check('含标题', titles.some((t) => t === 'actview — 响应式前端框架检验页'))
-  const cards = appRoot.children.filter((c) => c.className === 'demo-card')
-  check('渲染出 4 个 demo 卡片', cards.length === 4)
-  // 卡片顺序固定：Counter, KeyedList, PropsDemo, Toggle（ul 是 KeyedList 卡片的第 2 个子节点）
-  check('keyed 列表初始 3 项', cards[1] && cards[1].children[1].children.length === 3)
+  check('导航含首页/各功能链接', collectText(appRoot).includes('① 响应式'))
+  check('初始渲染首页总览', collectText(appRoot).includes('框架能力总览'))
+  routerMod.router.push('/reactive')
+  check('路由切换渲染响应式页', collectText(appRoot).includes('count ='))
+  routerMod.router.push('/list')
+  check('路由切换渲染 keyed 列表页', collectText(appRoot).includes('Apple'))
 
   console.log(`\n${pass} 通过 / ${fail} 失败`)
   process.exitCode = fail === 0 ? 0 : 1

@@ -63,9 +63,9 @@ export function createMemoryHistory(initial: string = '/'): RouterHistory {
 
 export function createWebHistory(base: string = ''): RouterHistory {
   const listeners = new Set<(to: string) => void>()
+  const notify = (to: string) => listeners.forEach((cb) => cb(to))
   const emit = () => {
-    const to = window.location.pathname + window.location.search
-    listeners.forEach((cb) => cb(to))
+    notify(window.location.pathname + window.location.search)
   }
   const onPopState = () => emit()
 
@@ -83,13 +83,15 @@ export function createWebHistory(base: string = ''): RouterHistory {
     },
     push(to) {
       window.history.pushState(null, '', base + to)
-      emit()
+      // pushState 不触发 popstate，需手动通知目标路径
+      notify(base + to)
     },
     replace(to) {
       window.history.replaceState(null, '', base + to)
-      emit()
+      notify(base + to)
     },
     go(delta) {
+      // 由浏览器触发 popstate =》 emit（读取 location）
       window.history.go(delta)
     },
   }

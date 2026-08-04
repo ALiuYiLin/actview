@@ -1,0 +1,21 @@
+import { createRouter, createWebHistory } from "@actview/router";
+import { HomePage } from "./pages/HomePage";
+import { ReactivePage } from "./pages/ReactivePage";
+import { KeyedListPage } from "./pages/KeyedListPage";
+import { PropsPage } from "./pages/PropsPage";
+import { TogglePage } from "./pages/TogglePage";
+
+// ============================================================
+// 路由配置 — 路由切换 =》 组件切换
+// ============================================================
+
+export const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: "/", component: HomePage },
+    { path: "/reactive", component: ReactivePage },
+    { path: "/list", component: KeyedListPage },
+    { path: "/props", component: PropsPage },
+    { path: "/toggle", component: TogglePage },
+  ],
+});
