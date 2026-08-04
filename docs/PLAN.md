@@ -62,7 +62,7 @@
    - 已实现：`setInputValue` 赋值前记录、赋值后恢复 `selectionStart/End`
 3. ~~**生命周期钩子**~~ ✅（本次提交，verify 场景 12）
    - 已实现：`onMounted` / `onUpdated` / `onBeforeUnmount`；模块级 `currentInstance` 上下文，setup 执行期间注册钩子
-   - 触发时机：首次渲染后 mounted（子先于父，同步挂载）；每次重渲染 updated；卸载前 beforeUnmount
+   - 触发时机：首次渲染后 mounted（子先父后，与 Vue 3 一致——挂载深度优先遍历，子组件先完成）；每次重渲染 updated；卸载前 beforeUnmount
 4. ~~**computed + ref + watch**~~ ✅（本次提交，verify 场景 13）
    - `computed`：基于 effect + 脏标记的惰性缓存计算值，computed 本身也是依赖源
    - `ref`：`{ value }` 包装，`ref.value` 响应式；附 `isRef` / `unref`
