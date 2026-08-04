@@ -1,1 +1,1 @@
-export { reactive } from "./reactive";
+export { reactive, shallowReactive, readonly, markRaw } from "./reactive";

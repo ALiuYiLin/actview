@@ -222,6 +222,32 @@ try {
   check('删除 key 后遍历 a,c', keysText() === 'a,c')
   check('删除 key 后 in 检测 no-b', hasBText() === 'no-b')
 
+  // ---------- 场景 8：markRaw / readonly / shallowReactive ----------
+  console.log('--- 场景 8：markRaw / readonly / shallowReactive / 非普通对象 ---')
+  const apiHost = hosts.get('#api')
+  const apiSpan = (cls) => apiHost.children[0].children.find((c) => c.className === cls).children[0].data
+  check('Date 不崩溃且可调用方法', apiSpan('date') === '0')
+  check('普通嵌套对象响应式', apiSpan('normal') === '1')
+  check('markRaw 对象原样显示', apiSpan('marked') === '1')
+  check('readonly 可读', apiSpan('ro') === '1')
+  check('readonly 嵌套可读', apiSpan('ro-nested') === '1')
+  check('shallowReactive 浅层可读', apiSpan('sh-top') === '1')
+
+  globalThis.__changeNormal()
+  check('改普通嵌套对象触发更新', apiSpan('normal') === '2')
+
+  globalThis.__changeMarked()
+  check('改 markRaw 对象不触发更新', apiSpan('marked') === '1')
+
+  globalThis.__changeShNested()
+  check('shallow 深层修改不触发更新', apiSpan('sh-nested') === '1')
+
+  globalThis.__changeShTop()
+  check('shallow 浅层修改触发更新', apiSpan('sh-top') === '2')
+
+  globalThis.__tryWriteRo()
+  check('readonly 修改被拦截（值不变）', apiSpan('ro') === '1')
+
   // ---------- 冒烟：src/main.tsx 检验页（路由版） ----------
   console.log('--- 冒烟：src/main.tsx 检验页（路由版） ---')
   await server.ssrLoadModule('/src/main.tsx')

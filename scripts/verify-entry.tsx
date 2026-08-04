@@ -1,4 +1,4 @@
-import { createApp, reactive } from "@local/core"
+import { createApp, reactive, readonly, shallowReactive, markRaw } from "@local/core"
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from "@actview/router"
 
 // ---------- 场景 1：响应式文本 + input ----------
@@ -152,6 +152,39 @@ createApp(KeysApp).mount('#keys')
 
 globalThis.__addKey = (k, v) => { keysState[k] = v }
 globalThis.__delKey = (k) => { delete keysState[k] }
+
+// ---------- 场景 8：markRaw / readonly / shallowReactive / 非普通对象 ----------
+const rawMarkedObj = { n: 1 }
+const marked = markRaw(rawMarkedObj)
+
+const apiState = reactive({
+  d: new Date(0),          // 非普通对象：不代理，调用方法不崩溃
+  normal: { n: 1 },        // 普通嵌套对象：响应式
+  marked,                  // markRaw 对象：永不代理
+})
+const ro = readonly({ count: 1, nested: { deep: 1 } })
+const sh = shallowReactive({ top: 1, nested: { deep: 1 } })
+
+function ApiApp() {
+  return (
+    <div class="api-app">
+      <span class="date">{apiState.d.getTime()}</span>
+      <span class="normal">{apiState.normal.n}</span>
+      <span class="marked">{apiState.marked.n}</span>
+      <span class="ro">{ro.count}</span>
+      <span class="ro-nested">{ro.nested.deep}</span>
+      <span class="sh-top">{sh.top}</span>
+      <span class="sh-nested">{sh.nested.deep}</span>
+    </div>
+  )
+}
+createApp(ApiApp).mount('#api')
+
+globalThis.__changeNormal = () => { apiState.normal.n = 2 }
+globalThis.__changeMarked = () => { rawMarkedObj.n = 2 }
+globalThis.__changeShTop = () => { sh.top = 2 }
+globalThis.__changeShNested = () => { sh.nested.deep = 2 }
+globalThis.__tryWriteRo = () => { ro.count = 99 }
 
 // ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')
