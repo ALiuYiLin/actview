@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
-    "release": "npm version patch && pnpm build && cd dist && npm publish"
+    "release": "pnpm build && cd dist && npm publish"
   },
   "version": "1.0.7"
 }
