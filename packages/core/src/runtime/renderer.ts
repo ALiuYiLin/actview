@@ -108,7 +108,7 @@ export function mountVNode(vnode: any, container: Element | null): any {
   // Fragment：自身无 DOM，直接挂载 children
   if (vnode.type === Fragment) {
     vnode.el = null
-    patchChildren(null, vnode.props?.children, container as Element)
+    vnode.__avChildren = patchChildren(null, vnode.props?.children, container as Element)
     return null
   }
   // 文本
@@ -122,7 +122,7 @@ export function mountVNode(vnode: any, container: Element | null): any {
   const el = document.createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
-  patchChildren(null, vnode.props?.children, el)
+  vnode.__avChildren = patchChildren(null, vnode.props?.children, el)
   container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
@@ -152,13 +152,23 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
   // Fragment
   if (newVnode.type === Fragment) {
     newVnode.el = oldVnode.el
-    patchChildren(oldVnode.props?.children, newVnode.props?.children, container)
+    newVnode.__avChildren = patchChildren(
+      oldVnode.props?.children,
+      newVnode.props?.children,
+      container,
+      oldVnode,
+    )
     return
   }
   // 原生元素：更新 props 与 children
   const el = (newVnode.el = oldVnode.el as Element)
   patchProps(oldVnode.props, newVnode.props, el)
-  patchChildren(oldVnode.props?.children, newVnode.props?.children, el)
+  newVnode.__avChildren = patchChildren(
+    oldVnode.props?.children,
+    newVnode.props?.children,
+    el,
+    oldVnode,
+  )
 }
 
 /** 组件更新：props 未变则复用旧实例；变了则更新 props 并手动触发
@@ -218,20 +228,29 @@ function isSameProps(a: any, b: any): boolean {
 // children 与 props
 // ------------------------------------------------------------
 
-function patchChildren(oldChildren: any, newChildren: any, container: Element) {
-  const oldList = normalizeChildren(oldChildren).map(toVNode)
+function patchChildren(
+  oldChildren: any,
+  newChildren: any,
+  container: Element,
+  oldVnode?: any,
+): any[] {
+  // 旧 vnode 列表：优先用上次 diff 缓存的 vnode（带 el，文本节点可精确定位），
+  // 否则对旧 children 重新包装（首次/异常兜底）
+  const oldList =
+    oldVnode?.__avChildren ?? normalizeChildren(oldChildren).map(toVNode)
   const newList = normalizeChildren(newChildren).map(toVNode)
 
   // 新列表中出现 key → 走 keyed diff；否则保持同索引 diff
   if (newList.some((v) => v && v.key != null)) {
     patchKeyedChildren(oldList, newList, container)
-    return
+    return newList
   }
 
   const len = Math.max(oldList.length, newList.length)
   for (let i = 0; i < len; i++) {
     patch(oldList[i] ?? null, newList[i] ?? null, container, i)
   }
+  return newList
 }
 
 // ------------------------------------------------------------

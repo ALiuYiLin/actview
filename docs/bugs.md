@@ -29,28 +29,20 @@
 
 ---
 
-### 2. 🐛 P1 — 同索引 diff 无移动（无 key 列表增删中间项错位）
+### 2. ✅ 已修复 — P1 同索引 diff 文本定位（本次提交，verify 场景 18）
 
-- **现状**：`patchChildren` 对无 key 列表按位置（同索引）对比 patch，中间插入/删除会使后续项全部错位。
-- **复现**：
-
-  ```tsx
-  const state = reactive({ list: ['a', 'b', 'c'] })
-  // <ul>{state.list.map(i => <li>{i}</li>)}</ul>  —— 无 key
-  state.list = ['a', 'x', 'b', 'c'] // 插入 'x'：b/c 的文本虽会更新，但 DOM 节点错位
-  ```
-
-- **影响**：需配合 key 使用；无 key 时增删中间项 DOM 复用错乱（文本更新仍正确，但 DOM 引用/状态错位）。
-- **修复方向**：无 key 列表也可走「索引 diff + 尾部锚点」或直接退化为「重建」（正确性优先）；参考 Vue 3：无 key 时按索引 patch，新增项插到末尾、多余旧项删除——**当前实现其实已按此逻辑，问题在于索引定位文本节点用 `childNodes[index]` 在增删时可能偏移**（见条目 3 同源）。
+- **原问题**：无 key 列表按位置对比，文本 vnode 的 `el` 未跨 diff 持久化，patch 时退化用 `container.childNodes[index]` 猜测——纯文本/混排列表增删中间项会错位（取到错误节点）。
+- **修复**（`renderer.ts`）：vnode 级 children 缓存——`patchChildren` 接收旧 vnode（`oldVnode.__avChildren`，上次 diff 产生的带 `el` 的 vnode 列表），返回新列表存到新 vnode；文本节点跨 diff 精确定位，不再依赖 `childNodes[index]`。
+- **验证**（verify 场景 18）：纯文本数组增删中间项显示与节点数正确；无 key 元素列表保持标准索引语义（文本正确、DOM 按索引复用）。
+- **遗留**：无 key 元素列表增删中间项时 DOM 节点状态跟随索引（React/Vue 均如此），需配合 key；文本显示不受影响。
 
 ---
 
-### 3. 🐛 P2 — Fragment 内文本索引偏移
+### 3. ✅ 已修复 — P2 Fragment 内文本索引偏移（本次提交，verify 场景 18）
 
-- **现状**：Fragment 位于兄弟节点中间时，其内部文本节点更新按 **0 起始索引**从容器 `childNodes` 恢复，可能取到容器内**其他兄弟**的节点造成错位。
-- **复现**：
-
-  ```tsx
+- **原问题**：Fragment 位于兄弟节点中间时，其内部文本更新按 0 起始索引从容器 `childNodes` 恢复，取到兄弟节点造成错位（实测 `<span>A</span><>{[n, 'B']}</><span>C</span>` 更新 n 后变 `99BBC`，`spanA` 被误改）。
+- **修复**：同 Bug 2 根因（文本 vnode el 丢失），vnode 级 children 缓存修复后 Fragment 文本精确定位（实测 `A99BC`，`spanA` 不被误改）。
+- **验证**：verify 场景 18。  ```tsx
   // <div><span>A</span><>{state.n}</><span>B</span></div>
   // Fragment 内文本按 childNodes[0] 定位 → 拿到 <span>A</span> 而非 Fragment 的文本
   ```
@@ -79,7 +71,7 @@
 
 | 限制 | 说明 | 缓解/替代 |
 |---|---|---|
-| 无 key 列表 diff 错位 | 见 Bug 2 | 列表渲染务必加 `key` |
+| 无 key 列表 DOM 状态错位 | 无 key 元素列表增删中间项时 DOM 节点状态跟随索引（标准无 key 语义，文本显示正确） | 列表渲染务必加 `key` |
 | `keep-alive` 子组件需单根元素 | Fragment 子组件 `subTree.el` 为 null，缓存/恢复无效 | 子组件返回单根元素 |
 | `mounted` 钩子顺序：子先于父 | 同步挂载顺序，与 Vue 3（post 队列，父先子后）相反 | 依赖父先于子挂载的顺序场景需注意 |
 | `watch` 不随组件卸载自动 stop | 无 scoped effects 机制 | 在 `onBeforeUnmount` 中调用 `watch` 返回的 stop |
@@ -98,3 +90,4 @@
 - keyed diff 整体重排非最小移动（LIS）｜事件系统 `el.on*` 简陋（invoker + capture）
 - `replace` 不卸载旧组件导致实例泄漏（bffcfd8 顺带修复）｜patch 复用失效实例不重建（74a0bd4 顺带修复）
 - **effect 内修改数组爆栈**（c7e6c6e：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）
+- **同索引 diff 文本错位 + Fragment 文本索引偏移**（本次提交：vnode 级 children 缓存，文本 el 跨 diff 持久化）

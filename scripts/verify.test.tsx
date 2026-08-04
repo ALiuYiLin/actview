@@ -854,3 +854,58 @@ describe('场景 17：effect 内修改数组', () => {
     expect(collectText(host)).toContain('1')
   })
 })
+
+// ------------------------------------------------------------
+// 场景 18：同索引 diff 文本定位（vnode 级 children 缓存）
+//   Bug 2（纯文本/混排列表错位）与 Bug 3（Fragment 内文本索引偏移）
+//   根因相同：文本 vnode 的 el 未跨 diff 持久化，退化用 childNodes[index] 猜测
+// ------------------------------------------------------------
+describe('场景 18：同索引 diff 文本定位', () => {
+  it('Fragment 混排更新不再错位（Bug 3）', async () => {
+    const state = reactive({ n: 1 })
+    function App() {
+      return <div><span>A</span><>{[state.n, 'B']}</><span>C</span></div>
+    }
+    const host = mount('#s18a', App)
+    expect(collectText(host)).toBe('A1BC')
+
+    state.n = 99
+    await nextTick()
+    expect(collectText(host)).toBe('A99BC') // 修复前错误为 '99BBC'
+    expect((host.children[0].children[0] as HTMLElement).textContent).toBe('A') // spanA 未被误改
+  })
+
+  it('纯文本数组增删中间项显示与节点数正确（Bug 2）', async () => {
+    const state = reactive({ list: ['a', 'b', 'c'] })
+    function App() {
+      return <div>{state.list}</div>
+    }
+    const host = mount('#s18b', App)
+    expect(host.children[0].textContent).toBe('abc')
+
+    state.list = ['a', 'x', 'b', 'c']
+    await nextTick()
+    expect(host.children[0].textContent).toBe('axbc')
+
+    state.list = ['a', 'x'] // 删除尾部：多余文本节点被移除
+    await nextTick()
+    expect(host.children[0].textContent).toBe('ax')
+    expect(host.children[0].childNodes.length).toBe(2)
+  })
+
+  it('无 key 元素列表保持标准行为（文本正确、节点按索引复用）', async () => {
+    const state = reactive({ list: ['a', 'b', 'c'] })
+    function App() {
+      return <ul>{state.list.map((i) => <li>{i}</li>)}</ul>
+    }
+    const host = mount('#s18c', App)
+    const ul = host.children[0]
+    const liA = ul.children[0]
+
+    state.list = ['a', 'x', 'b', 'c']
+    await nextTick()
+    expect(Array.from(ul.children).map((li) => li.textContent).join(',')).toBe('a,x,b,c')
+    expect(ul.children.length).toBe(4)
+    expect(ul.children[0]).toBe(liA) // 首项复用（无 key 的标准索引语义）
+  })
+})
