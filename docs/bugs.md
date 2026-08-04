@@ -71,7 +71,7 @@
 | 无 key 列表 DOM 状态错位 | 无 key 元素列表增删中间项时 DOM 节点状态跟随索引（标准无 key 语义，文本显示正确） | 列表渲染务必加 `key` |
 | `keep-alive` 子组件需单根元素 | Fragment 子组件 `subTree.el` 为 null，缓存/恢复无效 | 子组件返回单根元素 |
 | `mounted` 顺序 | **子先父后，与 Vue 3 一致**（Vue 3 官方测试 `apiLifecycle.spec.ts` 断言：child onMounted → mid → root）；挂载是深度优先遍历，子组件先完成挂载；差异仅在我们同步触发、Vue 3 走 post 队列异步批量 | 无需处理；「父先子后」的是 `beforeMount`（Vue 3 同步、跟随遍历顺序） |
-| `watch` 不随组件卸载自动 stop | 无 scoped effects 机制 | 在 `onBeforeUnmount` 中调用 `watch` 返回的 stop |
+| `watch` 自动停止 | ✅ 已实现（本次提交，verify 场景 21）：组件实例持 `EffectScope`，setup 期间创建的 watch/computed/render effect 自动注册，组件卸载时 `scope.stop()` 统一停止；setup 外创建的 watch 仍需手动 stop（Vue 3 同） | 组件内 watch 无需手动清理 |
 | `ErrorBoundary` 捕获后不自动恢复 | 触发 fallback 后持续显示直到边界重建 | 用 key 重建边界 |
 | `lazy` 的 loader 需返回组件产物 | 须为 `defineComponent` 产物（setup 返回 render 函数）；`import('./x')` 用 `m.default` | 见 verify 场景 15 用法 |
 | `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式）；同步场景已修复不爆栈（见已修复 Bug 1） | 事件 handler 内修改 |

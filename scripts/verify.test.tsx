@@ -1039,3 +1039,66 @@ describe('场景 20：具名插槽', () => {
     expect(host.children[0].textContent).toBe('Title!Body')
   })
 })
+
+// ------------------------------------------------------------
+// 场景 21：EffectScope — 组件卸载自动停止 watch/computed/render effect
+// ------------------------------------------------------------
+describe('场景 21：EffectScope 自动停止', () => {
+  it('组件卸载后 watch 自动停止（回调不再触发）', async () => {
+    const state = reactive({ n: 0 })
+    const log: string[] = []
+    const ui = reactive({ on: true })
+    function Child() {
+      watch(() => state.n, (v) => log.push(`child:${v}`))
+      return <span>child</span>
+    }
+    function App() {
+      return <div>{ui.on ? <Child /> : null}</div>
+    }
+    const host = mount('#s21a', App)
+
+    state.n = 1
+    await nextTick()
+    expect(log).toEqual(['child:1']) // 挂载期间 watch 生效
+
+    ui.on = false // 卸载 Child → scope.stop → watch 自动停止
+    await nextTick()
+    state.n = 2
+    await nextTick()
+    expect(log).toEqual(['child:1']) // 不再触发（修复前会追加 'child:2'）
+  })
+
+  it('computed 随组件卸载停止重算；组件外 watch 不受影响', async () => {
+    const state = reactive({ n: 1 })
+    let computedRuns = 0
+    const externalWatchLog: string[] = []
+    // 组件外 watch：不绑定任何 scope，手动管理
+    const stopExternal = watch(() => state.n, (v) => externalWatchLog.push(v))
+
+    function Child() {
+      const double = computed(() => {
+        computedRuns++
+        return state.n * 2
+      })
+      return <span>{double.value}</span>
+    }
+    const ui = reactive({ on: true })
+    function App() {
+      return <div>{ui.on ? <Child /> : null}</div>
+    }
+    const host = mount('#s21b', App)
+    expect(collectText(host)).toContain('2')
+    expect(computedRuns).toBe(1)
+
+    ui.on = false // 卸载 Child：computed 的 effect 停止
+    await nextTick()
+    const runsAfterUnmount = computedRuns
+    state.n = 10
+    await nextTick()
+    expect(computedRuns).toBe(runsAfterUnmount) // computed 不再重算
+
+    await nextTick()
+    expect(externalWatchLog).toContain(10) // 组件外 watch 仍生效（需手动 stop）
+    stopExternal()
+  })
+})

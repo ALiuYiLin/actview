@@ -11,6 +11,7 @@ import { runEffect, queueJob } from './reactive-system'
 import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
+import { EffectScope } from './effectScope'
 
 /** 组件实例：保存 setup/render 及当前子树 */
 export interface ComponentInstance {
@@ -27,6 +28,8 @@ export interface ComponentInstance {
   container: Element | null
   /** 实例 effect 是否仍存活（被卸载后 false；缓存复用判断用） */
   isActive: () => boolean
+  /** 组件 effect scope：setup 期间的 watch/computed/render effect 注册于此，卸载时统一停止 */
+  scope: EffectScope
   /** 生命周期钩子数组（setup 执行期间注册） */
   mounted: (() => void)[]
   updated: (() => void)[]
@@ -53,6 +56,7 @@ export function mountComponent(vnode: any, container: Element | null) {
     isMounted: false,
     container: container as Element | null,
     isActive: () => false,
+    scope: new EffectScope(),
     mounted: [],
     updated: [],
     beforeUnmount: [],
@@ -97,7 +101,8 @@ export function mountComponent(vnode: any, container: Element | null) {
 
   // runEffect 立即执行首次挂载（同步渲染）；之后响应式变化经 scheduler
   // 入微任务队列去重批量更新（调度批处理）
-  const effect = runEffect(update, { scheduler: queueJob })
+  // render effect 注册进组件 scope，随组件卸载自动停止
+  const effect = instance.scope.run(() => runEffect(update, { scheduler: queueJob }))
 
   // 首次渲染已完成（DOM 已挂载）→ 触发 onMounted
   // 注意：子组件的 mounted 先于父组件触发（同步挂载顺序，与 Vue 3 相反）
@@ -114,7 +119,9 @@ export function mountComponent(vnode: any, container: Element | null) {
 
   instance.unmount = () => {
     instance.beforeUnmount.forEach((fn) => fn())
-    effect.stop()
+    // 停止组件作用域内全部 effect（render effect + setup 期间的 watch/computed）
+    instance.scope.stop()
+    effect.stop() // 兜底（scope.stop 已含 render effect，幂等）
   }
 
   // 组件 VNode 的 el 指向其子树根节点

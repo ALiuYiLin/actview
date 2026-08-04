@@ -1,4 +1,5 @@
 import type { Dep } from "../types"
+import { getCurrentScope } from "./effectScope"
 
 // ============================================================
 // 调度批处理 — effect 更新入微任务队列去重
@@ -55,6 +56,9 @@ export class ReactiveEffect {
     this.fn = fn
     this.scheduler = scheduler
     this.deps = []
+    // 注册进当前 effect scope（组件 setup 期间 = 组件 scope，卸载时自动停止）
+    const scope = getCurrentScope()
+    if (scope) scope.effects.push(this)
   }
   public run(): any {
     if (!this.active || this._running) return
