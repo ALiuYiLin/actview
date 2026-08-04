@@ -317,10 +317,57 @@ function patchProps(oldProps: any, newProps: any, el: Element) {
   }
 }
 
+// ------------------------------------------------------------
+// 事件系统：addEventListener + capture + invoker 统一解绑（参考 Vue 3 patchEvent）
+//   - onClick → 'click'；onClickCapture → 'click' + capture
+//   - 同一元素同一事件的 handler 更新时只换 invoker.value，不重新 addEventListener
+//   - handler 为 null/undefined 时解绑并移除 invoker
+// ------------------------------------------------------------
+
+interface Invoker extends Function {
+  value: any
+  attached: number
+}
+
+/** 事件 props 名 → DOM 事件名：onClick → click；onClickCapture → click（capture 由调用方解析） */
+function toEventName(key: string): string | null {
+  let name = key.slice(2) // 去掉 'on'
+  if (!name) return null
+  if (name.endsWith('Capture')) name = name.slice(0, -7)
+  // DOM 标准事件名均为小写（onMouseDown → mousedown）；oninput 本就小写
+  return name.toLowerCase()
+}
+
+function patchEvent(el: any, key: string, value: any) {
+  const eventName = toEventName(key)
+  if (!eventName) return
+  const capture = key.endsWith('Capture')
+  const vei = (el._vei ??= {}) as Record<string, Invoker>
+  let invoker = vei[key]
+
+  if (value) {
+    if (invoker) {
+      // handler 更新：仅替换 value，无需重新绑定
+      invoker.value = value
+      return
+    }
+    invoker = vei[key] = ((e: Event) => {
+      invoker.value(e)
+    }) as unknown as Invoker
+    invoker.value = value
+    invoker.attached = Date.now()
+    el.addEventListener(eventName, invoker, capture)
+  } else if (invoker) {
+    // 解绑
+    el.removeEventListener(eventName, invoker, capture)
+    delete vei[key]
+  }
+}
+
 function setProp(el: any, key: string, value: any) {
-  // 事件：直接绑定到元素属性（onchange → el.onchange）
+  // 事件：addEventListener + capture + invoker 统一解绑（参考 Vue 3 patchEvent）
   if (key.startsWith('on')) {
-    el[key] = typeof value === 'function' ? value : null
+    patchEvent(el, key, value)
     return
   }
   // class / style / value / checked 走 property

@@ -236,7 +236,7 @@ describe('场景 5：路由', () => {
     expect(collectText(host)).toContain('About page')
 
     const nav = host.children[0].children[0] as HTMLElement
-    ;(nav.children[0] as any).onclick({ preventDefault() {} })
+    ;(nav.children[0] as HTMLAnchorElement).dispatchEvent(new Event('click'))
     await nextTick()
     expect(collectText(host)).toContain('Home page')
     expect((nav.children[0] as HTMLAnchorElement).getAttribute('href')).toBe('/')
@@ -462,5 +462,53 @@ describe('冒烟：src/main.tsx 检验页', () => {
     routerMod.router.push('/list')
     await nextTick()
     expect(collectText(appRoot)).toContain('Apple')
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 11：事件系统（addEventListener + capture + invoker 复用 + 统一解绑）
+// ------------------------------------------------------------
+describe('场景 11：事件系统', () => {
+  it('绑定/capture/换 handler 不重绑/解绑', async () => {
+    const state = reactive({ count: 0, enabled: true })
+    function App() {
+      return (
+        <button
+          onClick={state.enabled ? () => state.count++ : undefined}
+          onMouseDownCapture={() => (state.count += 10)}
+        >
+          btn
+        </button>
+      )
+    }
+
+    // mount 后 spy 实例方法（happy-dom 事件方法在深层原型，原型 spy 不可靠）
+    const host = mount('#s11', App)
+    const btn = host.children[0] as HTMLButtonElement
+
+    // 初始绑定生效（行为验证：dispatch 触发 handler）
+    btn.dispatchEvent(new Event('click'))
+    expect(state.count).toBe(1)
+    btn.dispatchEvent(new Event('mousedown'))
+    expect(state.count).toBe(11)
+
+    // 重渲染：handler 换新闭包，invoker 复用 → 不重新 addEventListener
+    const addSpy = vi.spyOn(btn, 'addEventListener')
+    state.count = 100 // 触发 App 重渲染，onClick / onMouseDownCapture 均为新函数
+    await nextTick()
+    expect(addSpy).not.toHaveBeenCalled()
+
+    // 解绑：enabled=false → onClick 移除并停止触发
+    const removeSpy = vi.spyOn(btn, 'removeEventListener')
+    state.enabled = false
+    await nextTick()
+    expect(removeSpy).toHaveBeenCalledWith('click', expect.any(Function), false)
+    btn.dispatchEvent(new Event('click'))
+    expect(state.count).toBe(100) // click 不再 +1
+    btn.dispatchEvent(new Event('mousedown'))
+    expect(state.count).toBe(110) // mousedown 仍 +10
+
+    addSpy.mockRestore()
+    removeSpy.mockRestore()
   })
 })

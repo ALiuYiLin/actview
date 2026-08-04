@@ -23,7 +23,7 @@
 | ~~**keyed diff 非最小移动**~~ | ✅ 已实现：LIS 最长递增子序列定位不动节点，仅移动非 LIS 节点（参考 Vue 3 `getSequence`） | 大列表重排 O(n) DOM 移动 | ~~P1~~ ✅ |
 | **同索引 diff 无移动** | 无 key 列表按位置对比，增删中间项会错位 | 需配合 key 使用 | P1 |
 | ~~**受控 input 光标跳动**~~ | ✅ 已修复：`setInputValue` 更新 value 前后记录/恢复 `selectionStart/End`（仅聚焦时） | 输入体验 | ~~P0~~ ✅ |
-| **事件系统简陋** | `el.on*` 赋值，无 `addEventListener`、无 capture、无统一解绑 | 复杂交互受限 | P2 |
+| ~~**事件系统简陋**~~ | ✅ 已升级：`addEventListener` + capture（`onClickCapture`）+ invoker 统一解绑（参考 Vue 3 `patchEvent`），换 handler 不重绑 | 复杂交互受限 | ~~P2~~ ✅ |
 | **Fragment 内文本索引偏移** | Fragment 处于兄弟节点中间时文本更新按 0 起始索引，可能错位 | 边缘场景 | P2 |
 | **空文本节点** | `{fn()}` 返回 `''` 会残留空文本节点 | 小瑕疵 | P3 |
 
@@ -75,7 +75,7 @@
 
 ### 阶段三：能力扩展（P2）
 
-8. 事件系统升级：`addEventListener` + capture + 统一解绑
+8. ~~**事件系统升级**~~ ✅：`addEventListener` + capture + 统一解绑（invoker 模式）
 9. 插槽、动态组件、keep-alive
 10. 错误边界 / Suspense
 
@@ -97,3 +97,4 @@
 | 提交 caa6931 | 受控 input 光标保位 | `setInputValue` 记录/恢复 `selectionStart/End`；verify 场景 9 |
 | 提交 53b4af6 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
 | 本次提交 | LIS 最小移动 diff | `getSequence`（贪心+二分+前驱回溯）定位不动节点，仅移动非 LIS 节点；verify 场景 2 增强（insertBefore 次数断言） |
+| 本次提交 | 事件系统升级 | `patchEvent` + invoker 缓存（`el._vei`）；`onClickCapture` 支持 capture；handler 更新不重绑、null 解绑；verify 场景 11 |
