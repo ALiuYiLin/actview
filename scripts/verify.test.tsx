@@ -64,10 +64,16 @@ describe('场景 2：keyed diff', () => {
     const ul = host.children[0] as HTMLUListElement
     const texts = () => Array.from(ul.children).map((li) => li.textContent)
     expect(texts()).toEqual(['a', 'b', 'c'])
+    const liA = ul.children[0] // 'a' 的 DOM 节点（用于复用断言）
 
+    // 重排 c,a,b：LIS = [a,b]，只移动 c（insertBefore 恰好 1 次，不是整体重排）
+    const insertSpy = vi.spyOn(ul, 'insertBefore')
     state.items = ['c', 'a', 'b']
     await nextTick()
     expect(texts()).toEqual(['c', 'a', 'b'])
+    expect(insertSpy).toHaveBeenCalledTimes(1)
+    expect(ul.children[1]).toBe(liA) // 'a' 的 li 复用，未被重建
+    insertSpy.mockRestore()
 
     state.items = ['a', 'd']
     await nextTick()
@@ -76,6 +82,37 @@ describe('场景 2：keyed diff', () => {
     state.items = ['x', 'a', 'd']
     await nextTick()
     expect(texts()).toEqual(['x', 'a', 'd'])
+  })
+
+  it('4 元素重排只移动最小节点数', async () => {
+    const state = reactive({ items: ['a', 'b', 'c', 'd'] })
+    function ListApp() {
+      return (
+        <ul>
+          {state.items.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      )
+    }
+    const host = mount('#s2b', ListApp)
+    const ul = host.children[0] as HTMLUListElement
+    const texts = () => Array.from(ul.children).map((li) => li.textContent)
+    expect(texts()).toEqual(['a', 'b', 'c', 'd'])
+
+    // a,b,c,d → a,c,d,b：LIS = [a,c,d]（旧下标 0,2,3），仅 b 需移动
+    const insertSpy = vi.spyOn(ul, 'insertBefore')
+    state.items = ['a', 'c', 'd', 'b']
+    await nextTick()
+    expect(texts()).toEqual(['a', 'c', 'd', 'b'])
+    expect(insertSpy).toHaveBeenCalledTimes(1)
+    insertSpy.mockRestore()
+
+    // 全部逆序：a,c,d,b → b,d,c,a，至少 3 次移动但不超过列表长度
+    const spy2 = vi.spyOn(ul, 'insertBefore')
+    state.items = ['b', 'd', 'c', 'a']
+    await nextTick()
+    expect(texts()).toEqual(['b', 'd', 'c', 'a'])
+    expect(spy2.mock.calls.length).toBeLessThan(4)
+    spy2.mockRestore()
   })
 })
 

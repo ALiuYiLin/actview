@@ -20,7 +20,7 @@
 
 | 限制 | 现状 | 影响 | 优先级 |
 |---|---|---|---|
-| **keyed diff 非最小移动** | 「复用 + 整体 appendChild 重排」，非 LIS 最长递增子序列 | 大列表重排 O(n) DOM 移动 | P1 |
+| ~~**keyed diff 非最小移动**~~ | ✅ 已实现：LIS 最长递增子序列定位不动节点，仅移动非 LIS 节点（参考 Vue 3 `getSequence`） | 大列表重排 O(n) DOM 移动 | ~~P1~~ ✅ |
 | **同索引 diff 无移动** | 无 key 列表按位置对比，增删中间项会错位 | 需配合 key 使用 | P1 |
 | ~~**受控 input 光标跳动**~~ | ✅ 已修复：`setInputValue` 更新 value 前后记录/恢复 `selectionStart/End`（仅聚焦时） | 输入体验 | ~~P0~~ ✅ |
 | **事件系统简陋** | `el.on*` 赋值，无 `addEventListener`、无 capture、无统一解绑 | 复杂交互受限 | P2 |
@@ -69,7 +69,7 @@
 ### 阶段二：正确性与性能（P1）
 
 5. ~~**调度批处理**~~ ✅：effect 更新入微任务队列去重（scheduler + job queue），提供 `nextTick`
-6. **LIS 最小移动 diff**：替换「整体重排」为最长递增子序列定位不动节点
+6. ~~**LIS 最小移动 diff**~~ ✅：替换「整体重排」为最长递增子序列定位不动节点
 7. ~~**`has` / `ownKeys` 陷阱**~~ ✅（提交 34a8729，verify 场景 7）
    - 已实现：`ITERATE_KEY` + `has`/`ownKeys` 陷阱，新增/删除 key 触发迭代依赖
 
@@ -95,4 +95,5 @@
 | 提交 34a8729 | for...in / 'in' 响应 | `ITERATE_KEY` + `has`/`ownKeys` 陷阱，增删 key 触发；verify 场景 7 |
 | 提交 6f892fd | markRaw / readonly / shallowReactive | 只代理普通对象/数组（Date/Map/Set 不代理）；verify 场景 8 |
 | 提交 caa6931 | 受控 input 光标保位 | `setInputValue` 记录/恢复 `selectionStart/End`；verify 场景 9 |
-| 待提交 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
+| 提交 53b4af6 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
+| 本次提交 | LIS 最小移动 diff | `getSequence`（贪心+二分+前驱回溯）定位不动节点，仅移动非 LIS 节点；verify 场景 2 增强（insertBefore 次数断言） |

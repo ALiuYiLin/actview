@@ -208,11 +208,13 @@ function patchChildren(oldChildren: any, newChildren: any, container: Element) {
 }
 
 // ------------------------------------------------------------
-// keyed diff — 按 key 复用/移动/删除节点
+// keyed diff — 按 key 复用，LIS 最小移动（参考 Vue 3 思路）
 //   1. 建旧 key → index 映射
-//   2. 遍历新列表：key 命中 → patch 复用；否则新建（先不挂载）
+//   2. 遍历新列表：key 命中 → patch 复用并记录旧 index（source，+1 偏移）；
+//      未命中 → 创建（暂不挂载），source 记 0
 //   3. 卸载未被复用的旧节点（此时 DOM 仍是旧顺序，文本可按索引恢复）
-//   4. 按新顺序依次 appendChild 重排（已挂载节点会被移动）
+//   4. 对 source 求最长递增子序列（LIS）—— 这些节点保持原位，不移动
+//   5. 从后往前：新节点与非 LIS 节点 insertBefore 到 anchor 前，LIS 节点不动
 // ------------------------------------------------------------
 
 function patchKeyedChildren(oldList: any[], newList: any[], container: Element) {
@@ -221,32 +223,80 @@ function patchKeyedChildren(oldList: any[], newList: any[], container: Element) 
     if (vnode && vnode.key != null) oldKeyToIndex.set(vnode.key, i)
   })
 
-  const reusedIndexes = new Set<number>()
+  const newLen = newList.length
+  // source[i]：新列表第 i 项对应旧列表下标 +1；0 = 新创建节点
+  const source = new Array(newLen).fill(0)
 
   // 2. 复用或创建
-  for (const newVNode of newList) {
+  for (let i = 0; i < newLen; i++) {
+    const newVNode = newList[i]
     if (newVNode == null) continue
     if (newVNode.key != null && oldKeyToIndex.has(newVNode.key)) {
       const oldIndex = oldKeyToIndex.get(newVNode.key)!
       patch(oldList[oldIndex], newVNode, container)
-      reusedIndexes.add(oldIndex)
+      source[i] = oldIndex + 1
     } else {
-      // 无 key 或未命中：先创建（不挂载），重排时统一插入
+      // 无 key 或未命中：先创建（不挂载），最后统一插入
       mountVNode(newVNode, null)
     }
   }
 
-  // 3. 卸载未复用的旧节点
+  // 3. 卸载未被复用的旧节点
   oldList.forEach((oldVNode, i) => {
-    if (oldVNode && !reusedIndexes.has(i)) {
+    if (oldVNode && !source.includes(i + 1)) {
       unmount(oldVNode, container, i)
     }
   })
 
-  // 4. 按新顺序重排：依次 append（appendChild 对已挂载节点是移动）
-  for (const newVNode of newList) {
-    if (newVNode?.el) container.appendChild(newVNode.el)
+  // 4. LIS：source 上求最长递增子序列（对应旧节点保持原位，不移动）
+  const seq = getSequence(source)
+  let j = seq.length - 1
+
+  // 5. 从后往前插入/移动：anchor 为 i+1 项（已处理，位置正确）
+  for (let i = newLen - 1; i >= 0; i--) {
+    const newVNode = newList[i]
+    if (newVNode == null) continue
+    // Fragment 等 el 为 null 的节点静默跳过（与旧行为一致）
+    if (newVNode?.el == null) continue
+    const anchor = i + 1 < newLen ? newList[i + 1]?.el ?? null : null
+    if (source[i] === 0) {
+      // 新节点：插入到 anchor 前
+      container.insertBefore(newVNode.el, anchor)
+    } else if (j < 0 || i !== seq[j]) {
+      // 复用节点但不在 LIS 上 → 需要移动
+      container.insertBefore(newVNode.el, anchor)
+    } else {
+      j-- // 在 LIS 上，保持原位
+    }
   }
+}
+
+// 最长递增子序列（返回下标数组；贪心 + 二分 + 前驱链回溯，值 0 表示新节点不参与）
+function getSequence(arr: number[]): number[] {
+  const p = arr.slice() // 前驱索引链
+  const result: number[] = [] // tails：按末尾值递增的 LIS 末端下标
+  for (let i = 0; i < arr.length; i++) {
+    const val = arr[i]
+    if (val === 0) continue
+    // 二分：找第一个末尾值 >= val 的位置
+    let lo = 0
+    let hi = result.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (arr[result[mid]] < val) lo = mid + 1
+      else hi = mid
+    }
+    if (lo > 0) p[i] = result[lo - 1]
+    result[lo] = i
+  }
+  // 回溯前驱链，得到真实 LIS 下标
+  let len = result.length
+  let k = result[len - 1]
+  while (len-- > 0) {
+    result[len] = k
+    k = p[k]
+  }
+  return result
 }
 
 function patchProps(oldProps: any, newProps: any, el: Element) {
