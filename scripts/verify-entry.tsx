@@ -113,6 +113,24 @@ createApp(RouterApp).mount('#router')
 
 globalThis.__router = router
 
+// ---------- 场景 6：数组方法响应（push/pop/splice/reverse/索引赋值） ----------
+const arrState = reactive({ items: ['a', 'b', 'c'] })
+
+function ArrApp() {
+  return (
+    <ul>
+      {arrState.items.map((item) => <li key={item}>{item}</li>)}
+    </ul>
+  )
+}
+createApp(ArrApp).mount('#arr')
+
+globalThis.__arrPush = (v) => arrState.items.push(v)
+globalThis.__arrPop = () => arrState.items.pop()
+globalThis.__arrSplice = () => arrState.items.splice(1, 1)
+globalThis.__arrReverse = () => arrState.items.reverse()
+globalThis.__arrSetIndex = (i, v) => { arrState.items[i] = v }
+
 // ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')
 createApp(ListApp).mount('#list')

@@ -186,6 +186,27 @@ try {
   check('RouterLink 点击导航到 Home', collectText(routerHost).includes('Home page'))
   check('href 属性正确', navLinks[0].attrs.href === '/')
 
+  // ---------- 场景 6：数组方法响应 ----------
+  console.log('--- 场景 6：数组方法（push/pop/splice/reverse/索引赋值） ---')
+  const arrHost = hosts.get('#arr')
+  const liTexts = (host) => host.children[0].children.map((li) => li.children[0].data)
+  check('初始 a,b,c', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['a', 'b', 'c']))
+
+  globalThis.__arrPush('d')
+  check('push 后 a,b,c,d', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['a', 'b', 'c', 'd']))
+
+  globalThis.__arrPop()
+  check('pop 后 a,b,c', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['a', 'b', 'c']))
+
+  globalThis.__arrSplice()
+  check('splice(1,1) 后 a,c', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['a', 'c']))
+
+  globalThis.__arrReverse()
+  check('reverse 后 c,a', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['c', 'a']))
+
+  globalThis.__arrSetIndex(0, 'x')
+  check('索引赋值后 x,a', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['x', 'a']))
+
   // ---------- 冒烟：src/main.tsx 检验页（路由版） ----------
   console.log('--- 冒烟：src/main.tsx 检验页（路由版） ---')
   await server.ssrLoadModule('/src/main.tsx')
