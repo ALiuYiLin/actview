@@ -963,3 +963,79 @@ describe('场景 19：空文本节点', () => {
     expect(div.childNodes.length).toBe(4)
   })
 })
+
+// ------------------------------------------------------------
+// 场景 20：具名插槽（<template slot="name"> 编译期转换 → slots prop）
+// ------------------------------------------------------------
+describe('场景 20：具名插槽', () => {
+  it('具名插槽 + 默认插槽分发', () => {
+    function Card(props: any) {
+      return (
+        <div class="card">
+          <div class="header">{props.slots?.header?.()}</div>
+          <div class="body">{props.children}</div>
+          <div class="footer">{props.slots?.footer?.()}</div>
+        </div>
+      )
+    }
+    function App() {
+      return (
+        <Card>
+          <template slot="header">标题</template>
+          <template slot="footer">页脚</template>
+          正文内容
+        </Card>
+      )
+    }
+    const host = mount('#s20a', App)
+    const card = host.children[0] as HTMLElement
+    expect((card.children[0] as HTMLElement).textContent).toBe('标题') // header 插槽
+    expect((card.children[1] as HTMLElement).textContent).toBe('正文内容') // 默认插槽
+    expect((card.children[2] as HTMLElement).textContent).toBe('页脚') // footer 插槽
+  })
+
+  it('具名作用域插槽（template 无值属性声明参数）', () => {
+    function List(props: any) {
+      return (
+        <ul>
+          {props.items.map((item: string, i: number) => (
+            <li key={i}>{props.slots?.item?.(item, i)}</li>
+          ))}
+        </ul>
+      )
+    }
+    function App() {
+      return (
+        <List items={['a', 'b']}>
+          <template slot="item" item i>
+            <b>{i}:{item}</b>
+          </template>
+        </List>
+      )
+    }
+    const host = mount('#s20b', App)
+    const ul = host.children[0] as HTMLUListElement
+    expect(Array.from(ul.children).map((li) => li.textContent).join(',')).toBe('0:a,1:b')
+  })
+
+  it('默认插槽 + 具名插槽混合', () => {
+    function Panel(props: any) {
+      return (
+        <div>
+          {props.slots?.title?.() ?? null}
+          {props.children}
+        </div>
+      )
+    }
+    function App() {
+      return (
+        <Panel>
+          <template slot="title">Title!</template>
+          Body
+        </Panel>
+      )
+    }
+    const host = mount('#s20c', App)
+    expect(host.children[0].textContent).toBe('Title!Body')
+  })
+})

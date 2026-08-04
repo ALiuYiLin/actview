@@ -7,6 +7,112 @@
 
 import { types as t } from '@babel/core'
 
+// ============================================================
+// 具名插槽转换
+//   <Card>
+//     <template slot="header">标题</template>              → slots.header = () => '标题'
+//     <template slot="item" item><b>{item}</b></template>  → slots.item = (item) => <b>...
+//     默认内容                                            → props.children
+//   </Card>
+//   转换后：<Card slots={{ header: () => ..., item: (item) => ... }}>默认内容</Card>
+//   - 仅当父元素是组件（首字母大写）时提取
+//   - 作用域参数：template 上的无值属性名（如 `item`）声明为插槽函数参数
+// ============================================================
+
+/** 从 JSXElement 提取 <template slot="name"> 子元素，生成 slots prop */
+function extractNamedSlots(el: any) {
+  // 仅组件（大写开头）接受具名插槽
+  const nameNode = el.openingElement.name
+  if (!t.isJSXIdentifier(nameNode) || !/^[A-Z]/.test(nameNode.name)) return
+
+  const children = el.children
+  const slotProps: any[] = []
+  const remaining: any[] = []
+
+  for (const child of children) {
+    if (
+      t.isJSXElement(child) &&
+      t.isJSXIdentifier(child.openingElement.name, { name: 'template' })
+    ) {
+      const attrs = child.openingElement.attributes
+      const slotAttr = attrs.find(
+        (a: any) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'slot' }),
+      )
+      // 仅转换字符串 slot 值（如 slot="header"）
+      if (slotAttr && t.isStringLiteral((slotAttr as any).value)) {
+        // 作用域参数：除 slot 外的无值属性名（<template slot="item" item>）
+        const scopeParams = attrs
+          .filter(
+            (a: any) =>
+              t.isJSXAttribute(a) &&
+              !t.isJSXIdentifier(a.name, { name: 'slot' }) &&
+              !a.value,
+          )
+          .map((a: any) => t.identifier(a.name.name))
+        // 插槽内容统一用 Fragment 包裹（JSXText/多 children 均可作箭头函数 body）
+        const slotBody = t.jsxFragment(
+          t.jsxOpeningFragment(),
+          t.jsxClosingFragment(),
+          child.children,
+        )
+        slotProps.push(
+          t.objectProperty(
+            t.stringLiteral((slotAttr as any).value.value),
+            t.arrowFunctionExpression(scopeParams, slotBody),
+          ),
+        )
+        continue // 从 children 中移除 template
+      }
+    }
+    remaining.push(child)
+  }
+
+  if (!slotProps.length) return
+  el.children = remaining
+  el.openingElement.attributes.push(
+    t.jsxAttribute(
+      t.jsxIdentifier('slots'),
+      t.jsxExpressionContainer(t.objectExpression(slotProps)),
+    ),
+  )
+}
+
+/** 递归遍历 JSX 树（元素/Fragment/表达式嵌套），提取具名插槽 */
+function walkJSX(node: any) {
+  if (t.isJSXElement(node)) {
+    extractNamedSlots(node)
+    node.children.forEach(walkJSX)
+  } else if (t.isJSXFragment(node)) {
+    node.children.forEach(walkJSX)
+  } else if (t.isJSXExpressionContainer(node)) {
+    walkExpression(node.expression)
+  }
+}
+
+/** 递归遍历可能嵌套 JSX 的表达式（&& / 三元 / 箭头函数 / 数组 / 调用参数等） */
+function walkExpression(expr: any) {
+  if (!expr) return
+  if (t.isJSXElement(expr) || t.isJSXFragment(expr)) {
+    walkJSX(expr)
+  } else if (t.isJSXExpressionContainer(expr)) {
+    walkExpression(expr.expression)
+  } else if (t.isLogicalExpression(expr) || t.isBinaryExpression(expr)) {
+    walkExpression(expr.left)
+    walkExpression(expr.right)
+  } else if (t.isConditionalExpression(expr)) {
+    walkExpression(expr.consequent)
+    walkExpression(expr.alternate)
+  } else if (t.isArrowFunctionExpression(expr) || t.isFunctionExpression(expr)) {
+    walkExpression(expr.body)
+  } else if (t.isCallExpression(expr)) {
+    expr.arguments.forEach(walkExpression)
+  } else if (t.isArrayExpression(expr)) {
+    expr.elements.forEach(walkExpression)
+  } else if (t.isObjectExpression(expr)) {
+    expr.properties.forEach((p: any) => walkExpression(p.value))
+  }
+}
+
 export default function defineComponentPlugin() {
   let hasTransformed = false
 
@@ -51,6 +157,9 @@ export default function defineComponentPlugin() {
         if (!t.isJSXElement(last.argument) && !t.isJSXFragment(last.argument)) return
 
         hasTransformed = true
+
+        // ---------- 2.5 具名插槽转换（提取 <template slot="x"> → slots prop） ----------
+        walkJSX(last.argument)
 
         // ---------- 3. return JSX → return () => JSX ----------
         last.argument = t.arrowFunctionExpression([], last.argument)

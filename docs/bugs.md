@@ -76,7 +76,7 @@
 | `lazy` 的 loader 需返回组件产物 | 须为 `defineComponent` 产物（setup 返回 render 函数）；`import('./x')` 用 `m.default` | 见 verify 场景 15 用法 |
 | `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式）；同步场景已修复不爆栈（见已修复 Bug 1） | 事件 handler 内修改 |
 | 空文本节点不残留 | 空文本不产生 DOM 节点（修复后）；多个连续空文本+后续节点同时恢复的边缘场景可能轻微错位 | 边缘场景少见 |
-| 无具名插槽 | 仅默认/作用域插槽（函数 children） | 具名插槽需 JSX/Babel 侧语法支持 |
+| 无具名插槽 | ✅ 已支持（本次提交，verify 场景 20）：`<template slot="name">...</template>` 编译期转换为 `slots` prop（Babel 插件），支持作用域参数（无值属性声明） | - |
 | 组件函数体顶层是 setup 体（只执行一次） | 顶层响应式读取/抛错不会在更新时重跑；渲染期逻辑应放 JSX 表达式 | 见 verify 场景 15 注释 |
 
 ---
