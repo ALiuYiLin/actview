@@ -1,31 +1,25 @@
-# 测试说明 — scripts/verify 覆盖的场景
+# 测试说明 — scripts/verify.test.tsx 覆盖的场景
 
-> 本文档说明 `scripts/verify.mjs` + `scripts/verify-entry.tsx` 测试了什么、怎么测的、怎么运行。
+> 本文档说明 `scripts/verify.test.tsx`（vitest + happy-dom）测试了什么、怎么测的、怎么运行。
+> 原 `scripts/verify.mjs` + `verify-entry.tsx`（手写 DOM stub）已迁移到 vitest，场景保留为用例。
 
 ---
 
 ## 1. 测试基础设施
 
-框架的渲染器依赖真实 DOM（`document.createElement` 等），而仓库没有浏览器测试环境。
-因此 `verify.mjs` 内置了一个**最小 DOM stub**，用普通对象模拟真实 DOM 的关键行为：
+测试基于 **vitest + happy-dom**：
 
-- `createElement` / `createTextNode` / `appendChild` / `removeChild` / `replaceChild`
-- `appendChild` 实现真实 DOM 的**移动语义**（已挂载节点先移除再追加）
-- `childNodes` / `setAttribute` / `className` / `style` / `value`
-- 文本节点的 `data` 与 `textContent` 互为别名（与真实 DOM 一致）
-- `querySelector` 按选择器缓存容器（支持多个应用同时挂载）
-
-测试通过 **vite 的 `ssrLoadModule`** 加载 `.tsx` 模块——走与浏览器完全相同的管线：
-`actview` Babel 插件（defineComponent 转换）→ esbuild JSX 转换 → 模块执行（`createApp().mount(...)`）。
-即编译期与运行期全链路都被覆盖。
+- **happy-dom** 提供真实的 DOM/window 环境（`document.createElement`、事件、`window.history`、input 光标语义等），不再需要手写 DOM stub；
+- **vitest 复用 vite 配置**（`vite.config.ts` 的 `test` 块）——测试文件走与浏览器完全相同的编译管线：`actview` Babel 插件（defineComponent 转换）→ esbuild JSX 转换 → 模块执行（`createApp().mount(...)`），编译期与运行期全链路都被覆盖；
+- 每个场景是一个独立 `it` 用例，组件与状态定义在用例内部（相互隔离）。
 
 **运行方式**：
 
 ```bash
-node scripts/verify.mjs
+pnpm test        # 即 vitest run
 ```
 
-当前共 **23 项断言**，全部通过时输出 `23 通过 / 0 失败`，并以退出码 0 结束。
+当前共 **10 个用例**（场景 1-9 + 冒烟），全部通过时退出码为 0。
 
 ---
 
@@ -126,15 +120,19 @@ node scripts/verify.mjs
 
 ---
 
-## 4. 断言清单（23 项）
+## 4. 用例清单（10 个）
 
 ```
-场景 ①：挂载后 count 文本为 "1" / count=42 后文本自动更新为 "42"
-场景 ②：初始 a,b,c / 重排 c,a,b / 删除+新增 a,d / 头部新增 x,a,d
-场景 ③：setup 1 次 / msg=hello / msg→world / setup 仍 1 次 / span 引用不变
-场景 ④：初始 render 1 次 / 含 inner / 子更新 changed / 父仍 1 次
-        / props 同步 hello2! / 父 2 次 / 子更新 again / 父仍 2 次（核心）
-冒烟：根元素 / 标题 / 4 卡片 / keyed 列表 3 项
+场景 ①：响应式：count 1 =》 42 自动更新，input.value 同步
+场景 ②：keyed diff：重排 c,a,b / 删除+新增 a,d / 头部新增 x,a,d
+场景 ③：props：setup 1 次 / msg hello =》 world / setup 仍 1 次 / DOM 引用不变
+场景 ④：依赖隔离：子内部状态变化不连带父（含 props 更新后的核心断言）
+场景 ⑤：路由：初始 Home / push About / push /user/:id / back / link 点击 / href
+场景 ⑥：数组方法：push / pop / splice / reverse / 索引赋值
+场景 ⑦：for...in / in：增删 key 后遍历与 in 检查更新
+场景 ⑧：reactive API：Date 不崩 / markRaw 隔离 / readonly 拦截 / shallow 浅层
+场景 ⑨：input 光标：聚焦时赋值后恢复、未聚焦不干预
+冒烟：main.tsx 路由版：首页总览 =》 push /reactive =》 push /list
 ```
 
 ---
@@ -143,8 +141,8 @@ node scripts/verify.mjs
 
 新增场景三步走：
 
-1. 在 `scripts/verify-entry.tsx` 写组件，用 `globalThis.__xxx` 暴露驱动接口，`createApp(...).mount('#xxx')` 挂到新容器；
-2. 在 `scripts/verify.mjs` 用 `hosts.get('#xxx')` 取容器，写 `check('描述', 条件)` 断言；
-3. `node scripts/verify.mjs` 运行，保持全绿。
+1. 在 `scripts/verify.test.tsx` 的对应 `describe` 中新增一个 `it` 用例，组件与状态定义在用例内部，用 `mount('#xxx', Component)` 挂载；
+2. 通过返回的宿主元素 + `expect(...).toBe(...)` 断言（文本/结构/计数等）；
+3. `pnpm test` 运行，保持全绿。
 
-> 注意：`verify-entry.tsx` 在 `tsconfig` 的 `include` 之外，类型检查报错只出现在编辑器（inferred project），不影响 `tsc` 与 `verify` 运行。
+> 注意：`scripts/*.test.tsx` 不在 `tsconfig` 的 `include` 之内，类型检查报错只出现在编辑器（inferred project），不影响 `tsc` 与 `vitest` 运行。

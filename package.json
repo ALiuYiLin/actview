@@ -6,16 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "@actview/core": "workspace:*",
+    "@actview/jsx": "workspace:*",
     "@actview/plugin": "workspace:*",
     "@actview/router": "workspace:*",
     "@types/node": "^26.0.1",
+    "actview": "workspace:*",
+    "happy-dom": "^20.11.1",
     "typescript": "~6.0.2",
     "vite": "^6.4.3",
-    "actview": "workspace:*",
-    "@actview/core": "workspace:*",
-    "@actview/jsx": "workspace:*"
+    "vitest": "^4.1.10"
   }
 }

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import path from 'path'
 import { actviewPlugin } from '@actview/plugin'
 
@@ -12,6 +12,10 @@ export default defineConfig({
     alias: {
       '@actview/jsx': path.resolve(__dirname, 'packages/jsx/src'),
     },
+  },
+  test: {
+    environment: 'happy-dom',
+    include: ['scripts/**/*.test.{ts,tsx}'],
   },
   server: {
     port: 3000,
