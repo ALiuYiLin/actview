@@ -2,6 +2,7 @@
 
 > 规划来源：`docs/DESIGN.md` 第 9 节 + 开发过程中的实际踩点。
 > 本文件随实现进度更新：完成项标记 ✅。
+> 未修复问题与已知限制清单：见 `docs/bugs.md`。
 
 ---
 
@@ -10,8 +11,8 @@
 | 限制 | 现状 | 影响 | 优先级 |
 |---|---|---|---|
 | ~~**数组方法不响应**~~ | ✅ 已修复：惰性深层代理 + 数组 instrumentation（`push/pop/shift/unshift/splice/sort/reverse` 及索引赋值均触发更新） | 高频痛点 | ~~P0~~ ✅ |
-| **无 `computed` / `watch`** | 只有 `reactive` + `runEffect`（可当手动 watch） | 无派生值缓存、无便捷侦听封装 | P1 |
-| **无 `ref`** | 基本类型无法直接响应（只能包对象） | 使用体验 | P1 |
+| ~~**无 `computed` / `watch`**~~ | ✅ 已实现：`computed`（脏标记惰性缓存）；`watch`（源为 ref/getter/对象深遍历/数组，`immediate`、`onCleanup`、返回 stop） | 无派生值缓存、无便捷侦听封装 | ~~P1~~ ✅ |
+| ~~**无 `ref`**~~ | ✅ 已实现：`{ value }` 包装，`ref.value` 响应式（对象值自动 reactive）；附 `isRef` / `unref` | 基本类型无法直接响应 | ~~P1~~ ✅ |
 | ~~**`for...in` / `'in'` 不响应**~~ | ✅ 已修复：`has` / `ownKeys` 陷阱 + `ITERATE_KEY` 依赖，增删 key 触发更新 | 遍历响应式对象不更新 | ~~P2~~ ✅ |
 | ~~**无调度批处理**~~ | ✅ 已实现：effect 更新入微任务队列去重（`queueJob` + Set 去重 + 批量 flush），提供 `nextTick` | 性能 + nextTick 语义 | ~~P1~~ ✅ |
 | ~~**无 `shallowReactive` / `readonly` / `markRaw`**~~ | ✅ 已实现：只代理普通对象/数组（Date/Map/Set 等不代理）、`markRaw` 跳过代理、`readonly` 深层只读、`shallowReactive` 浅层 | 灵活性/性能边界 | ~~P2~~ ✅ |
@@ -42,8 +43,8 @@
 
 | 限制 | 现状 | 优先级 |
 |---|---|---|
-| **测试是自制 stub** | `scripts/verify.mjs` 手写 DOM stub，非标准测试框架 | P1 |
-| **类型未泛型化** | 组件 props 无泛型推导、事件类型手工定义 | P2 |
+| ~~**测试是自制 stub**~~ | ✅ 已迁移：`scripts/verify.mjs` 的 DOM stub 已替换，场景保留为 `scripts/verify.test.tsx`（vitest + happy-dom） | P1 |
+| ~~**类型未泛型化**~~ | ✅ 已实现：`ComponentType<P>`/`PropsOf` props 推导、camelCase 事件类型（见路线图 12） | P2 |
 | **无 devtools** | 无调试面板 | P3 |
 | **无 SSR/hydration** | 渲染器直接依赖 `document` | P3 |
 | **无文档站点** | 仅 `docs/DESIGN.md` + `docs/test.md` | P3 |
