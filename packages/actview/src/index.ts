@@ -20,6 +20,9 @@ export {
   onUpdated,
   onBeforeUnmount,
   KeepAlive,
+  ErrorBoundary,
+  Suspense,
+  lazy,
 } from '@actview/core'
 
 export type { App } from '@actview/core'

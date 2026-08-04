@@ -71,9 +71,9 @@ export function patch(oldVnode: any, newVnode: any, container: Element, index?: 
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
     patchVNode(oldVnode, newVnode, container, index)
-  } else if (newVnode.component) {
+  } else if (newVnode.component?.isActive?.()) {
     // keep-alive 缓存命中：旧组件先卸载（走缓存分支，DOM 移入隐藏容器），
-    // 再复用缓存实例更新
+    // 再复用缓存实例更新；实例已失效（如 Suspense 的 fallback 替换后）则重建
     unmount(oldVnode, container, index)
     patchComponent(oldVnode, newVnode, container)
   } else {
@@ -88,6 +88,13 @@ export function render(vnode: any, container: Element) {
 // ------------------------------------------------------------
 // 挂载
 // ------------------------------------------------------------
+
+/** 模板引用：vnode.props.ref（函数或 { value }）在挂载/卸载时回调 */
+export function applyRef(ref: any, value: any) {
+  if (!ref) return
+  if (typeof ref === 'function') ref(value)
+  else if (ref && typeof ref === 'object') ref.value = value
+}
 
 export function mountVNode(vnode: any, container: Element | null): any {
   vnode = resolveDynamicVNode(vnode)
@@ -117,6 +124,8 @@ export function mountVNode(vnode: any, container: Element | null): any {
   patchProps(null, vnode.props, el)
   patchChildren(null, vnode.props?.children, el)
   container?.appendChild(el)
+  // 模板引用：ref 指向挂载后的 DOM
+  applyRef(vnode.props?.ref, el)
   return el
 }
 
@@ -323,14 +332,14 @@ function patchProps(oldProps: any, newProps: any, el: Element) {
 
   // 删除旧 props 中已不存在的属性
   for (const key in oldProps) {
-    if (key === 'children') continue
+    if (key === 'children' || key === 'ref') continue
     if (!(key in newProps)) {
       setProp(el, key, undefined)
     }
   }
   // 设置/更新新 props
   for (const key in newProps) {
-    if (key === 'children') continue
+    if (key === 'children' || key === 'ref') continue
     setProp(el, key, newProps[key])
   }
 }
@@ -482,4 +491,6 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   if (el && el.parentNode) {
     el.parentNode.removeChild(el)
   }
+  // 模板引用：卸载时置 null
+  applyRef(vnode.props?.ref, null)
 }

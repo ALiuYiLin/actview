@@ -8,8 +8,9 @@
 // ============================================================
 
 import { runEffect, queueJob } from './reactive-system'
-import { patch } from './renderer'
+import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
+import { getErrorBoundary } from './errorBoundary'
 
 /** 组件实例：保存 setup/render 及当前子树 */
 export interface ComponentInstance {
@@ -24,6 +25,8 @@ export interface ComponentInstance {
   isMounted: boolean
   /** 挂载容器（keep-alive 恢复 DOM 时使用） */
   container: Element | null
+  /** 实例 effect 是否仍存活（被卸载后 false；缓存复用判断用） */
+  isActive: () => boolean
   /** 生命周期钩子数组（setup 执行期间注册） */
   mounted: (() => void)[]
   updated: (() => void)[]
@@ -49,11 +52,15 @@ export function mountComponent(vnode: any, container: Element | null) {
     unmount: () => {},
     isMounted: false,
     container: container as Element | null,
+    isActive: () => false,
     mounted: [],
     updated: [],
     beforeUnmount: [],
   }
   vnode.component = instance
+
+  // 组件模板引用：ref 指向组件实例
+  applyRef(vnode.props?.ref, instance)
 
   // setup 执行期间挂载 currentInstance 上下文：
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount 注册到本实例
@@ -63,17 +70,28 @@ export function mountComponent(vnode: any, container: Element | null) {
 
   // 更新函数：重新 render 并与旧子树 patch
   const update = () => {
-    const newSubTree = instance.render()
-    const oldSubTree = instance.subTree
-    instance.subTree = newSubTree
-    patch(oldSubTree, newSubTree, container as Element)
-    // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
-    vnode.el = instance.subTree ? instance.subTree.el : null
-    // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated
-    if (instance.isMounted) {
-      instance.updated.forEach((fn) => fn())
-    } else {
-      instance.isMounted = true
+    try {
+      const newSubTree = instance.render()
+      const oldSubTree = instance.subTree
+      instance.subTree = newSubTree
+      patch(oldSubTree, newSubTree, container as Element)
+      // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
+      vnode.el = instance.subTree ? instance.subTree.el : null
+      // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated
+      if (instance.isMounted) {
+        instance.updated.forEach((fn) => fn())
+      } else {
+        instance.isMounted = true
+      }
+    } catch (err) {
+      // 渲染错误：交给最近的 ErrorBoundary（显示 fallback）
+      const boundary = getErrorBoundary()
+      if (boundary && boundary.errorRef?.value == null) {
+        boundary.errorRef.value = err
+        boundary.update?.()
+      } else {
+        console.error('[actview] 组件渲染错误:', err)
+      }
     }
   }
 
@@ -91,6 +109,8 @@ export function mountComponent(vnode: any, container: Element | null) {
   instance.update = () => {
     if (effect.active) queueJob(effect)
   }
+
+  instance.isActive = () => effect.active
 
   instance.unmount = () => {
     instance.beforeUnmount.forEach((fn) => fn())

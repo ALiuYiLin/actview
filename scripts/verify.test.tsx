@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -689,5 +689,73 @@ describe('场景 14：插槽与动态组件', () => {
     expect(collectText(host)).toContain('CompA(5)')
     expect(aMounted).toBe(1) // 不重建：onMounted 只触发一次
     expect(host.children[0].children[0]).toBe(aDiv) // DOM 复用
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 15：错误边界 / Suspense / lazy / ref
+// ------------------------------------------------------------
+describe('场景 15：错误边界 / Suspense / lazy / ref', () => {
+  it('ErrorBoundary 捕获子组件渲染错误并显示 fallback', async () => {
+    const state = reactive({ boom: false })
+    function throwBoom() {
+      throw new Error('boom!')
+    }
+    // 抛错放在 JSX 表达式内（render 期执行、被渲染 effect 跟踪）；
+    // 组件函数体顶层是 setup 体（只执行一次），不会在更新时重跑
+    function Broken() {
+      return <span>{state.boom ? throwBoom() : 'ok'}</span>
+    }
+    function App() {
+      return (
+        <div>
+          <ErrorBoundary fallback={<b>出错了</b>}>
+            <Broken />
+          </ErrorBoundary>
+        </div>
+      )
+    }
+    const host = mount('#s15a', App)
+    expect(collectText(host)).toContain('ok')
+
+    state.boom = true // 子组件渲染抛错 → 边界捕获并显示 fallback
+    await nextTick()
+    expect(collectText(host)).toContain('出错了')
+    expect(collectText(host)).not.toContain('ok')
+  })
+
+  it('ref 模板引用指向 DOM', () => {
+    let elRef: any = null
+    function App() {
+      return <div><input ref={(el) => { elRef = el }} /></div>
+    }
+    const host = mount('#s15b', App)
+    expect(elRef).toBe(host.children[0].children[0])
+    expect(elRef.tagName).toBe('INPUT')
+  })
+
+  it('Suspense + lazy 异步组件：fallback → loaded', async () => {
+    let resolveLoader!: (m: any) => void
+    const LazyComp = lazy(() => new Promise((res) => { resolveLoader = res }))
+    function App() {
+      return (
+        <div>
+          <Suspense fallback={<span>loading...</span>}>
+            <LazyComp />
+          </Suspense>
+        </div>
+      )
+    }
+    const host = mount('#s15c', App)
+
+    // lazy 注册 pending → Suspense 显示 fallback
+    await nextTick()
+    expect(collectText(host)).toContain('loading...')
+
+    // loader 完成 → Suspense resolve → 渲染真实组件（defineComponent 约定 setup 返回 render 函数）
+    resolveLoader({ default: defineComponent(function Loaded() { return () => <i>loaded!</i> }) })
+    await nextTick()
+    await nextTick()
+    expect(collectText(host)).toContain('loaded!')
   })
 })

@@ -34,9 +34,9 @@
 | ~~**无生命周期钩子**~~ | ✅ 已实现：`onMounted` / `onUpdated` / `onBeforeUnmount`（模块级 `currentInstance` 上下文），卸载时执行清理钩子 | 外部资源（事件、定时器、订阅）无清理钩子 | ~~P0~~ ✅ |
 | ~~**无插槽体系**~~ | ✅ 已支持：默认插槽（`props.children` 静态透传）+ 作用域插槽（函数 children，render-prop 模式）；具名插槽未实现 | 内容分发 | ~~P2~~ ✅ |
 | ~~**无动态组件 / keep-alive**~~ | ✅ 已实现：`<component is={...}>`（renderer 解析 props.is）；`KeepAlive` 缓存实例与 DOM（隐藏容器 + 卸载拦截 + 复用） | 动态切换 / 状态保留 | ~~P2~~ ✅ |
-| **无错误边界 / Suspense** | 组件渲染抛错无兜底 | P2 |
-| **`ref` 字段闲置** | VNode.ref 已留字段未实现模板引用 | P2 |
-| **无异步组件** | 无 lazy 加载 | P3 |
+| ~~**无错误边界 / Suspense**~~ | ✅ 已实现：`ErrorBoundary`（栈式注册 + 渲染 try/catch + fallback）；`Suspense` + `lazy`（异步组件，fallback/resolve） | 组件渲染抛错无兜底 | ~~P2~~ ✅ |
+| ~~**`ref` 字段闲置**~~ | ✅ 已实现：`props.ref`（函数或 `{ value }`）挂载时指向 DOM/组件实例，卸载时置 null | 模板引用 | ~~P2~~ ✅ |
+| ~~**无异步组件**~~ | ✅ 已实现：`lazy(loader)` 异步加载组件（配合 Suspense，加载失败交给错误边界） | lazy 加载 | ~~P3~~ ✅ |
 
 ## 四、工程化
 
@@ -82,7 +82,12 @@
    - 动态组件：`<component is={Comp}>`，renderer `resolveDynamicVNode` 解析 props.is
    - keep-alive：`KeepAlive` 内置组件（隐藏容器缓存 DOM + 实例保留），patch 复用分支 `newVnode.component` 优先
    - 顺带修复：`replace` 原不调用 `unmount`（组件替换时旧实例泄漏），现先卸载再挂载
-10. 错误边界 / Suspense
+10. ~~**错误边界 / Suspense**~~ ✅（本次提交，verify 场景 15）
+    - 错误边界：`ErrorBoundary`（模块级栈注册，mountComponent update 包 try/catch，fallback 支持 VNode/函数）；已有错误的边界不重复触发（防死循环）
+    - Suspense + lazy：`Suspense`（pending 注册/解析，fallback 显示）；`lazy(loader)` 异步组件（未完成渲染占位，完成后重建渲染；加载失败抛给错误边界）
+    - 顺带修复：patch 复用分支检测实例活性（`isActive`），失效实例（如 Suspense fallback 替换后）重建而非复用
+11. ~~**`ref` 模板引用**~~ ✅（本次提交，verify 场景 15）
+    - 已实现：`props.ref`（函数或 `{ value }`）挂载时指向 DOM（元素）/ 组件实例，卸载时置 null
 
 ### 阶段四：工程化（P2-P3）
 
@@ -105,3 +110,4 @@
 | 本次提交 | 事件系统升级 | `patchEvent` + invoker 缓存（`el._vei`）；`onClickCapture` 支持 capture；handler 更新不重绑、null 解绑；verify 场景 11 |
 | 本次提交 | 生命周期钩子 + computed/ref/watch | `onMounted`/`onUpdated`/`onBeforeUnmount`（currentInstance 上下文）；`computed`（脏标记惰性缓存）；`ref`/`isRef`/`unref`；`watch`（immediate/cleanup/stop）；verify 场景 12、13 |
 | 本次提交 | 插槽 / 动态组件 / keep-alive | 默认+作用域插槽；`<component is>`；`KeepAlive`（隐藏容器缓存 + 实例复用）；修复 replace 不卸载旧组件的泄漏；verify 场景 14 |
+| 本次提交 | 错误边界 / Suspense / lazy / ref | `ErrorBoundary`（栈注册 + fallback）；`Suspense`+`lazy` 异步组件；`props.ref` 模板引用；修复复用分支对失效实例重建；verify 场景 15 |
