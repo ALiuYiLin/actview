@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "@actview/jsx": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/rewrite-package.mjs ."
   }
 }

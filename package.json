@@ -17,6 +17,7 @@
     "@types/node": "^26.0.1",
     "actview": "workspace:*",
     "happy-dom": "^20.11.1",
+    "tsup": "^8.5.1",
     "typescript": "~6.0.2",
     "vite": "^6.4.3",
     "vitest": "^4.1.10"
