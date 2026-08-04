@@ -1,6 +1,5 @@
 {
   "name": "@actview/jsx",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -11,5 +10,5 @@
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
     "publish": "npm version patch && pnpm build && cd dist && npm publish"
   },
-  "version": "1.0.5"
+  "version": "1.0.6"
 }
