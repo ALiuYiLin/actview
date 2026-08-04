@@ -50,10 +50,15 @@ export function mountComponent(vnode: any, container: Element | null) {
     // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
     vnode.el = instance.subTree ? instance.subTree.el : null
   }
-  instance.update = update
 
   // runEffect 立即执行首次挂载；之后响应式数据变化自动重跑 update
   const effect = runEffect(update)
+
+  // props 更新路径（父组件 patchComponent 手动调度）也必须走完整 effect 语义：
+  // cleanup 旧依赖 + 设置 activeEffect 上下文，否则裸调用 update 会把调用方
+  // （父 effect）误收集进本组件的内部响应式依赖，导致父组件被连带重渲染
+  instance.update = () => effect.run()
+
   instance.unmount = () => {
     effect.stop()
   }

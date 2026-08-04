@@ -39,7 +39,16 @@ function makeElement(tag) {
   }
 }
 function makeText(text) {
-  return { nodeType: 3, textContent: String(text), data: String(text), parentNode: null }
+  let data = String(text)
+  return {
+    nodeType: 3,
+    parentNode: null,
+    // 真实 DOM 中 data 与 textContent 互为别名，需同步
+    get data() { return data },
+    set data(v) { data = String(v) },
+    get textContent() { return data },
+    set textContent(v) { data = String(v) },
+  }
 }
 const hosts = new Map()
 globalThis.document = {
@@ -120,6 +129,35 @@ try {
   check('msg 更新为 "world"（未重挂）', span.children[0].textContent === 'world')
   check('子组件 setup 仍只执行一次（DOM 复用）', globalThis.__getSetupCount() === 1)
   check('span 元素引用未变（精确更新而非重建）', span === parentHost.children[0].children[0])
+
+  // ---------- 场景 4：props 更新路径不污染父组件依赖 ----------
+  console.log('--- 场景 4：子组件内部状态变化不连带父组件重渲染 ---')
+  const clHost = hosts.get('#childlocal')
+  function collectText(el) {
+    if (!el) return ''
+    if (el.nodeType === 3) return el.data
+    return (el.children || []).map(collectText).join('')
+  }
+  check('初始父 render 1 次', globalThis.__getParentRenderCount() === 1)
+  check('初始文本含 inner', collectText(clHost).includes('local: inner'))
+
+  // 基线：子组件内部状态变化只触发子组件更新
+  globalThis.__setChildLocal('changed')
+  check('子文本更新为 changed', collectText(clHost).includes('local: changed'))
+  check('父组件未被连带重渲染（render 仍 1 次）', globalThis.__getParentRenderCount() === 1)
+
+  // props 更新：父组件自身应正常重渲染，子组件文本同步
+  globalThis.__setParentMsg('hello2!')
+  check('props 更新后子文本同步', collectText(clHost).includes('prop: hello2!'))
+  check('父组件正常重渲染（render 2 次）', globalThis.__getParentRenderCount() === 2)
+
+  // 核心断言：props 更新路径之后，子内部状态再变化
+  // 修复前：props 路径裸调用 instance.update → 子 render 时 activeEffect 是父 effect
+  //         → 父 effect 被收集进子内部 state → 连带渲染（render 3 次）
+  // 修复后：instance.update = effect.run → 只在子 effect 上下文收集 → 父仍 2 次
+  globalThis.__setChildLocal('again')
+  check('子文本更新为 again', collectText(clHost).includes('local: again'))
+  check('props 路径未污染父依赖（render 仍 2 次）', globalThis.__getParentRenderCount() === 2)
 
   // ---------- 冒烟：src/main.tsx 检验页能正常渲染 ----------
   console.log('--- 冒烟：src/main.tsx 检验页 ---')

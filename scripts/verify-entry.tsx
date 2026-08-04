@@ -46,7 +46,39 @@ function Parent() {
 globalThis.__setMsg = (msg) => { parentState.msg = msg }
 globalThis.__getSetupCount = () => childSetupCount
 
-// ---------- 挂载三个应用到不同容器 ----------
+// ---------- 场景 4：子组件内部状态变化不应连带父组件重渲染 ----------
+let parentRenderCount = 0
+function markParentRender() {
+  parentRenderCount++
+  return '' // 渲染时计数一次，产生一个空文本节点，不影响布局
+}
+
+const innerState = reactive({ local: 'inner' })
+
+function ChildWithLocal(props) {
+  return (
+    <div class="child-local">
+      <span>prop: {props.msg} | local: {innerState.local}</span>
+    </div>
+  )
+}
+
+const parentState2 = reactive({ msg: 'hello2' })
+
+function ParentWithLocal() {
+  return (
+    <div class="parent-local">
+      {markParentRender()}
+      <ChildWithLocal msg={parentState2.msg} />
+    </div>
+  )
+}
+globalThis.__setParentMsg = (msg) => { parentState2.msg = msg }
+globalThis.__setChildLocal = (v) => { innerState.local = v }
+globalThis.__getParentRenderCount = () => parentRenderCount
+
+// ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')
 createApp(ListApp).mount('#list')
 createApp(Parent).mount('#parent')
+createApp(ParentWithLocal).mount('#childlocal')
