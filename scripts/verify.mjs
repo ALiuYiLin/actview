@@ -207,6 +207,21 @@ try {
   globalThis.__arrSetIndex(0, 'x')
   check('索引赋值后 x,a', JSON.stringify(liTexts(arrHost)) === JSON.stringify(['x', 'a']))
 
+  // ---------- 场景 7：for...in / in 响应 ----------
+  console.log('--- 场景 7：for...in 遍历 / in 操作符 ---')
+  const keysHost = hosts.get('#keys')
+  const keysText = () => keysHost.children[0].children[0].children[0].data
+  const hasBText = () => keysHost.children[0].children[1].children[0].data
+  check('初始遍历 a,b', keysText() === 'a,b')
+  check('初始 in 检测 has-b', hasBText() === 'has-b')
+
+  globalThis.__addKey('c', 3)
+  check('新增 key 后遍历 a,b,c', keysText() === 'a,b,c')
+
+  globalThis.__delKey('b')
+  check('删除 key 后遍历 a,c', keysText() === 'a,c')
+  check('删除 key 后 in 检测 no-b', hasBText() === 'no-b')
+
   // ---------- 冒烟：src/main.tsx 检验页（路由版） ----------
   console.log('--- 冒烟：src/main.tsx 检验页（路由版） ---')
   await server.ssrLoadModule('/src/main.tsx')

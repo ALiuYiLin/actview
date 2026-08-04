@@ -1,5 +1,8 @@
 import { track, trigger } from "../runtime/reactive-system"
 
+/** 迭代键：代表「对象的 key 集合」，用于 for...in / in 操作的依赖 */
+const ITERATE_KEY = Symbol('iterate')
+
 // ============================================================
 // 数组方法 instrumentation
 //   state.items.push(x) 等修改数组内容后，需要触发"读取了该数组"的依赖：
@@ -38,12 +41,15 @@ function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey
       return isObject(value) ? reactive(value) : value
     },
     set(target, key, value, receiver) {
+      const hadKey = Reflect.has(target, key)
       const oldValue = Reflect.get(target, key, receiver)
       const result = Reflect.set(target, key, value, receiver)
       if (oldValue !== value) {
         trigger(target, key)
         // 数组内容变化 =》 通知读取了该数组的父级依赖（如 state.items）
         trigger(parent.target, parent.key)
+        // 新增 key（如 push 的新索引）=》 通知迭代依赖
+        if (!hadKey) trigger(target, ITERATE_KEY)
       }
       return result
     },
@@ -52,9 +58,19 @@ function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey
       const result = Reflect.deleteProperty(target, key)
       if (had) {
         trigger(target, key)
+        trigger(target, ITERATE_KEY)
         trigger(parent.target, parent.key)
       }
       return result
+    },
+    // for...in / in 数组：依赖 key 集合
+    has(target, key) {
+      track(target, ITERATE_KEY)
+      return Reflect.has(target, key)
+    },
+    ownKeys(target) {
+      track(target, ITERATE_KEY)
+      return Reflect.ownKeys(target)
     },
   })
   return proxy
@@ -80,10 +96,13 @@ export function reactive<T extends object>(obj: T): T {
       return isObject(value) ? reactive(value) : value
     },
     set(target, key, value, receiver) {
+      const hadKey = Reflect.has(target, key)
       const oldValue = Reflect.get(target, key, receiver)
       const result = Reflect.set(target, key, value, receiver)
       if (oldValue !== value) {
         trigger(target, key)
+        // 新增 key =》 影响 for...in 遍历结果
+        if (!hadKey) trigger(target, ITERATE_KEY)
       }
       return result
     },
@@ -92,8 +111,18 @@ export function reactive<T extends object>(obj: T): T {
       const result = Reflect.deleteProperty(target, key)
       if (had) {
         trigger(target, key)
+        trigger(target, ITERATE_KEY)
       }
       return result
+    },
+    // for...in / key in obj：依赖 key 集合，增删 key 时触发
+    has(target, key) {
+      track(target, ITERATE_KEY)
+      return Reflect.has(target, key)
+    },
+    ownKeys(target) {
+      track(target, ITERATE_KEY)
+      return Reflect.ownKeys(target)
     },
   })
 

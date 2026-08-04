@@ -131,6 +131,28 @@ globalThis.__arrSplice = () => arrState.items.splice(1, 1)
 globalThis.__arrReverse = () => arrState.items.reverse()
 globalThis.__arrSetIndex = (i, v) => { arrState.items[i] = v }
 
+// ---------- 场景 7：for...in 遍历 / in 操作符响应 ----------
+const keysState = reactive({ a: 1, b: 2 })
+
+function collectKeys(obj) {
+  const keys: string[] = []
+  for (const k in obj) keys.push(k)
+  return keys.join(',')
+}
+
+function KeysApp() {
+  return (
+    <div class="keys-app">
+      <span class="keys">{collectKeys(keysState)}</span>
+      <span class="has-b">{('b' in keysState) ? 'has-b' : 'no-b'}</span>
+    </div>
+  )
+}
+createApp(KeysApp).mount('#keys')
+
+globalThis.__addKey = (k, v) => { keysState[k] = v }
+globalThis.__delKey = (k) => { delete keysState[k] }
+
 // ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')
 createApp(ListApp).mount('#list')
