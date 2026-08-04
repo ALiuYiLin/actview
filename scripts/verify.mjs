@@ -8,18 +8,27 @@
 function makeElement(tag) {
   const children = []
   const attrs = {}
-  return {
+  let value = ''
+  const el = {
     tagName: String(tag).toLowerCase(),
     children,
     attrs,
     className: '',
     style: {},
     textContent: '',
-    value: '',
+    selectionStart: 0,
+    selectionEnd: 0,
     checked: false,
     parentNode: null,
     get childNodes() { return children },
     set innerHTML(_v) { children.length = 0 },
+    get value() { return value },
+    set value(v) {
+      value = String(v)
+      // 真实 DOM：对 value 赋值会把光标重置到 0
+      el.selectionStart = 0
+      el.selectionEnd = 0
+    },
     appendChild(c) {
       // 真实 DOM 语义：已挂载节点先移除再追加（移动）
       if (c.parentNode === this) {
@@ -37,6 +46,7 @@ function makeElement(tag) {
     setAttribute(k, v) { attrs[k] = String(v) },
     removeAttribute(k) { delete attrs[k] },
   }
+  return el
 }
 function makeText(text) {
   let data = String(text)
@@ -54,6 +64,7 @@ const hosts = new Map()
 globalThis.document = {
   createElement: makeElement,
   createTextNode: makeText,
+  activeElement: null,
   querySelector(sel) {
     if (sel.startsWith('#')) {
       if (!hosts.has(sel)) hosts.set(sel, makeElement('div'))
@@ -247,6 +258,29 @@ try {
 
   globalThis.__tryWriteRo()
   check('readonly 修改被拦截（值不变）', apiSpan('ro') === '1')
+
+  // ---------- 场景 9：受控 input 光标保位 ----------
+  console.log('--- 场景 9：受控 input 光标保位 ---')
+  const inputHost = hosts.get('#input')
+  const inputEl = inputHost.children[0].children[0]
+  check('初始 value abc', inputEl.value === 'abc')
+
+  // 聚焦场景：光标在位置 1，state 值变化（abc =》 aXc）触发 patch 赋值
+  inputEl.value = 'abc'
+  inputEl.selectionStart = 1
+  inputEl.selectionEnd = 1
+  document.activeElement = inputEl
+  globalThis.__setInputText('aXc')
+  check('value 更新为 aXc', inputEl.value === 'aXc')
+  check('聚焦时光标保持 1（赋值不跳末尾）', inputEl.selectionStart === 1 && inputEl.selectionEnd === 1)
+
+  // 未聚焦场景：不保位（value 赋值正常重置光标）
+  inputEl.value = 'aXc'
+  inputEl.selectionStart = 2
+  document.activeElement = null
+  globalThis.__setInputText('abXc')
+  check('未聚焦 value 仍更新', inputEl.value === 'abXc')
+  check('未聚焦光标不保位（重置为 0）', inputEl.selectionStart === 0)
 
   // ---------- 冒烟：src/main.tsx 检验页（路由版） ----------
   console.log('--- 冒烟：src/main.tsx 检验页（路由版） ---')

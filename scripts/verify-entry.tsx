@@ -186,6 +186,20 @@ globalThis.__changeShTop = () => { sh.top = 2 }
 globalThis.__changeShNested = () => { sh.nested.deep = 2 }
 globalThis.__tryWriteRo = () => { ro.count = 99 }
 
+// ---------- 场景 9：受控 input 光标保位 ----------
+const inputState = reactive({ text: 'abc' })
+
+function InputApp() {
+  return (
+    <div class="input-app">
+      <input value={inputState.text} oninput={(e) => { inputState.text = e.target.value }} />
+    </div>
+  )
+}
+createApp(InputApp).mount('#input')
+
+globalThis.__setInputText = (v) => { inputState.text = v }
+
 // ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')
 createApp(ListApp).mount('#list')

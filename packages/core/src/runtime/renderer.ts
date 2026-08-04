@@ -287,6 +287,9 @@ function setProp(el: any, key: string, value: any) {
   if (key === 'value' || key === 'checked' || key === 'disabled' || key === 'readonly') {
     if (value == null || value === false) {
       el.removeAttribute(key)
+    } else if (key === 'value') {
+      // 受控 input：赋值可能重置光标到末尾，更新前后记录并恢复
+      setInputValue(el, value)
     } else {
       el[key] = value
     }
@@ -299,6 +302,28 @@ function setProp(el: any, key: string, value: any) {
     el.setAttribute(key, '')
   } else {
     el.setAttribute(key, String(value))
+  }
+}
+
+/**
+ * 受控 input 赋值：浏览器对 value 赋值会把光标移到末尾，
+ * 赋值前记录 selectionStart/End，赋值后恢复（截断到新值长度内）。
+ * 仅当元素聚焦且值确实变化时处理，避免无谓操作。
+ */
+function setInputValue(el: any, value: any) {
+  const str = String(value)
+  if (el.value === str) return
+
+  const active =
+    typeof document !== 'undefined' && document.activeElement === el
+  const start = active ? el.selectionStart : null
+  const end = active ? el.selectionEnd : null
+
+  el.value = str
+
+  if (active && typeof start === 'number' && typeof el.selectionStart === 'number') {
+    el.selectionStart = Math.min(start, str.length)
+    el.selectionEnd = Math.min(end ?? start, str.length)
   }
 }
 
