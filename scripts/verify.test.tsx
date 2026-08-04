@@ -909,3 +909,57 @@ describe('场景 18：同索引 diff 文本定位', () => {
     expect(ul.children[0]).toBe(liA) // 首项复用（无 key 的标准索引语义）
   })
 })
+
+// ------------------------------------------------------------
+// 场景 19：空文本节点（Bug 4：不残留空文本节点）
+// ------------------------------------------------------------
+describe('场景 19：空文本节点', () => {
+  it('文本置空后移除节点、恢复后重建', async () => {
+    const state = reactive({ s: 'abc' })
+    function App() {
+      return <div>{state.s}</div>
+    }
+    const host = mount('#s19a', App)
+    const div = host.children[0]
+    expect(div.textContent).toBe('abc')
+    expect(div.childNodes.length).toBe(1)
+
+    state.s = '' // 置空：移除空文本节点，不残留
+    await nextTick()
+    expect(div.textContent).toBe('')
+    expect(div.childNodes.length).toBe(0) // 修复前残留 1 个空文本节点
+
+    state.s = 'xyz' // 恢复：重新创建文本节点
+    await nextTick()
+    expect(div.textContent).toBe('xyz')
+    expect(div.childNodes.length).toBe(1)
+  })
+
+  it('首次挂载即空文本不创建节点', () => {
+    const state = reactive({ s: '' })
+    function App() {
+      return <div>{state.s}</div>
+    }
+    const host = mount('#s19b', App)
+    expect(host.children[0].childNodes.length).toBe(0)
+  })
+
+  it('列表中间空文本增删后其余项不错位', async () => {
+    const state = reactive({ list: ['a', '', 'b'] })
+    function App() {
+      return <div>{state.list}</div>
+    }
+    const host = mount('#s19c', App)
+    const div = host.children[0]
+    expect(div.childNodes.length).toBe(2) // 中间空文本不建节点
+
+    state.list = ['a', 'x', 'b'] // 空文本位置插入 x：锚点为 childNodes[1]（b）
+    await nextTick()
+    expect(div.textContent).toBe('axb')
+
+    state.list = ['a', 'x', 'b', 'c'] // 尾部追加
+    await nextTick()
+    expect(div.textContent).toBe('axbc')
+    expect(div.childNodes.length).toBe(4)
+  })
+})

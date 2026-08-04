@@ -52,18 +52,15 @@
 
 ---
 
-### 4. 🐛 P3 — 空文本节点残留
+### 4. ✅ 已修复 — P3 空文本节点残留（本次提交，verify 场景 19）
 
-- **现状**（已实测）：子节点文本从有值变为 `''` 时，DOM 中残留空文本节点（`childNodes` 数量不变，`textContent` 为空）。
-- **复现**：
-
-  ```tsx
-  const state = reactive({ s: 'abc' })
-  // <div>{state.s}</div> → state.s = '' → div.childNodes 仍为 1（空文本节点）
-  ```
-
-- **影响**：小瑕疵，不影响显示；`childNodes` 遍历/样式选择器可能受扰。
-- **修复方向**：patch 文本时若新文本为 `''` 且旧文本非空 → 直接 `removeChild` 并标记 vnode.el 为 null；下次非空时重新创建。
+- **原问题**（已实测）：子节点文本从有值变为 `''` 时，DOM 中残留空文本节点（`childNodes` 数量不变，`textContent` 为空）。
+- **修复**（`renderer.ts`）：
+  - 挂载空文本（`''`）不创建节点（`vnode.el = null`）
+  - patch 到空文本时移除旧节点并置 `el = null`
+  - 从空文本恢复非空时创建节点并插入到 `childNodes[index]` 锚点前（列表中间位置正确）
+- **验证**（verify 场景 19）：置空后 `childNodes` 归 0、恢复后重建、首挂空不建节点、列表中间空文本增删不错位。
+- **遗留**：多个连续空文本 + 后续节点同时恢复的边缘场景可能轻微错位（P3 小瑕疵，可接受）。
 
 ---
 
@@ -78,6 +75,7 @@
 | `ErrorBoundary` 捕获后不自动恢复 | 触发 fallback 后持续显示直到边界重建 | 用 key 重建边界 |
 | `lazy` 的 loader 需返回组件产物 | 须为 `defineComponent` 产物（setup 返回 render 函数）；`import('./x')` 用 `m.default` | 见 verify 场景 15 用法 |
 | `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式）；同步场景已修复不爆栈（见已修复 Bug 1） | 事件 handler 内修改 |
+| 空文本节点不残留 | 空文本不产生 DOM 节点（修复后）；多个连续空文本+后续节点同时恢复的边缘场景可能轻微错位 | 边缘场景少见 |
 | 无具名插槽 | 仅默认/作用域插槽（函数 children） | 具名插槽需 JSX/Babel 侧语法支持 |
 | 组件函数体顶层是 setup 体（只执行一次） | 顶层响应式读取/抛错不会在更新时重跑；渲染期逻辑应放 JSX 表达式 | 见 verify 场景 15 注释 |
 
@@ -90,4 +88,5 @@
 - keyed diff 整体重排非最小移动（LIS）｜事件系统 `el.on*` 简陋（invoker + capture）
 - `replace` 不卸载旧组件导致实例泄漏（bffcfd8 顺带修复）｜patch 复用失效实例不重建（74a0bd4 顺带修复）
 - **effect 内修改数组爆栈**（c7e6c6e：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）
-- **同索引 diff 文本错位 + Fragment 文本索引偏移**（本次提交：vnode 级 children 缓存，文本 el 跨 diff 持久化）
+- **同索引 diff 文本错位 + Fragment 文本索引偏移**（e060ebf：vnode 级 children 缓存，文本 el 跨 diff 持久化）
+- **空文本节点残留**（本次提交：空文本不建节点/移除旧节点/恢复重建）

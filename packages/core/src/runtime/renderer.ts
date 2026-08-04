@@ -113,6 +113,11 @@ export function mountVNode(vnode: any, container: Element | null): any {
   }
   // 文本
   if (vnode.type === Text) {
+    // 空文本不创建节点（避免残留空文本节点），下次非空时在 patch 中创建
+    if (vnode.props.text === '') {
+      vnode.el = null
+      return null
+    }
     const el = document.createTextNode(vnode.props.text)
     vnode.el = el
     container?.appendChild(el)
@@ -140,11 +145,27 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
     return
   }
   // 文本：每次 render 生成的文本 VNode 是新的（无 el），
-  // 需要按索引从 container.childNodes 恢复真实文本节点
+  // 优先用旧 vnode 的 el（vnode 级缓存），否则按索引从 container.childNodes 恢复
   if (newVnode.type === Text) {
-    const el = (newVnode.el =
-      oldVnode.el ?? (index != null ? container.childNodes[index] : null) as Text)
-    if (el && el.textContent !== newVnode.props.text) {
+    // 空文本：移除旧节点（若存在）并置 el=null，下次非空时重建 —— 不残留空文本节点
+    if (newVnode.props.text === '') {
+      if (oldVnode.el && oldVnode.el.parentNode) {
+        oldVnode.el.parentNode.removeChild(oldVnode.el)
+      }
+      newVnode.el = null
+      return
+    }
+    let el = oldVnode.el
+    if (!el) {
+      // 上次是空文本（已移除）或新增：创建文本节点，插入到 index 位置（childNodes[index] 前）
+      el = document.createTextNode(newVnode.props.text)
+      newVnode.el = el
+      const anchor = index != null ? container.childNodes[index] ?? null : null
+      container.insertBefore(el, anchor)
+    } else {
+      newVnode.el = el
+    }
+    if (el.textContent !== newVnode.props.text) {
       el.textContent = newVnode.props.text
     }
     return

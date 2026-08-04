@@ -115,3 +115,4 @@
 | 本次提交 | 类型泛型化 | `ComponentType<P>`/`PropsOf` props 推导；jsx 工厂泛型重载（标签→IntrinsicElements、组件→props、Fragment）；camelCase 事件类型（`onClick` 等 + capture）；verify 场景 16（@ts-expect-error 编译期反向断言） |
 | 提交 c7e6c6e | 修复 effect 内修改数组爆栈 | `pauseTracking`/`resetTracking`（数组修改方法暂停收集）；`ReactiveEffect.run()` 重入保护 + `shouldTrack` 恢复；verify 场景 17 |
 | 提交 e060ebf | 修复同索引 diff 文本错位 + Fragment 文本索引偏移 | vnode 级 children 缓存（`__avChildren`），文本 vnode 的 el 跨 diff 持久化，不再用 `childNodes[index]` 猜测；verify 场景 18 |
+| 本次提交 | 修复空文本节点残留 | 空文本不创建节点、patch 置空移除旧节点、恢复时按锚点重建；verify 场景 19 |
