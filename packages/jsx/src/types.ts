@@ -19,6 +19,18 @@ export interface VNode<Type = VNodeTypes> {
   el?: Node | null
 }
 
+/** 组件类型：defineComponent 产物（{ __setup } + call signature），props 泛型化 */
+export type ComponentType<P = any> = {
+  __setup: (props: P) => any
+} & ((props: P) => any)
+
+/** 从组件类型推导 props：取 __setup 的第一个参数 */
+export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
+  ? P
+  : T extends (props: infer P) => any
+    ? P
+    : {}
+
 export type VNodeChild = VNode | string | number | boolean | null | undefined
 export type VNodeChildren = VNodeChild | VNodeChild[]
 
@@ -57,7 +69,7 @@ export interface HtmlProps {
   href?: string
   src?: string
 
-  // 事件处理器（表单事件用 FormEvent）
+  // 事件处理器（小写形式，兼容旧写法）
   onclick?: (e: MouseEvent) => void
   ondblclick?: (e: MouseEvent) => void
   onmousedown?: (e: MouseEvent) => void
@@ -72,6 +84,33 @@ export interface HtmlProps {
   oninput?: (e: FormEvent) => void
   onsubmit?: (e: FormEvent) => void
   onselect?: (e: FormEvent) => void
+
+  // 事件处理器（camelCase，推荐写法；与 DOM 事件对应）
+  onClick?: (e: MouseEvent) => void
+  onDblClick?: (e: MouseEvent) => void
+  onMouseDown?: (e: MouseEvent) => void
+  onMouseUp?: (e: MouseEvent) => void
+  onMouseOver?: (e: MouseEvent) => void
+  onMouseOut?: (e: MouseEvent) => void
+  onMouseMove?: (e: MouseEvent) => void
+  onFocus?: (e: FocusEvent) => void
+  onBlur?: (e: FocusEvent) => void
+  onKeyDown?: (e: KeyboardEvent) => void
+  onKeyUp?: (e: KeyboardEvent) => void
+  onKeyPress?: (e: KeyboardEvent) => void
+  onChange?: (e: FormEvent) => void
+  onInput?: (e: FormEvent) => void
+  onSubmit?: (e: FormEvent) => void
+  onSelect?: (e: FormEvent) => void
+  onScroll?: (e: Event) => void
+  onLoad?: (e: Event) => void
+  onError?: (e: Event) => void
+  // capture 变体（onXxxCapture → 捕获阶段监听）
+  onClickCapture?: (e: MouseEvent) => void
+  onMouseDownCapture?: (e: MouseEvent) => void
+  onKeyDownCapture?: (e: KeyboardEvent) => void
+  onChangeCapture?: (e: FormEvent) => void
+  onInputCapture?: (e: FormEvent) => void
 
   [key: `data-${string}`]: unknown
   [key: string]: unknown

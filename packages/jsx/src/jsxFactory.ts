@@ -6,6 +6,8 @@
 export const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 export const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment')
 
+import type { VNode, VNodeChildren, ComponentType } from './types.js'
+
 /** 创建 VNode */
 function createVNode(type: any, key: any, props: any) {
   return {
@@ -16,6 +18,22 @@ function createVNode(type: any, key: any, props: any) {
     props,
   }
 }
+
+// 类型签名（JSX 检查）：
+//   字符串标签 → JSX.IntrinsicElements（div → HtmlProps，input → InputProps）
+//   组件（defineComponent 产物）→ PropsOf 推导 props（含事件类型）
+//   Fragment（symbol）→ 仅 children
+function jsxImpl<K extends keyof JSX.IntrinsicElements>(
+  type: K,
+  config: JSX.IntrinsicElements[K] & { children?: VNodeChildren },
+  maybeKey?: any,
+): VNode
+function jsxImpl<P>(
+  type: ComponentType<P>,
+  config: P & { children?: VNodeChildren },
+  maybeKey?: any,
+): VNode
+function jsxImpl(type: symbol, config: { children?: VNodeChildren }, maybeKey?: any): VNode
 
 /** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode */
 function jsxImpl(type: any, config: any, maybeKey?: any) {

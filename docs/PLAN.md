@@ -91,8 +91,8 @@
 
 ### 阶段四：工程化（P2-P3）
 
-11. 测试迁移到 **vitest + happy-dom**（verify.mjs 的 stub 换掉，场景保留为用例）
-12. 类型泛型化：`defineComponent<T>` props 推导、事件类型生成
+11. ~~**测试迁移到 vitest + happy-dom**~~ ✅（已迁移：`scripts/verify.mjs` 的 DOM stub 已替换，场景保留为 `scripts/verify.test.tsx` 用例）
+12. ~~**类型泛型化**~~ ✅（本次提交，verify 场景 16）：`defineComponent` props 推导（`ComponentType<P>` / `PropsOf`）、JSX 工厂重载签名（字符串标签 → `IntrinsicElements`，组件 → props 推导）、camelCase 事件类型（`onClick`/`onInput`/`onXxxCapture` 等）
 13. devtools / SSR（远期）
 
 ---
@@ -111,3 +111,4 @@
 | 本次提交 | 生命周期钩子 + computed/ref/watch | `onMounted`/`onUpdated`/`onBeforeUnmount`（currentInstance 上下文）；`computed`（脏标记惰性缓存）；`ref`/`isRef`/`unref`；`watch`（immediate/cleanup/stop）；verify 场景 12、13 |
 | 本次提交 | 插槽 / 动态组件 / keep-alive | 默认+作用域插槽；`<component is>`；`KeepAlive`（隐藏容器缓存 + 实例复用）；修复 replace 不卸载旧组件的泄漏；verify 场景 14 |
 | 本次提交 | 错误边界 / Suspense / lazy / ref | `ErrorBoundary`（栈注册 + fallback）；`Suspense`+`lazy` 异步组件；`props.ref` 模板引用；修复复用分支对失效实例重建；verify 场景 15 |
+| 本次提交 | 类型泛型化 | `ComponentType<P>`/`PropsOf` props 推导；jsx 工厂泛型重载（标签→IntrinsicElements、组件→props、Fragment）；camelCase 事件类型（`onClick` 等 + capture）；verify 场景 16（@ts-expect-error 编译期反向断言） |
