@@ -9,12 +9,12 @@
 
 | 限制 | 现状 | 影响 | 优先级 |
 |---|---|---|---|
-| **数组方法不响应** | `reactive` 只拦 `get/set/deleteProperty`，`push/splice/reverse` 等走内部索引+length，而 render 只 track `items` 这个 key | 高频痛点：只能 `state.items = [...]` 替换整数组 | P0 |
+| ~~**数组方法不响应**~~ | ✅ 已修复：惰性深层代理 + 数组 instrumentation（`push/pop/shift/unshift/splice/sort/reverse` 及索引赋值均触发更新） | 高频痛点 | ~~P0~~ ✅ |
 | **无 `computed` / `watch`** | 只有 `reactive` + `runEffect`（可当手动 watch） | 无派生值缓存、无便捷侦听封装 | P1 |
 | **无 `ref`** | 基本类型无法直接响应（只能包对象） | 使用体验 | P1 |
-| **`for...in` / `'in'` 不响应** | Proxy 缺 `has` / `ownKeys` 陷阱 | 遍历响应式对象不更新 | P2 |
+| ~~**`for...in` / `'in'` 不响应**~~ | ✅ 已修复：`has` / `ownKeys` 陷阱 + `ITERATE_KEY` 依赖，增删 key 触发更新 | 遍历响应式对象不更新 | ~~P2~~ ✅ |
 | **无调度批处理** | `trigger` 同步执行，一轮内改 N 次状态跑 N 次 effect | 性能 + 无 nextTick 语义 | P1 |
-| **无 `shallowReactive` / `readonly` / `markRaw`** | 只有深度 reactive | 灵活性/性能边界 | P2 |
+| ~~**无 `shallowReactive` / `readonly` / `markRaw`**~~ | ✅ 已实现：只代理普通对象/数组（Date/Map/Set 等不代理）、`markRaw` 跳过代理、`readonly` 深层只读、`shallowReactive` 浅层 | 灵活性/性能边界 | ~~P2~~ ✅ |
 
 ## 二、渲染层（diff）
 
@@ -22,7 +22,7 @@
 |---|---|---|---|
 | **keyed diff 非最小移动** | 「复用 + 整体 appendChild 重排」，非 LIS 最长递增子序列 | 大列表重排 O(n) DOM 移动 | P1 |
 | **同索引 diff 无移动** | 无 key 列表按位置对比，增删中间项会错位 | 需配合 key 使用 | P1 |
-| **受控 input 光标跳动** | 每次 patch 重设 `el.value` | 输入体验 | P0 |
+| ~~**受控 input 光标跳动**~~ | ✅ 已修复：`setInputValue` 更新 value 前后记录/恢复 `selectionStart/End`（仅聚焦时） | 输入体验 | ~~P0~~ ✅ |
 | **事件系统简陋** | `el.on*` 赋值，无 `addEventListener`、无 capture、无统一解绑 | 复杂交互受限 | P2 |
 | **Fragment 内文本索引偏移** | Fragment 处于兄弟节点中间时文本更新按 0 起始索引，可能错位 | 边缘场景 | P2 |
 | **空文本节点** | `{fn()}` 返回 `''` 会残留空文本节点 | 小瑕疵 | P3 |
@@ -54,11 +54,11 @@
 
 ### 阶段一：补常用短板（P0）
 
-1. **数组方法 instrumentation**（`push/pop/shift/unshift/splice/sort/reverse`）
-   - 参考 Vue 3 `arrayInstrumentations`：用 Proxy 拦截数组方法，patch 后手动触发依赖
-   - 完成后 demo 可改为 `state.items.push(...)`，verify 增加数组方法场景
-2. **受控 input 光标保位**
-   - patch 更新 `value` 前记录 `selectionStart/End`，更新后恢复
+1. ~~**数组方法 instrumentation**~~ ✅（提交 d413312，verify 场景 6）
+   - 已实现：惰性深层代理 + 数组代理 instrumentation，修改方法以代理为 this 调原始实现，length/索引/父级 key 依赖经 set 陷阱自动触发
+   - 说明：未实现 `pauseTracking`（仅影响「effect 内改数组」的边界场景，事件 handler 场景不受影响）
+2. ~~**受控 input 光标保位**~~ ✅（提交 caa6931，verify 场景 9）
+   - 已实现：`setInputValue` 赋值前记录、赋值后恢复 `selectionStart/End`
 3. **生命周期钩子**（`onMounted` / `onUpdated` / `onBeforeUnmount`）
    - 模块级 `currentInstance` 上下文 + `ComponentInstance` 挂钩子数组
    - 配合「卸载时清理事件/定时器」解决资源泄漏
@@ -70,7 +70,8 @@
 
 5. **调度批处理**：effect 更新入微任务队列去重（scheduler + job queue），提供 `nextTick`
 6. **LIS 最小移动 diff**：替换「整体重排」为最长递增子序列定位不动节点
-7. **`has` / `ownKeys` 陷阱**：支持 `for...in` / `key in obj` 响应
+7. ~~**`has` / `ownKeys` 陷阱**~~ ✅（提交 34a8729，verify 场景 7）
+   - 已实现：`ITERATE_KEY` + `has`/`ownKeys` 陷阱，新增/删除 key 触发迭代依赖
 
 ### 阶段三：能力扩展（P2）
 
@@ -90,4 +91,7 @@
 
 | 日期 | 项 | 说明 |
 |---|---|---|
-| - | - | 尚未开始 |
+| 提交 d413312 | 数组方法 instrumentation | 惰性深层代理 + 数组代理；`push/pop/shift/unshift/splice/sort/reverse` 与索引赋值触发更新；verify 场景 6 |
+| 提交 34a8729 | for...in / 'in' 响应 | `ITERATE_KEY` + `has`/`ownKeys` 陷阱，增删 key 触发；verify 场景 7 |
+| 提交 6f892fd | markRaw / readonly / shallowReactive | 只代理普通对象/数组（Date/Map/Set 不代理）；verify 场景 8 |
+| 提交 caa6931 | 受控 input 光标保位 | `setInputValue` 记录/恢复 `selectionStart/End`；verify 场景 9 |
