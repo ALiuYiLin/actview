@@ -9,5 +9,9 @@
   "dependencies": {
     "@actview/core": "workspace:*",
     "@actview/jsx": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/rewrite-package.mjs .",
+    "publish": "npm version patch && pnpm build && cd dist && npm publish"
   }
 }

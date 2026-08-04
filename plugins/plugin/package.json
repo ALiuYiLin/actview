@@ -10,6 +10,7 @@
     "@babel/core": "^8.0.1"
   },
   "scripts": {
-    "build": "tsup && node ../../scripts/rewrite-package.mjs ."
+    "build": "tsup && node ../../scripts/rewrite-package.mjs .",
+    "publish": "npm version patch && pnpm build && cd dist && npm publish"
   }
 }

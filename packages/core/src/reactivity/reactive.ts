@@ -34,6 +34,8 @@ export function markRaw<T extends object>(obj: T): T {
 }
 
 function isPlainObject(v: any): boolean {
+  // null / 非对象（含 undefined，如访问 toJSON 等 symbol 属性时）不判为普通对象
+  if (v === null || typeof v !== 'object') return false
   const proto = Object.getPrototypeOf(v)
   return proto === Object.prototype || proto === null
 }
