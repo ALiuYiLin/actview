@@ -13,7 +13,7 @@
 | **无 `computed` / `watch`** | 只有 `reactive` + `runEffect`（可当手动 watch） | 无派生值缓存、无便捷侦听封装 | P1 |
 | **无 `ref`** | 基本类型无法直接响应（只能包对象） | 使用体验 | P1 |
 | ~~**`for...in` / `'in'` 不响应**~~ | ✅ 已修复：`has` / `ownKeys` 陷阱 + `ITERATE_KEY` 依赖，增删 key 触发更新 | 遍历响应式对象不更新 | ~~P2~~ ✅ |
-| **无调度批处理** | `trigger` 同步执行，一轮内改 N 次状态跑 N 次 effect | 性能 + 无 nextTick 语义 | P1 |
+| ~~**无调度批处理**~~ | ✅ 已实现：effect 更新入微任务队列去重（`queueJob` + Set 去重 + 批量 flush），提供 `nextTick` | 性能 + nextTick 语义 | ~~P1~~ ✅ |
 | ~~**无 `shallowReactive` / `readonly` / `markRaw`**~~ | ✅ 已实现：只代理普通对象/数组（Date/Map/Set 等不代理）、`markRaw` 跳过代理、`readonly` 深层只读、`shallowReactive` 浅层 | 灵活性/性能边界 | ~~P2~~ ✅ |
 
 ## 二、渲染层（diff）
@@ -68,7 +68,7 @@
 
 ### 阶段二：正确性与性能（P1）
 
-5. **调度批处理**：effect 更新入微任务队列去重（scheduler + job queue），提供 `nextTick`
+5. ~~**调度批处理**~~ ✅：effect 更新入微任务队列去重（scheduler + job queue），提供 `nextTick`
 6. **LIS 最小移动 diff**：替换「整体重排」为最长递增子序列定位不动节点
 7. ~~**`has` / `ownKeys` 陷阱**~~ ✅（提交 34a8729，verify 场景 7）
    - 已实现：`ITERATE_KEY` + `has`/`ownKeys` 陷阱，新增/删除 key 触发迭代依赖
