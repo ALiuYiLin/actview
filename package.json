@@ -11,10 +11,11 @@
   "devDependencies": {
     "@actview/plugin": "workspace:*",
     "@actview/router": "workspace:*",
-    "@local/core": "workspace:*",
-    "@local/jsx-factory": "workspace:*",
     "@types/node": "^26.0.1",
     "typescript": "~6.0.2",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "actview": "workspace:*",
+    "@actview/core": "workspace:*",
+    "@actview/jsx": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { createApp, reactive, readonly, shallowReactive, markRaw } from "@local/core"
+import { createApp, reactive, readonly, shallowReactive, markRaw } from "actview"
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from "@actview/router"
 
 // ---------- 场景 1：响应式文本 + input ----------

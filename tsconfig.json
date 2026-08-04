@@ -14,16 +14,17 @@
     "noEmit": true,
 
     "jsx": "react-jsx",
-    "jsxImportSource": "@local/jsx-factory",
+    "jsxImportSource": "@actview/jsx",
 
     /* Path aliases — resolves workspace packages */
     "paths": {
-      "@local/jsx-factory": ["./packages/jsx/src/index.ts"],
-      "@local/jsx-factory/*": ["./packages/jsx/src/*"],
-      "@local/core": ["./packages/core/src/index.ts"],
-      "@local/core/*": ["./packages/core/src/*"],
+      "@actview/jsx": ["./packages/jsx/src/index.ts"],
+      "@actview/jsx/*": ["./packages/jsx/src/*"],
+      "@actview/core": ["./packages/core/src/index.ts"],
+      "@actview/core/*": ["./packages/core/src/*"],
       "@actview/plugin": ["./plugins/plugin/src/index.ts"],
-      "@actview/router": ["./packages/router/src/index.ts"]
+      "@actview/router": ["./packages/router/src/index.ts"],
+      "actview": ["./packages/actview/src/index.ts"]
     },
 
     /* Linting */

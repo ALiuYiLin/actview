@@ -1,4 +1,4 @@
-import { reactive } from "@local/core";
+import { reactive } from "actview";
 import { cardStyle, btnStyle, hintStyle } from "../styles";
 
 // ============================================================

@@ -1,5 +1,5 @@
 {
-  "name": "@local/jsx-factory",
+  "name": "@actview/jsx",
   "private": true,
   "type": "module",
   "exports": {

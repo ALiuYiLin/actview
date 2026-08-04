@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@local/core": "workspace:*",
-    "@local/jsx-factory": "workspace:*"
+    "@actview/core": "workspace:*",
+    "@actview/jsx": "workspace:*"
   }
 }

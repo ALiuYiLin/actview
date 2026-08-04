@@ -22,16 +22,16 @@ export default function defineComponentPlugin() {
           const alreadyImported = path.node.body.some(
             (n: any) =>
               t.isImportDeclaration(n) &&
-              n.source.value === '@local/core' &&
+              n.source.value === '@actview/core' &&
               n.specifiers.some((s: any) => s.imported?.name === 'defineComponent')
           )
           if (alreadyImported) return
 
-          // 添加 import { defineComponent } from '@local/core'
+          // 添加 import { defineComponent } from '@actview/core'
           path.node.body.unshift(
             t.importDeclaration(
               [t.importSpecifier(t.identifier('defineComponent'), t.identifier('defineComponent'))],
-              t.stringLiteral('@local/core'),
+              t.stringLiteral('@actview/core'),
             ),
           )
         },

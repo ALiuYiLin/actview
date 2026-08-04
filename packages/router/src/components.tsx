@@ -4,8 +4,8 @@
 //   路由变化 =》 RouterView effect 重跑 =》 匹配组件切换（patch replace）
 // ============================================================
 
-import { defineComponent } from '@local/core'
-import { jsx } from '@local/jsx-factory'
+import { defineComponent } from '@actview/core'
+import { jsx } from '@actview/jsx'
 import { currentRouter } from './router'
 
 /** 渲染为 <a>，点击拦截默认跳转并走 router.push；style/class 等其余 props 透传 */

@@ -1,5 +1,5 @@
 {
-  "name": "@local/core",
+  "name": "@actview/core",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@local/jsx-factory": "workspace:*"
+    "@actview/jsx": "workspace:*"
   }
 }

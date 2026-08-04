@@ -4,7 +4,7 @@
 //   RouterView 渲染时读取它 → 路由变化自动触发组件切换
 // ============================================================
 
-import { reactive } from '@local/core'
+import { reactive } from '@actview/core'
 import { createMatcher, type RouteRecord, type MatchedRoute } from './matcher'
 import type { RouterHistory } from './history'
 

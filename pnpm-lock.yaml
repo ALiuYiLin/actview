@@ -8,18 +8,24 @@ importers:
 
   .:
     devDependencies:
+      '@actview/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@actview/jsx':
+        specifier: workspace:*
+        version: link:packages/jsx
       '@actview/plugin':
         specifier: workspace:*
         version: link:plugins/plugin
-      '@local/core':
+      '@actview/router':
         specifier: workspace:*
-        version: link:packages/core
-      '@local/jsx-factory':
-        specifier: workspace:*
-        version: link:packages/jsx
+        version: link:packages/router
       '@types/node':
         specifier: ^26.0.1
         version: 26.0.1
+      actview:
+        specifier: workspace:*
+        version: link:packages/actview
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
@@ -27,13 +33,31 @@ importers:
         specifier: ^6.4.3
         version: 6.4.3(@types/node@26.0.1)
 
+  packages/actview:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:*
+        version: link:../core
+      '@actview/jsx':
+        specifier: workspace:*
+        version: link:../jsx
+
   packages/core:
     dependencies:
-      '@local/jsx-factory':
+      '@actview/jsx':
         specifier: workspace:*
         version: link:../jsx
 
   packages/jsx: {}
+
+  packages/router:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:*
+        version: link:../core
+      '@actview/jsx':
+        specifier: workspace:*
+        version: link:../jsx
 
   plugins/plugin:
     dependencies:

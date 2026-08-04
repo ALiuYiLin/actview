@@ -10,7 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@local/jsx-factory': path.resolve(__dirname, 'packages/jsx/src'),
+      '@actview/jsx': path.resolve(__dirname, 'packages/jsx/src'),
     },
   },
   server: {
