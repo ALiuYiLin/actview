@@ -1,6 +1,6 @@
 {
   "name": "@actview/core",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -11,5 +11,8 @@
   "scripts": {
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
     "release": "pnpm build && cd dist && npm publish"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
