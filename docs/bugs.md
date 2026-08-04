@@ -90,3 +90,31 @@
 - **effect 内修改数组爆栈**（c7e6c6e：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）
 - **同索引 diff 文本错位 + Fragment 文本索引偏移**（e060ebf：vnode 级 children 缓存，文本 el 跨 diff 持久化）
 - **空文本节点残留**（本次提交：空文本不建节点/移除旧节点/恢复重建）
+
+---
+
+## 四、Vue 3 测试迁移（scripts/actview.test.tsx）
+
+> 迁移来源：`E:\code3\vue3\packages\reactivity\__tests__\`（effect/reactive/reactiveArray/computed/watch 核心用例，45 个）。
+> 适配：`effect`→`runEffect`、`stop`→`e.stop()`、watch 异步 flush 用 `await nextTick()`；跳过依赖未实现 API 的用例。
+
+### 迁移检验出的框架 bug（本次已修复）
+
+| Bug | 现象 | 修复 |
+|---|---|---|
+| **数组 length 依赖不触发** | `runEffect(() => dummy = arr.length)` 后 `push(1)`，dummy 不变。根因：JS 数组 length 自动同步，push 内部 `set('length')` 时 `oldValue === value`，检测不到变化 | 新增整数索引时显式 `trigger(target, 'length')`（Vue 3 同：ADD + 整数 key → 触发 length） |
+| **不可写属性 set 失败仍触发依赖** | `Object.defineProperty(writable:false)` 后赋值，effect 被错误触发 | `Reflect.set` 失败（`result === false`）时不 trigger |
+| **`reactive(proxy)` 不幂等** | 已代理对象再 `reactive()` 会再包一层代理 | `proxySet` 记录已创建代理，命中直接返回 |
+| **非可扩展对象被代理** | `Object.preventExtensions` 对象被代理（Vue 3 不代理） | `shouldProxy` 加 `Object.isExtensible` 检查 |
+| **`__v_skip` 对象被代理** | Vue 3 跳过带 `__v_skip` 的对象 | `shouldProxy` 加 `__v_skip` 检查 |
+| **watch 对象源永不回调** | `watch(reactiveObj, cb)` 新旧值同为同一引用，`hasChanged` 恒 false | 对象/数组源视为 deep，回调始终触发（Vue 3 deep 语义） |
+
+### 与 Vue 3 的语义差异（未实现，迁移时跳过）
+
+- Map/Set/WeakMap/WeakSet 响应式代理（reactive.spec 相关用例）
+- `isReactive` / `isReadonly` / `isProxy` / `toRaw` 工具函数
+- `shallowReadonly` / `shallowRef` / `toRef` / `toRefs`
+- `computed` setter（可写 computed）、`effectScope` 独立 API（我们有内部 EffectScope，未暴露全 API）
+- `onWatcherCleanup` / `once` / `call` / `scheduler` 等 watch 选项
+- 数组 identity 方法（`indexOf`/`includes` 对 reactive 元素的 toRaw 比较）
+- ref 在 reactive 嵌套中的自动解包（Vue 3 有，我们无）

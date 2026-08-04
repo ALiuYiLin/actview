@@ -25,6 +25,9 @@ export function watch<T>(
   options: WatchOptions = {},
 ): () => void {
   const getter = createGetter(source)
+  // 对象/数组源：默认深度监听（traverse 全量收集），
+  // 新旧值同为同一引用，回调应始终触发（Vue 3 deep 语义）
+  const isDeepSource = source != null && typeof source === 'object' && !isRef(source)
 
   let oldValue: any
   let cleanup: (() => void) | null = null
@@ -42,7 +45,7 @@ export function watch<T>(
       cleanup = null
     }
     const newValue = effect.run()
-    if (hasChanged(newValue, oldValue)) {
+    if (isDeepSource || hasChanged(newValue, oldValue)) {
       cb(newValue, oldValue, onCleanup)
       oldValue = newValue
     }

@@ -46,7 +46,12 @@ function isPlainObject(v: any): boolean {
 
 /** 是否应对该值做响应式代理 */
 function shouldProxy(v: any): boolean {
-  return (Array.isArray(v) || isPlainObject(v)) && !rawSet.has(v)
+  return (
+    (Array.isArray(v) || isPlainObject(v)) &&
+    !rawSet.has(v) &&
+    !(v as any).__v_skip && // Vue 3：__v_skip 标记的对象跳过代理
+    Object.isExtensible(v) // Vue 3：非可扩展对象不代理
+  )
 }
 
 function warnReadonly(key: PropertyKey) {
@@ -57,9 +62,25 @@ function warnReadonly(key: PropertyKey) {
 const reactiveMap = new WeakMap<object, any>()
 const shallowMap = new WeakMap<object, any>()
 const readonlyMap = new WeakMap<object, any>()
+/** 已创建的响应式代理集合：reactive(proxy) 幂等返回原代理 */
+const proxySet = new WeakSet<object>()
 
 /** 迭代键：代表「对象的 key 集合」，用于 for...in / in 操作的依赖 */
 const ITERATE_KEY = Symbol('iterate')
+
+/** 数组整数索引 key（'0'/'12' 等；'length'/'foo' 不是） */
+const isIntegerKey = (key: PropertyKey) =>
+  typeof key === 'string' &&
+  key !== 'NaN' &&
+  key[0] !== '-' &&
+  String(parseInt(key, 10)) === key
+
+/** 数组新增整数索引时：length 自动同步，set('length') 检测不到变化，需显式触发 */
+function triggerArrayLengthIfNeeded(target: any, key: PropertyKey, hadKey: boolean) {
+  if (!hadKey && Array.isArray(target) && isIntegerKey(key)) {
+    trigger(target, 'length')
+  }
+}
 
 // ============================================================
 // 数组代理（响应式 / 只读）
@@ -68,6 +89,7 @@ const ITERATE_KEY = Symbol('iterate')
 /** 响应式数组代理：拦截修改方法 + 索引/length 变更时通知父级 */
 function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey }): any[] {
   const proxy = new Proxy(raw, {
+    /* 在 handlers 定义后登记到 proxySet */
     get(target, key, receiver) {
       // 修改方法返回 instrumented 包装（this 绑定为数组代理）
       if (typeof key === 'string' && key in arrayInstrumentations) {
@@ -81,8 +103,9 @@ function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey
       const hadKey = Reflect.has(target, key)
       const oldValue = Reflect.get(target, key, receiver)
       const result = Reflect.set(target, key, value, receiver)
-      if (oldValue !== value) {
+      if (result && oldValue !== value) {
         trigger(target, key)
+        triggerArrayLengthIfNeeded(target, key, hadKey)
         // 数组内容变化 =》 通知读取了该数组的父级依赖（如 state.items）
         trigger(parent.target, parent.key)
         // 新增 key（如 push 的新索引）=》 通知迭代依赖
@@ -110,6 +133,7 @@ function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey
       return Reflect.ownKeys(target)
     },
   })
+  proxySet.add(proxy)
   return proxy
 }
 
@@ -158,10 +182,11 @@ function createObjectHandlers(deep: boolean) {
       const hadKey = Reflect.has(target, key)
       const oldValue = Reflect.get(target, key, receiver)
       const result = Reflect.set(target, key, value, receiver)
-      if (oldValue !== value) {
+      if (result && oldValue !== value) {
         trigger(target, key)
         // 新增 key =》 影响 for...in 遍历结果
         if (!hadKey) trigger(target, ITERATE_KEY)
+        triggerArrayLengthIfNeeded(target, key, hadKey)
       }
       return result
     },
@@ -220,10 +245,12 @@ function createReadonlyObjectHandlers() {
 /** 深度响应式：普通对象 / 数组的嵌套结构也响应式 */
 export function reactive<T extends object>(obj: T): T {
   if (!shouldProxy(obj)) return obj
+  if (proxySet.has(obj)) return obj // 已是响应式代理：幂等返回
   const cached = reactiveMap.get(obj)
   if (cached) return cached as T
   const proxy = new Proxy(obj, createObjectHandlers(true)) as T
   reactiveMap.set(obj, proxy)
+  proxySet.add(proxy)
   return proxy
 }
 
