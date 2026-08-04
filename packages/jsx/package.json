@@ -10,5 +10,5 @@
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
     "release": "pnpm build && cd dist && npm publish"
   },
-  "version": "1.0.7"
+  "version": "1.0.8"
 }
