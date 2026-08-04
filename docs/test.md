@@ -37,6 +37,7 @@ node scripts/verify.mjs
 | ② keyed diff | 列表按 key 复用 / 重排 / 增删 | 4 |
 | ③ props 细粒度更新 | 父传子 props 变化 → 精确更新、不重挂 | 5 |
 | ④ 依赖隔离 | 子组件内部状态变化不连带父组件重渲染 | 8 |
+| ⑤ 路由切换 | RouterView 组件切换 / 动态参数 / back / RouterLink | 6 |
 | 冒烟测试 | `src/main.tsx` 检验页端到端渲染 | 4 |
 
 ---
@@ -96,6 +97,23 @@ node scripts/verify.mjs
 **为什么第 4 步是关键**：props 更新路径曾经直接裸调用 `instance.update()`，导致子组件 render 在「父 effect 上下文」中执行，把父 effect 误收集进子内部状态的依赖——此后子内部状态一变化，父组件就被连带整树重渲染。修复为 `instance.update = () => effect.run()` 后，props 路径与内部状态路径统一走完整 effect 语义（cleanup + 正确 activeEffect），父组件不再被污染。
 
 该场景是**先复现后修复**的回归测试：修复前第 4 步断言失败（父 render 变成 3 次），修复后通过。
+
+### 场景 ⑤：路由（RouterView 组件切换）
+
+**测试代码**：`@actview/router` 的 `createRouter` + `createMemoryHistory`（内存模式，无需浏览器 history），路由表含 `/`、`/about`、`/user/:id`；`RouterApp` 渲染 `RouterLink` 导航栏 + `RouterView`。
+
+**验证流程**：
+
+1. 初始渲染 Home；
+2. `router.push('/about')` → RouterView 切换为 About；
+3. `router.push('/user/42')` → 渲染 User 且 `props.params.id` 为 `'42'`（动态参数）；
+4. `router.back()` → 回到 About（memory history 栈）；
+5. 直接调用 `RouterLink` 渲染出的 `<a>` 的 `onclick` → 触发导航（拦截默认跳转）；
+6. `href` 属性正确。
+
+**覆盖机制**：`currentRoute` 是 `reactive` 状态，`RouterView` 每次渲染时读它并重新匹配 → 路由变化触发 RouterView 的 effect → patch 按组件 `type` 变化走替换路径完成组件切换。
+
+**关键设计点**：`RouterView` 手写 `defineComponent` + render 闭包（不依赖 Babel 插件转换）——匹配逻辑必须每次渲染时执行，若写在组件函数体（会被 Babel 转成 setup）中则只执行一次，组件切换失效。
 
 ### 冒烟：src/main.tsx 检验页
 

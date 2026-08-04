@@ -22,7 +22,8 @@
       "@local/jsx-factory/*": ["./packages/jsx/src/*"],
       "@local/core": ["./packages/core/src/index.ts"],
       "@local/core/*": ["./packages/core/src/*"],
-      "@actview/plugin": ["./plugins/plugin/src/index.ts"]
+      "@actview/plugin": ["./plugins/plugin/src/index.ts"],
+      "@actview/router": ["./packages/router/src/index.ts"]
     },
 
     /* Linting */
@@ -31,5 +32,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
   },
-  "include": ["src", "packages/jsx/src/global.ts", "packages/core"]
+  "include": ["src", "packages/jsx/src/global.ts", "packages/core", "packages/router"]
 }

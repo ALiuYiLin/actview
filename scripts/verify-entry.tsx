@@ -1,4 +1,5 @@
 import { createApp, reactive } from "@local/core"
+import { createRouter, createMemoryHistory, RouterLink, RouterView } from "@actview/router"
 
 // ---------- 场景 1：响应式文本 + input ----------
 const state = reactive({ count: 1 })
@@ -76,6 +77,41 @@ function ParentWithLocal() {
 globalThis.__setParentMsg = (msg) => { parentState2.msg = msg }
 globalThis.__setChildLocal = (v) => { innerState.local = v }
 globalThis.__getParentRenderCount = () => parentRenderCount
+
+// ---------- 场景 5：路由（RouterView 组件切换） ----------
+function Home() {
+  return <div class="page home">Home page</div>
+}
+function About() {
+  return <div class="page about">About page</div>
+}
+function User(props) {
+  return <div class="page user">User: {props.params.id}</div>
+}
+
+const router = createRouter({
+  history: createMemoryHistory('/'),
+  routes: [
+    { path: '/', component: Home },
+    { path: '/about', component: About },
+    { path: '/user/:id', component: User },
+  ],
+})
+
+function RouterApp() {
+  return (
+    <div class="router-app">
+      <nav>
+        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About</RouterLink>
+      </nav>
+      <RouterView />
+    </div>
+  )
+}
+createApp(RouterApp).mount('#router')
+
+globalThis.__router = router
 
 // ---------- 挂载四个应用到不同容器 ----------
 createApp(App).mount('#app')

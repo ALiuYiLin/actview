@@ -1,36 +1,13 @@
 {
   "name": "@actview/router",
-  "version": "1.0.3",
-  "description": "Router module for Actview - history-based SPA routing with reactive route state",
+  "version": "0.0.0",
+  "private": true,
   "type": "module",
-  "main": "index.ts",
-  "types": "index.ts",
   "exports": {
-    ".": {
-      "import": "./index.ts",
-      "types": "./index.ts"
-    }
-  },
-  "files": [
-    "*.ts"
-  ],
-  "keywords": [
-    "actview",
-    "router",
-    "history",
-    "spa"
-  ],
-  "author": "scliuyilin",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
-  "homepage": "",
-  "bugs": {
-    "url": ""
+    ".": "./src/index.ts"
   },
   "dependencies": {
-    "@actview/core": "workspace:*"
+    "@local/core": "workspace:*",
+    "@local/jsx-factory": "workspace:*"
   }
 }

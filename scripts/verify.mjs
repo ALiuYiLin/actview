@@ -159,6 +159,26 @@ try {
   check('子文本更新为 again', collectText(clHost).includes('local: again'))
   check('props 路径未污染父依赖（render 仍 2 次）', globalThis.__getParentRenderCount() === 2)
 
+  // ---------- 场景 5：路由（RouterView 组件切换） ----------
+  console.log('--- 场景 5：路由（RouterView 组件切换） ---')
+  const routerHost = hosts.get('#router')
+  check('初始渲染 Home', collectText(routerHost).includes('Home page'))
+
+  globalThis.__router.push('/about')
+  check('push /about 切换为 About', collectText(routerHost).includes('About page'))
+
+  globalThis.__router.push('/user/42')
+  check('push /user/:id 动态参数正确', collectText(routerHost).includes('User: 42'))
+
+  globalThis.__router.back()
+  check('back() 回到 About', collectText(routerHost).includes('About page'))
+
+  // RouterLink 点击导航：nav 里第一个 a 的 onclick
+  const navLinks = routerHost.children[0].children[0].children
+  navLinks[0].onclick({ preventDefault() {} })
+  check('RouterLink 点击导航到 Home', collectText(routerHost).includes('Home page'))
+  check('href 属性正确', navLinks[0].attrs.href === '/')
+
   // ---------- 冒烟：src/main.tsx 检验页能正常渲染 ----------
   console.log('--- 冒烟：src/main.tsx 检验页 ---')
   await server.ssrLoadModule('/src/main.tsx')
