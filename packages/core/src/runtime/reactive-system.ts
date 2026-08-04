@@ -49,19 +49,31 @@ export class ReactiveEffect {
   /** 可选的调度器：设置后 trigger 不再同步 run，而是调用 scheduler */
   scheduler?: (effect: ReactiveEffect) => void
   private fn: ()=> void
+  /** 重入保护：run() 执行中再次被 trigger 直接跳过（防止 effect 内修改自身依赖爆栈） */
+  private _running = false
   constructor(fn: ()=> void, scheduler?: (effect: ReactiveEffect) => void){
     this.fn = fn
     this.scheduler = scheduler
     this.deps = []
   }
   public run(): any {
-    if (!this.active) return
-    cleanupEffect(this)
-    const preEffect = activeEffect
-    activeEffect = this
-    const result = this.fn()
-    activeEffect = preEffect
-    return result
+    if (!this.active || this._running) return
+    this._running = true
+    // effect 重跑是独立执行上下文：恢复依赖收集
+    // （数组修改方法内部 pauseTracking 期间嵌套触发的 effect 也要能重新 track）
+    const prevShouldTrack = shouldTrack
+    try {
+      shouldTrack = true
+      cleanupEffect(this)
+      const preEffect = activeEffect
+      activeEffect = this
+      const result = this.fn()
+      activeEffect = preEffect
+      return result
+    } finally {
+      this._running = false
+      shouldTrack = prevShouldTrack
+    }
   }
   /** 停止该 effect：清空所有依赖，之后不再响应 */
   public stop(){
@@ -84,8 +96,22 @@ function cleanupEffect(effect: ReactiveEffect){
 let activeEffect: ReactiveEffect | null = null
 const targetMap = new WeakMap<object,Map<PropertyKey,Dep>>()
 
+// ------------------------------------------------------------
+// 依赖收集开关（pauseTracking）
+//   数组修改方法执行期间暂停收集，避免 effect 内修改自身依赖时
+//   把「修改过程内部读取」收集进当前 effect（配合 run() 重入保护）
+// ------------------------------------------------------------
+
+let shouldTrack = true
+export function pauseTracking() {
+  shouldTrack = false
+}
+export function resetTracking() {
+  shouldTrack = true
+}
+
 export function track(target: object, key: PropertyKey){
-  if(!activeEffect) return
+  if(!activeEffect || !shouldTrack) return
   let depsMap = targetMap.get(target)
 
   if(!depsMap){

@@ -8,26 +8,24 @@
 
 ## 一、未修复 Bug（🐛）
 
-### 1. 🐛 P0 — `effect` 内修改数组爆栈（`pauseTracking` 缺失）
+### 1. ✅ 已修复 — P0 `effect` 内修改数组爆栈（提交 58f3579，verify 场景 17）
 
-- **复现**（已实测 `RangeError: Maximum call stack size exceeded`）：
+- **原问题**（已实测 `RangeError: Maximum call stack size exceeded`）：
 
   ```ts
-  import { reactive, runEffect } from 'actview'
-
   const state = reactive({ items: [1] })
   runEffect(() => {
     state.items.push(state.items.length) // effect 内修改自身依赖的数组
   })
   ```
 
-- **原因**：数组 `push` 经代理 `set` 触发 `trigger` → 同步执行依赖它的 effect（`effect.run()`）→ 重跑时又 `push` → 再触发 → 无限同步递归。
-- **根因**：`packages/core/src/reactivity/reactive.ts` 的数组 instrumentation 未做 `pauseTracking`（PLAN 阶段一第 1 项已注明未实现）。
-- **影响**：任何在组件渲染/effect 内直接 `push` 自身依赖数组的代码都会**同步爆栈崩溃**（浏览器卡死）。异步场景（事件 handler 内 push）不受影响——handler 不在 effect 执行中。
-- **修复方向**（参考 Vue 3）：
-  1. `reactive-system.ts` 增加 `pauseTracking() / resetTracking()`（`shouldTrack` 标记，`track()` 开头判断），数组修改方法（`push/pop/shift/unshift/splice/sort/reverse`）内部包裹 `pauseTracking`——修改期间不收集新依赖。
-  2. `ReactiveEffect.run()` 增加**重入保护**（`_running` 标记，`run()` 重入直接返回）——effect 执行中自身被 trigger 不再同步递归。
-  3. 注意：异步队列场景（组件 effect）仍有无限循环（与 Vue 3 一致），属「effect 内修改自身依赖」反模式，文档约束即可。
+- **原因**：数组 `push` 经代理 `set` 触发 `trigger` → 同步执行依赖它的 effect（`effect.run()`）→ 重跑时又 `push` → 无限同步递归。
+- **修复**（`packages/core/src/runtime/reactive-system.ts` + `reactivity/reactive.ts`）：
+  1. `pauseTracking() / resetTracking()`：数组修改方法（`push/pop/shift/unshift/splice/sort/reverse`）执行期间暂停依赖收集。
+  2. `ReactiveEffect.run()` 重入保护（`_running` 标记）：effect 执行中再次被 trigger 直接跳过，不再同步递归。
+  3. `run()` 内恢复 `shouldTrack`：effect 重跑是独立执行上下文，暂停期间嵌套触发的 effect 也能正常重新收集依赖。
+- **验证**（verify 场景 17）：effect 内 push 不爆栈、恰好执行一次；其他依赖该数组的 effect 正常触发；组件渲染内 push 不崩。
+- **遗留**：异步队列场景（组件 effect 内 push）仍有无限循环（与 Vue 3 相同），属「effect 内修改自身依赖」反模式，文档约束。
 
 ---
 
@@ -87,7 +85,7 @@
 | `watch` 不随组件卸载自动 stop | 无 scoped effects 机制 | 在 `onBeforeUnmount` 中调用 `watch` 返回的 stop |
 | `ErrorBoundary` 捕获后不自动恢复 | 触发 fallback 后持续显示直到边界重建 | 用 key 重建边界 |
 | `lazy` 的 loader 需返回组件产物 | 须为 `defineComponent` 产物（setup 返回 render 函数）；`import('./x')` 用 `m.default` | 见 verify 场景 15 用法 |
-| `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式） | 事件 handler 内修改；Bug 1 修复后同步不再爆栈 |
+| `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式）；同步场景已修复不爆栈（见已修复 Bug 1） | 事件 handler 内修改 |
 | 无具名插槽 | 仅默认/作用域插槽（函数 children） | 具名插槽需 JSX/Babel 侧语法支持 |
 | 组件函数体顶层是 setup 体（只执行一次） | 顶层响应式读取/抛错不会在更新时重跑；渲染期逻辑应放 JSX 表达式 | 见 verify 场景 15 注释 |
 
@@ -99,3 +97,4 @@
 - 受控 input 光标跳动（caa6931）｜无调度批处理/无 nextTick（53b4af6）
 - keyed diff 整体重排非最小移动（LIS）｜事件系统 `el.on*` 简陋（invoker + capture）
 - `replace` 不卸载旧组件导致实例泄漏（bffcfd8 顺带修复）｜patch 复用失效实例不重建（74a0bd4 顺带修复）
+- **effect 内修改数组爆栈**（58f3579：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）

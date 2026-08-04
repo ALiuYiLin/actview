@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -799,5 +800,57 @@ describe('场景 16：类型泛型化（编译期）', () => {
     // 合法：input 专属属性
     const okInput = <input type="checkbox" checked={true} />
     expect(okInput).toBeTruthy()
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 17：effect 内修改数组不爆栈（pauseTracking + 重入保护）
+// ------------------------------------------------------------
+describe('场景 17：effect 内修改数组', () => {
+  it('runEffect 内 push 自身依赖数组不爆栈、不无限重入', () => {
+    const state = reactive({ items: [1] })
+    let runs = 0
+    const e = runEffect(() => {
+      runs++
+      state.items.push(state.items.length)
+    })
+    // 重入保护：修改自身的 effect 不因自身 push 的 trigger 同步重跑
+    expect(runs).toBe(1)
+    expect(state.items).toEqual([1, 1]) // push 恰好执行一次
+    e.stop()
+  })
+
+  it('push 的 effect 不重入，其他依赖该数组的 effect 正常触发', () => {
+    const state = reactive({ items: [1] })
+    const seen: number[][] = []
+    const reader = runEffect(() => seen.push(state.items.slice()))
+    const pusher = runEffect(() => state.items.push(9))
+
+    expect(state.items).toEqual([1, 9])
+    // reader 首次读到 [1]，随后被 push 触发重跑并读到最新 [1,9]
+    // （push 内部索引+length 两次 set 会触发多次重跑，但每次都读到最新值）
+    expect(seen[0]).toEqual([1])
+    expect(seen[seen.length - 1]).toEqual([1, 9])
+    // pusher 自身不重入：数组里恰好一个 9
+    expect(state.items.filter((i) => i === 9)).toHaveLength(1)
+
+    // 只停 pusher（避免 push(10) 触发它重跑再 push(9)）；reader 保持响应
+    pusher.stop()
+    state.items.push(10)
+    expect(seen[seen.length - 1]).toEqual([1, 9, 10])
+    reader.stop()
+  })
+
+  it('组件渲染内 push 不导致渲染无限循环', async () => {
+    const state = reactive({ items: [1] })
+    function App() {
+      state.items.push(state.items.length) // 渲染期内 push（反模式，但不应崩）
+      return <ul>{state.items.map((i) => <li key={i}>{i}</li>)}</ul>
+    }
+    const host = document.createElement('div')
+    host.id = 's17'
+    document.body.appendChild(host)
+    createApp(App).mount('#s17')
+    expect(collectText(host)).toContain('1')
   })
 })

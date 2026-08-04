@@ -1,4 +1,4 @@
-import { track, trigger } from "../runtime/reactive-system"
+import { track, trigger, pauseTracking, resetTracking } from "../runtime/reactive-system"
 
 // ============================================================
 // 数组方法 instrumentation
@@ -10,11 +10,15 @@ import { track, trigger } from "../runtime/reactive-system"
 const MUTATING_ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'] as const
 
 /** 包装后的修改方法：用原始实现调用（this 是数组代理），
- *  内部对 length/索引的写入会走代理 set =》 触发数组自身与父级依赖 */
+ *  内部对 length/索引的写入会走代理 set =》 触发数组自身与父级依赖；
+ *  执行期间 pauseTracking：不把修改过程内部读取收集进当前 effect */
 const arrayInstrumentations: Record<string, (...args: any[]) => any> = {}
 MUTATING_ARRAY_METHODS.forEach((method) => {
   arrayInstrumentations[method] = function (this: any, ...args: any[]) {
-    return (Array.prototype as any)[method].apply(this, args)
+    pauseTracking()
+    const res = (Array.prototype as any)[method].apply(this, args)
+    resetTracking()
+    return res
   }
 })
 
