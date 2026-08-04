@@ -8,7 +8,7 @@
 
 ## 一、未修复 Bug（🐛）
 
-### 1. ✅ 已修复 — P0 `effect` 内修改数组爆栈（提交 58f3579，verify 场景 17）
+### 1. ✅ 已修复 — P0 `effect` 内修改数组爆栈（提交 c7e6c6e，verify 场景 17）
 
 - **原问题**（已实测 `RangeError: Maximum call stack size exceeded`）：
 
@@ -97,4 +97,4 @@
 - 受控 input 光标跳动（caa6931）｜无调度批处理/无 nextTick（53b4af6）
 - keyed diff 整体重排非最小移动（LIS）｜事件系统 `el.on*` 简陋（invoker + capture）
 - `replace` 不卸载旧组件导致实例泄漏（bffcfd8 顺带修复）｜patch 复用失效实例不重建（74a0bd4 顺带修复）
-- **effect 内修改数组爆栈**（58f3579：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）
+- **effect 内修改数组爆栈**（c7e6c6e：`pauseTracking` + `run()` 重入保护 + `shouldTrack` 恢复）

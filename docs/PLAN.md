@@ -113,4 +113,4 @@
 | 本次提交 | 插槽 / 动态组件 / keep-alive | 默认+作用域插槽；`<component is>`；`KeepAlive`（隐藏容器缓存 + 实例复用）；修复 replace 不卸载旧组件的泄漏；verify 场景 14 |
 | 本次提交 | 错误边界 / Suspense / lazy / ref | `ErrorBoundary`（栈注册 + fallback）；`Suspense`+`lazy` 异步组件；`props.ref` 模板引用；修复复用分支对失效实例重建；verify 场景 15 |
 | 本次提交 | 类型泛型化 | `ComponentType<P>`/`PropsOf` props 推导；jsx 工厂泛型重载（标签→IntrinsicElements、组件→props、Fragment）；camelCase 事件类型（`onClick` 等 + capture）；verify 场景 16（@ts-expect-error 编译期反向断言） |
-| 提交 58f3579 | 修复 effect 内修改数组爆栈 | `pauseTracking`/`resetTracking`（数组修改方法暂停收集）；`ReactiveEffect.run()` 重入保护 + `shouldTrack` 恢复；verify 场景 17 |
+| 提交 c7e6c6e | 修复 effect 内修改数组爆栈 | `pauseTracking`/`resetTracking`（数组修改方法暂停收集）；`ReactiveEffect.run()` 重入保护 + `shouldTrack` 恢复；verify 场景 17 |
