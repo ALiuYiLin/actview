@@ -10,6 +10,7 @@ export {
   shallowReactive,
   readonly,
   markRaw,
+  nextTick,
 } from '@actview/core'
 
 export type { App } from '@actview/core'

@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick } from 'actview'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -28,7 +28,7 @@ function collectText(el: any): string {
 // 场景 1：响应式文本自动更新
 // ------------------------------------------------------------
 describe('场景 1：响应式文本自动更新', () => {
-  it('reactive 状态变化自动重跑 patch 更新 DOM', () => {
+  it('reactive 状态变化自动重跑 patch 更新 DOM', async () => {
     const state = reactive({ count: 1 })
     function App() {
       return (
@@ -41,6 +41,7 @@ describe('场景 1：响应式文本自动更新', () => {
     const host = mount('#s1', App)
     expect(collectText(host)).toContain('hello: 1')
     state.count = 42
+    await nextTick()
     expect(collectText(host)).toContain('hello: 42')
     expect((host.children[0].children[1] as HTMLInputElement).value).toBe('42')
   })
@@ -50,7 +51,7 @@ describe('场景 1：响应式文本自动更新', () => {
 // 场景 2：keyed diff
 // ------------------------------------------------------------
 describe('场景 2：keyed diff', () => {
-  it('按 key 复用 / 重排 / 增删', () => {
+  it('按 key 复用 / 重排 / 增删', async () => {
     const state = reactive({ items: ['a', 'b', 'c'] })
     function ListApp() {
       return (
@@ -65,12 +66,15 @@ describe('场景 2：keyed diff', () => {
     expect(texts()).toEqual(['a', 'b', 'c'])
 
     state.items = ['c', 'a', 'b']
+    await nextTick()
     expect(texts()).toEqual(['c', 'a', 'b'])
 
     state.items = ['a', 'd']
+    await nextTick()
     expect(texts()).toEqual(['a', 'd'])
 
     state.items = ['x', 'a', 'd']
+    await nextTick()
     expect(texts()).toEqual(['x', 'a', 'd'])
   })
 })
@@ -79,7 +83,7 @@ describe('场景 2：keyed diff', () => {
 // 场景 3：props 细粒度更新
 // ------------------------------------------------------------
 describe('场景 3：props 细粒度更新', () => {
-  it('setup 只执行一次，props 更新不重挂', () => {
+  it('setup 只执行一次，props 更新不重挂', async () => {
     let childSetupCount = 0
     function Child(props: { msg: string }) {
       childSetupCount++
@@ -95,6 +99,7 @@ describe('场景 3：props 细粒度更新', () => {
     expect(span.textContent).toBe('hello')
 
     state.msg = 'world'
+    await nextTick()
     expect(span.textContent).toBe('world')
     expect(childSetupCount).toBe(1)
     expect(host.children[0].children[0]).toBe(span) // DOM 复用
@@ -105,7 +110,7 @@ describe('场景 3：props 细粒度更新', () => {
 // 场景 4：依赖隔离
 // ------------------------------------------------------------
 describe('场景 4：依赖隔离', () => {
-  it('子组件内部状态变化不连带父组件重渲染', () => {
+  it('子组件内部状态变化不连带父组件重渲染', async () => {
     let parentRenderCount = 0
     function markParentRender() {
       parentRenderCount++
@@ -132,15 +137,18 @@ describe('场景 4：依赖隔离', () => {
     expect(parentRenderCount).toBe(1)
 
     innerState.local = 'changed'
+    await nextTick()
     expect(collectText(host)).toContain('local: changed')
     expect(parentRenderCount).toBe(1)
 
     parentState.msg = 'hello2!'
+    await nextTick()
     expect(collectText(host)).toContain('prop: hello2!')
     expect(parentRenderCount).toBe(2)
 
     // 核心：props 更新路径之后，子内部状态再变化不得连带父组件
     innerState.local = 'again'
+    await nextTick()
     expect(collectText(host)).toContain('local: again')
     expect(parentRenderCount).toBe(2)
   })
@@ -150,7 +158,7 @@ describe('场景 4：依赖隔离', () => {
 // 场景 5：路由（RouterView 组件切换）
 // ------------------------------------------------------------
 describe('场景 5：路由', () => {
-  it('RouterView 切换 / 动态参数 / back / link', () => {
+  it('RouterView 切换 / 动态参数 / back / link', async () => {
     function Home() { return <div class="page home">Home page</div> }
     function About() { return <div class="page about">About page</div> }
     function User(props: { params: Record<string, string> }) {
@@ -179,16 +187,20 @@ describe('场景 5：路由', () => {
     expect(collectText(host)).toContain('Home page')
 
     router.push('/about')
+    await nextTick()
     expect(collectText(host)).toContain('About page')
 
     router.push('/user/42')
+    await nextTick()
     expect(collectText(host)).toContain('User: 42')
 
     router.back()
+    await nextTick()
     expect(collectText(host)).toContain('About page')
 
     const nav = host.children[0].children[0] as HTMLElement
     ;(nav.children[0] as any).onclick({ preventDefault() {} })
+    await nextTick()
     expect(collectText(host)).toContain('Home page')
     expect((nav.children[0] as HTMLAnchorElement).getAttribute('href')).toBe('/')
   })
@@ -198,7 +210,7 @@ describe('场景 5：路由', () => {
 // 场景 6：数组方法响应
 // ------------------------------------------------------------
 describe('场景 6：数组方法', () => {
-  it('push/pop/splice/reverse/索引赋值触发更新', () => {
+  it('push/pop/splice/reverse/索引赋值触发更新', async () => {
     const state = reactive({ items: ['a', 'b', 'c'] })
     function ArrApp() {
       return <ul>{state.items.map((item) => <li key={item}>{item}</li>)}</ul>
@@ -208,18 +220,23 @@ describe('场景 6：数组方法', () => {
     const texts = () => Array.from(ul.children).map((li) => li.textContent)
 
     state.items.push('d')
+    await nextTick()
     expect(texts()).toEqual(['a', 'b', 'c', 'd'])
 
     state.items.pop()
+    await nextTick()
     expect(texts()).toEqual(['a', 'b', 'c'])
 
     state.items.splice(1, 1)
+    await nextTick()
     expect(texts()).toEqual(['a', 'c'])
 
     state.items.reverse()
+    await nextTick()
     expect(texts()).toEqual(['c', 'a'])
 
     state.items[0] = 'x'
+    await nextTick()
     expect(texts()).toEqual(['x', 'a'])
   })
 })
@@ -228,7 +245,7 @@ describe('场景 6：数组方法', () => {
 // 场景 7：for...in / in 响应
 // ------------------------------------------------------------
 describe('场景 7：for...in / in 响应', () => {
-  it('增删 key 触发遍历与 in 检查更新', () => {
+  it('增删 key 触发遍历与 in 检查更新', async () => {
     const keysState = reactive({ a: 1, b: 2 })
     function collectKeys(obj: object) {
       const keys: string[] = []
@@ -251,9 +268,11 @@ describe('场景 7：for...in / in 响应', () => {
     expect(getText('has-b')).toBe('has-b')
 
     ;(keysState as any).c = 3
+    await nextTick()
     expect(getText('keys')).toBe('a,b,c')
 
     delete (keysState as any).b
+    await nextTick()
     expect(getText('keys')).toBe('a,c')
     expect(getText('has-b')).toBe('no-b')
   })
@@ -263,7 +282,7 @@ describe('场景 7：for...in / in 响应', () => {
 // 场景 8：markRaw / readonly / shallowReactive / 非普通对象
 // ------------------------------------------------------------
 describe('场景 8：markRaw / readonly / shallowReactive', () => {
-  it('Date 不崩溃、markRaw 隔离、readonly 拦截、shallow 浅层', () => {
+  it('Date 不崩溃、markRaw 隔离、readonly 拦截、shallow 浅层', async () => {
     const rawMarkedObj = { n: 1 }
     const marked = markRaw(rawMarkedObj)
     const apiState = reactive({ d: new Date(0), normal: { n: 1 }, marked })
@@ -292,6 +311,7 @@ describe('场景 8：markRaw / readonly / shallowReactive', () => {
     expect(getText('marked')).toBe('1')
 
     apiState.normal.n = 2
+    await nextTick()
     expect(getText('normal')).toBe('2') // 普通嵌套响应
 
     rawMarkedObj.n = 2
@@ -301,6 +321,7 @@ describe('场景 8：markRaw / readonly / shallowReactive', () => {
     expect(getText('sh-nested')).toBe('1') // shallow 深层不响应
 
     sh.top = 2
+    await nextTick()
     expect(getText('sh-top')).toBe('2') // shallow 浅层响应
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -315,7 +336,7 @@ describe('场景 8：markRaw / readonly / shallowReactive', () => {
 // 场景 9：受控 input 光标保位
 // ------------------------------------------------------------
 describe('场景 9：受控 input 光标保位', () => {
-  it('聚焦时赋值后恢复光标，未聚焦不干预', () => {
+  it('聚焦时赋值后恢复光标，未聚焦不干预', async () => {
     const state = reactive({ text: 'abc' })
     function InputApp() {
       return (
@@ -332,6 +353,7 @@ describe('场景 9：受控 input 光标保位', () => {
     inputEl.focus()
     inputEl.setSelectionRange(1, 1)
     state.text = 'aXc'
+    await nextTick()
     expect(inputEl.value).toBe('aXc')
     expect(inputEl.selectionStart).toBe(1)
 
@@ -341,8 +363,42 @@ describe('场景 9：受控 input 光标保位', () => {
     inputEl.value = 'aXc'
     inputEl.setSelectionRange(2, 2)
     state.text = 'abXc'
+    await nextTick()
     expect(inputEl.value).toBe('abXc')
     expect(inputEl.selectionStart).not.toBe(2)
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 10：调度批处理 + nextTick
+// ------------------------------------------------------------
+describe('场景 10：调度批处理', () => {
+  it('同轮多次修改状态只触发一次更新；nextTick 在更新后回调', async () => {
+    let renderCount = 0
+    function markRender() {
+      renderCount++
+      return ''
+    }
+    const state = reactive({ count: 0 })
+    function Counter() {
+      return <div class="counter">{markRender()}{state.count}</div>
+    }
+    const host = mount('#s10', Counter)
+    expect(renderCount).toBe(1) // 首次挂载同步渲染
+
+    state.count++
+    state.count++
+    state.count++
+    expect(renderCount).toBe(1) // 批处理：修改后同步时刻尚未重渲染
+    await nextTick()
+    expect(renderCount).toBe(2) // 微任务中只更新一次（去重）
+    expect(collectText(host)).toContain('3')
+
+    let called = false
+    state.count++
+    await nextTick(() => { called = true })
+    expect(called).toBe(true) // nextTick 回调在 flush 后执行
+    expect(renderCount).toBe(3)
   })
 })
 
@@ -363,9 +419,11 @@ describe('冒烟：src/main.tsx 检验页', () => {
     expect(collectText(appRoot)).toContain('① 响应式')
 
     routerMod.router.push('/reactive')
+    await nextTick()
     expect(collectText(appRoot)).toContain('count =')
 
     routerMod.router.push('/list')
+    await nextTick()
     expect(collectText(appRoot)).toContain('Apple')
   })
 })

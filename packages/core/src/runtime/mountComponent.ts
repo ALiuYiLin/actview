@@ -7,7 +7,7 @@
 //   })
 // ============================================================
 
-import { runEffect } from './reactive-system'
+import { runEffect, queueJob } from './reactive-system'
 import { patch } from './renderer'
 
 /** 组件实例：保存 setup/render 及当前子树 */
@@ -51,13 +51,16 @@ export function mountComponent(vnode: any, container: Element | null) {
     vnode.el = instance.subTree ? instance.subTree.el : null
   }
 
-  // runEffect 立即执行首次挂载；之后响应式数据变化自动重跑 update
-  const effect = runEffect(update)
+  // runEffect 立即执行首次挂载（同步渲染）；之后响应式变化经 scheduler
+  // 入微任务队列去重批量更新（调度批处理）
+  const effect = runEffect(update, { scheduler: queueJob })
 
-  // props 更新路径（父组件 patchComponent 手动调度）也必须走完整 effect 语义：
-  // cleanup 旧依赖 + 设置 activeEffect 上下文，否则裸调用 update 会把调用方
-  // （父 effect）误收集进本组件的内部响应式依赖，导致父组件被连带重渲染
-  instance.update = () => effect.run()
+  // props 更新路径（父组件 patchComponent 手动调度）同样入队，
+  // 获得 cleanup + 正确 activeEffect 上下文 + 批处理语义；
+  // 裸调用 update 会把调用方（父 effect）误收集进本组件的内部响应式依赖
+  instance.update = () => {
+    if (effect.active) queueJob(effect)
+  }
 
   instance.unmount = () => {
     effect.stop()

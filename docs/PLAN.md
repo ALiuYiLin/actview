@@ -95,3 +95,4 @@
 | 提交 34a8729 | for...in / 'in' 响应 | `ITERATE_KEY` + `has`/`ownKeys` 陷阱，增删 key 触发；verify 场景 7 |
 | 提交 6f892fd | markRaw / readonly / shallowReactive | 只代理普通对象/数组（Date/Map/Set 不代理）；verify 场景 8 |
 | 提交 caa6931 | 受控 input 光标保位 | `setInputValue` 记录/恢复 `selectionStart/End`；verify 场景 9 |
+| 待提交 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
