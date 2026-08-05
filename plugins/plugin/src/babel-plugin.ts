@@ -175,8 +175,23 @@ export default function defineComponentPlugin() {
         // 仅对源码 JSX 生效；已转换的 _jsx() 调用中无 JSX 节点可提取
         if (isJsx) walkJSX(last.argument)
 
-        // ---------- 3. return JSX → return () => JSX ----------
-        last.argument = t.arrowFunctionExpression([], ret)
+        // ---------- 3. 所有 return JSX/JSXCall/null 的语句 → return () => ... ----------
+        // 早退 return（`if (cond) return null` / `return <JSX/>`）也必须包成 render
+        // 函数，否则 __setup() 早退返回非函数 → instance.render is not a function
+        for (const stmt of body) {
+          if (!t.isReturnStatement(stmt)) continue
+          const arg = stmt.argument
+          if (arg == null) continue
+          const isStmtJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
+          const isStmtJsxCall =
+            t.isCallExpression(arg) &&
+            t.isIdentifier(arg.callee) &&
+            /^_?jsx/.test(arg.callee.name)
+          const isStmtNull = t.isNullLiteral(arg)
+          if (isStmtJsx || isStmtJsxCall || isStmtNull) {
+            stmt.argument = t.arrowFunctionExpression([], arg)
+          }
+        }
 
         // ---------- 4. defineComponent(function(){}) ----------
         const func = t.functionExpression(null, node.params, node.body, false, false)
