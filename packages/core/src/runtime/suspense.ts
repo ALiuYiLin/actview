@@ -43,19 +43,25 @@ export const Suspense = defineComponent(function (props: any) {
     },
     resolve() {
       pending.value = false
-    },
+    }
   }
 
   pushSuspense(self)
   onBeforeUnmount(() => popSuspense(self))
 
-  return () => (pending.value ? props.fallback ?? null : props.children)
+  return () => (pending.value ? (props.fallback ?? null) : props.children)
 })
 
 const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 
 function createVNode(type: any): any {
-  return { $$typeof: REACT_ELEMENT_TYPE, type, key: null, ref: null, props: null }
+  return {
+    $$typeof: REACT_ELEMENT_TYPE,
+    type,
+    key: null,
+    ref: null,
+    props: null
+  }
 }
 
 /**
@@ -87,7 +93,10 @@ export function lazy(loader: () => Promise<any>) {
 
   return defineComponent(function () {
     // 向最近的 Suspense 注册（无 Suspense 时 ctx 为 null，加载完成后直接渲染）
-    start((getCurrentInstance() as any)?.suspenseCtx ?? getCurrentSuspense()?.suspenseCtx)
+    start(
+      (getCurrentInstance() as any)?.suspenseCtx ??
+        getCurrentSuspense()?.suspenseCtx
+    )
 
     return () => {
       if (loadError) throw loadError

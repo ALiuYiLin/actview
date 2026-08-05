@@ -1,4 +1,4 @@
-import type { ComponentInstance } from "./mountComponent"
+import type { ComponentInstance } from './mountComponent'
 
 // ============================================================
 // 生命周期钩子 — 模块级 currentInstance 上下文

@@ -17,15 +17,39 @@ import type { VNode } from '@actview/jsx'
 
 /** void 元素：HTML 规范中无内容、不闭合 */
 const VOID_ELEMENTS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-  'link', 'meta', 'param', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr'
 ])
 
 /** Fragment 标记（与 renderer/jsxFactory 一致：Symbol.for 全局共享） */
 const Fragment = Symbol.for('react.fragment')
 
 /** 布尔属性：值为 true 时输出空属性（如 disabled/checked/readonly） */
-const BOOLEAN_ATTRS = new Set(['disabled', 'checked', 'readonly', 'required', 'multiple', 'selected', 'hidden', 'autofocus', 'novalidate', 'defer', 'async'])
+const BOOLEAN_ATTRS = new Set([
+  'disabled',
+  'checked',
+  'readonly',
+  'required',
+  'multiple',
+  'selected',
+  'hidden',
+  'autofocus',
+  'novalidate',
+  'defer',
+  'async'
+])
 
 /** HTML 文本/属性转义 */
 function escapeHtml(value: string): string {
@@ -38,7 +62,9 @@ function escapeHtml(value: string): string {
 }
 
 /** style 对象 → "k:v;k2:v2;" 字符串（camelCase 键原样输出） */
-function stringifyStyle(style: string | Record<string, string | number>): string {
+function stringifyStyle(
+  style: string | Record<string, string | number>
+): string {
   if (typeof style === 'string') return style
   if (!style) return ''
   return Object.entries(style)
@@ -78,10 +104,13 @@ function serializeNode(node: any): string {
   //   也兼容函数形态（__setup 属性或直接调用）
   const isComponent =
     typeof type === 'function' ||
-    (typeof type === 'object' && type != null && typeof (type as any).__setup === 'function')
+    (typeof type === 'object' &&
+      type != null &&
+      typeof (type as any).__setup === 'function')
   if (isComponent) {
     const setup = (type as any).__setup
-    const render = typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
+    const render =
+      typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
     if (typeof render === 'function') {
       return serializeNode(render())
     }

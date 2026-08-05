@@ -8,6 +8,10 @@
  * 让 defineComponent 产物（如手写 RouterView）能通过 JSX 类型检查，
  * 运行时仍是普通对象（as 断言不产生任何运行时代码）。
  */
-export function defineComponent<Setup extends (...args: any[]) => any>(setup: Setup) {
-  return { __setup: setup } as { __setup: Setup } & ((...args: Parameters<Setup>) => ReturnType<Setup>)
+export function defineComponent<Setup extends (...args: any[]) => any>(
+  setup: Setup
+) {
+  return { __setup: setup } as { __setup: Setup } & ((
+    ...args: Parameters<Setup>
+  ) => ReturnType<Setup>)
 }

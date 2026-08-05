@@ -33,7 +33,7 @@ function normalizeRecord(record: RouteRecord): RouteRecordNormalized {
   return {
     record,
     regex: new RegExp(`^${regexSource}/?$`),
-    keys,
+    keys
   }
 }
 

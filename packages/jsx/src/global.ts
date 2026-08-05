@@ -2,7 +2,13 @@
 // JSX 全局类型增强 — 通过 tsconfig include 加载，全局生效
 // ============================================================
 
-import type { VNode, VNodeTypes, HtmlProps, InputProps, ComponentType } from './types.js'
+import type {
+  VNode,
+  VNodeTypes,
+  HtmlProps,
+  InputProps,
+  ComponentType
+} from './types.js'
 
 declare global {
   namespace JSX {

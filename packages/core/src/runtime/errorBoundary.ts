@@ -43,7 +43,7 @@ export const ErrorBoundary = defineComponent(function (props: any) {
       // fallback 可以是 VNode 或函数（接收错误对象）
       return typeof props.fallback === 'function'
         ? props.fallback(error.value)
-        : props.fallback ?? null
+        : (props.fallback ?? null)
     }
     return props.children
   }

@@ -1,5 +1,5 @@
-import { reactive } from "./reactive"
-import { track, trigger } from "../runtime/reactive-system"
+import { reactive } from './reactive'
+import { track, trigger } from '../runtime/reactive-system'
 
 // ============================================================
 // ref — 值包装的响应式引用
@@ -81,14 +81,19 @@ class ObjectRefImpl<T extends object, K extends keyof T> implements Ref<T[K]> {
 }
 
 /** 将对象属性转为 ref：源对象是 reactive 时保持响应式；属性已是 ref 则原样返回 */
-export function toRef<T extends object, K extends keyof T>(object: T, key: K): Ref<T[K]> {
+export function toRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K
+): Ref<T[K]> {
   const val = object[key]
   if (isRef(val)) return val as unknown as Ref<T[K]>
   return new ObjectRefImpl(object, key) as Ref<T[K]>
 }
 
 /** 将对象的每个属性转为 ref（配合解构使用：const { a, b } = toRefs(state)） */
-export function toRefs<T extends object>(object: T): { [K in keyof T]: Ref<T[K]> } {
+export function toRefs<T extends object>(
+  object: T
+): { [K in keyof T]: Ref<T[K]> } {
   const ret: any = {}
   for (const key in object) {
     ret[key] = toRef(object, key)

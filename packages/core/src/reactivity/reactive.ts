@@ -1,4 +1,9 @@
-import { track, trigger, pauseTracking, resetTracking } from "../runtime/reactive-system"
+import {
+  track,
+  trigger,
+  pauseTracking,
+  resetTracking
+} from '../runtime/reactive-system'
 
 // ============================================================
 // 数组方法 instrumentation
@@ -7,7 +12,15 @@ import { track, trigger, pauseTracking, resetTracking } from "../runtime/reactiv
 //   2) 父级对象依赖（如 state.items）——数组代理 set 会通知
 // ============================================================
 
-const MUTATING_ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'] as const
+const MUTATING_ARRAY_METHODS = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+] as const
 
 /** 包装后的修改方法：用原始实现调用（this 是数组代理），
  *  内部对 length/索引的写入会走代理 set =》 触发数组自身与父级依赖；
@@ -76,7 +89,11 @@ const isIntegerKey = (key: PropertyKey) =>
   String(parseInt(key, 10)) === key
 
 /** 数组新增整数索引时：length 自动同步，set('length') 检测不到变化，需显式触发 */
-function triggerArrayLengthIfNeeded(target: any, key: PropertyKey, hadKey: boolean) {
+function triggerArrayLengthIfNeeded(
+  target: any,
+  key: PropertyKey,
+  hadKey: boolean
+) {
   if (!hadKey && Array.isArray(target) && isIntegerKey(key)) {
     trigger(target, 'length')
   }
@@ -87,7 +104,10 @@ function triggerArrayLengthIfNeeded(target: any, key: PropertyKey, hadKey: boole
 // ============================================================
 
 /** 响应式数组代理：拦截修改方法 + 索引/length 变更时通知父级 */
-function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey }): any[] {
+function createArrayProxy(
+  raw: any[],
+  parent: { target: object; key: PropertyKey }
+): any[] {
   const proxy = new Proxy(raw, {
     /* 在 handlers 定义后登记到 proxySet */
     get(target, key, receiver) {
@@ -131,7 +151,7 @@ function createArrayProxy(raw: any[], parent: { target: object; key: PropertyKey
     ownKeys(target) {
       track(target, ITERATE_KEY)
       return Reflect.ownKeys(target)
-    },
+    }
   })
   proxySet.add(proxy)
   return proxy
@@ -160,7 +180,7 @@ function createReadonlyArrayProxy(raw: any[]): any[] {
     ownKeys(target) {
       track(target, ITERATE_KEY)
       return Reflect.ownKeys(target)
-    },
+    }
   })
   return proxy
 }
@@ -207,7 +227,7 @@ function createObjectHandlers(deep: boolean) {
     ownKeys(target: object) {
       track(target, ITERATE_KEY)
       return Reflect.ownKeys(target)
-    },
+    }
   }
 }
 
@@ -234,7 +254,7 @@ function createReadonlyObjectHandlers() {
     ownKeys(target: object) {
       track(target, ITERATE_KEY)
       return Reflect.ownKeys(target)
-    },
+    }
   }
 }
 

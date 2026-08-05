@@ -22,7 +22,7 @@ export const RouterLink = defineComponent(function (props: any) {
         e.preventDefault()
         currentRouter.push(to)
       },
-      children,
+      children
     })
   }
 })
@@ -41,7 +41,7 @@ export const RouterView = defineComponent(function () {
     return jsx(Component, {
       path: route.path,
       params: matched.params,
-      query: route.query,
+      query: route.query
     })
   }
 })

@@ -1,5 +1,5 @@
-import { ReactiveEffect, track, trigger } from "../runtime/reactive-system"
-import type { Ref } from "./ref"
+import { ReactiveEffect, track, trigger } from '../runtime/reactive-system'
+import type { Ref } from './ref'
 
 /** computed 的公开类型：带 __v_isRef 标记的只读 Ref（与运行时实现一致） */
 export interface ComputedRef<T = any> extends Ref<T> {
@@ -35,7 +35,7 @@ export class ComputedRefImpl<T> {
           this._dirty = true
           trigger(this, 'value')
         }
-      },
+      }
     )
   }
 

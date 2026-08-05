@@ -30,7 +30,7 @@ export {
   ErrorBoundary,
   Suspense,
   lazy,
-  getCurrentScope,
+  getCurrentScope
 } from '@actview/core'
 
 export type { App } from '@actview/core'

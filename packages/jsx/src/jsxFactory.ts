@@ -15,7 +15,7 @@ function createVNode(type: any, key: any, props: any) {
     type,
     key,
     ref: null,
-    props,
+    props
   }
 }
 
@@ -26,14 +26,18 @@ function createVNode(type: any, key: any, props: any) {
 function jsxImpl<K extends keyof JSX.IntrinsicElements>(
   type: K,
   config: JSX.IntrinsicElements[K] & { children?: VNodeChildren },
-  maybeKey?: any,
+  maybeKey?: any
 ): VNode
 function jsxImpl<P>(
   type: ComponentType<P>,
   config: P & { children?: VNodeChildren },
-  maybeKey?: any,
+  maybeKey?: any
 ): VNode
-function jsxImpl(type: symbol, config: { children?: VNodeChildren }, maybeKey?: any): VNode
+function jsxImpl(
+  type: symbol,
+  config: { children?: VNodeChildren },
+  maybeKey?: any
+): VNode
 
 /** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode */
 function jsxImpl(type: any, config: any, maybeKey?: any) {

@@ -23,11 +23,11 @@ export function createApp(rootComponent?: unknown): App {
         type: rootComponent,
         key: null,
         ref: null,
-        props: {},
+        props: {}
       }
 
       host.innerHTML = ''
       render(rootVnode, host)
-    },
+    }
   }
 }

@@ -4,7 +4,12 @@
 // ============================================================
 
 export { createRouter, currentRouter } from './router'
-export type { Router, RouterOptions, RouteLocation, RouteLocationRaw } from './router'
+export type {
+  Router,
+  RouterOptions,
+  RouteLocation,
+  RouteLocationRaw
+} from './router'
 
 export { createMemoryHistory, createWebHistory } from './history'
 export type { RouterHistory } from './history'

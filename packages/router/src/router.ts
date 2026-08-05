@@ -43,11 +43,15 @@ function parseQuery(search: string): Record<string, string> {
   return query
 }
 
-function stringifyQuery(query?: Record<string, string | number | boolean>): string {
+function stringifyQuery(
+  query?: Record<string, string | number | boolean>
+): string {
   if (!query) return ''
   const entries = Object.entries(query)
     .filter(([, v]) => v != null)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .map(
+      ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`
+    )
   return entries.length ? `?${entries.join('&')}` : ''
 }
 
@@ -59,7 +63,7 @@ export function createRouter(options: RouterOptions) {
     path: '/',
     query: {},
     params: {},
-    fullPath: '/',
+    fullPath: '/'
   })
 
   /** 解析导航目标：字符串或 { path, query } =》 { fullPath } */
@@ -107,7 +111,7 @@ export function createRouter(options: RouterOptions) {
     /** 匹配 path =》 { record, params }（RouterView 渲染用） */
     match(path) {
       return matcher.match(path)
-    },
+    }
   }
 
   currentRouter = router

@@ -1,3 +1,3 @@
-import { ReactiveEffect } from "./runtime/reactive-system";
+import { ReactiveEffect } from './runtime/reactive-system'
 
 export type Dep = Set<ReactiveEffect>

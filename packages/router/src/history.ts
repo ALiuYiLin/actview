@@ -53,7 +53,7 @@ export function createMemoryHistory(initial: string = '/'): RouterHistory {
       if (target === index) return
       index = target
       emit()
-    },
+    }
   }
 }
 
@@ -93,6 +93,6 @@ export function createWebHistory(base: string = ''): RouterHistory {
     go(delta) {
       // 由浏览器触发 popstate =》 emit（读取 location）
       window.history.go(delta)
-    },
+    }
   }
 }

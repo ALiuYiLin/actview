@@ -119,10 +119,26 @@ export interface HtmlProps {
 /** input 元素特有属性 */
 export interface InputProps extends HtmlProps {
   type?:
-    | 'text' | 'password' | 'email' | 'number' | 'checkbox'
-    | 'radio' | 'file' | 'submit' | 'reset' | 'button'
-    | 'range' | 'date' | 'time' | 'color' | 'hidden'
-    | 'search' | 'tel' | 'url' | 'month' | 'week'
+    | 'text'
+    | 'password'
+    | 'email'
+    | 'number'
+    | 'checkbox'
+    | 'radio'
+    | 'file'
+    | 'submit'
+    | 'reset'
+    | 'button'
+    | 'range'
+    | 'date'
+    | 'time'
+    | 'color'
+    | 'hidden'
+    | 'search'
+    | 'tel'
+    | 'url'
+    | 'month'
+    | 'week'
     | 'datetime-local'
   value?: string | number | readonly string[]
   checked?: boolean

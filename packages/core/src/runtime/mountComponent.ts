@@ -7,7 +7,12 @@
 //   })
 // ============================================================
 
-import { runEffect, queueJob, pauseTracking, resetTracking } from './reactive-system'
+import {
+  runEffect,
+  queueJob,
+  pauseTracking,
+  resetTracking
+} from './reactive-system'
 import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
@@ -57,7 +62,11 @@ export interface ComponentInstance {
 /** 挂载组件 VNode：实例化并建立响应式更新 effect */
 export function mountComponent(vnode: any, container: Element | null) {
   const options = vnode.type
-  if (options == null || typeof options !== 'object' || typeof options.__setup !== 'function') {
+  if (
+    options == null ||
+    typeof options !== 'object' ||
+    typeof options.__setup !== 'function'
+  ) {
     throw new Error('[actview] mountComponent: 无效的组件，缺少 __setup')
   }
 
@@ -78,7 +87,7 @@ export function mountComponent(vnode: any, container: Element | null) {
     mounted: [],
     updated: [],
     beforeUnmount: [],
-    unmounted: [],
+    unmounted: []
   }
   vnode.component = instance
 
@@ -121,7 +130,9 @@ export function mountComponent(vnode: any, container: Element | null) {
   // runEffect 立即执行首次挂载（同步渲染）；之后响应式变化经 scheduler
   // 入微任务队列去重批量更新（调度批处理）
   // render effect 注册进组件 scope，随组件卸载自动停止
-  const effect = instance.scope.run(() => runEffect(update, { scheduler: queueJob }))
+  const effect = instance.scope.run(() =>
+    runEffect(update, { scheduler: queueJob })
+  )
 
   // 首次渲染已完成（DOM 已挂载）→ 触发 onMounted
   // 注意：子组件的 mounted 先于父组件触发（同步挂载顺序，与 Vue 3 相反）

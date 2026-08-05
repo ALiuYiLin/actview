@@ -26,11 +26,14 @@ export function bindPatchChildren(fn: (...args: any[]) => any[]) {
 
 export const Teleport = /* @__PURE__ */ {
   __builtin: 'teleport',
-  __setup: () => () => null, // 仅满足组件形状；实际渲染走内置分支
+  __setup: () => () => null // 仅满足组件形状；实际渲染走内置分支
 } as any
 
 /** 解析 to：选择器 =》 元素；Element =》 原样；null/未定义 =》 当前容器（内联） */
-function resolveTeleportTarget(to: any, fallback: Element | null): Element | null {
+function resolveTeleportTarget(
+  to: any,
+  fallback: Element | null
+): Element | null {
   if (to == null) return fallback
   if (typeof to === 'string') return document.querySelector(to)
   if (to instanceof Element || (to && to.nodeType === 1)) return to
@@ -50,7 +53,11 @@ export function mountTeleport(vnode: any, container: Element | null) {
 }
 
 /** 更新 Teleport：to 变化 =》 迁移 DOM；children 变化 =》 目标容器上 patch */
-export function patchTeleport(oldVnode: any, newVnode: any, container: Element | null) {
+export function patchTeleport(
+  oldVnode: any,
+  newVnode: any,
+  container: Element | null
+) {
   const oldTarget = resolveTeleportTarget(oldVnode.props?.to, container)
   const newTarget = resolveTeleportTarget(newVnode.props?.to, container)
   if (oldTarget && newTarget && oldTarget !== newTarget) {
@@ -65,7 +72,7 @@ export function patchTeleport(oldVnode: any, newVnode: any, container: Element |
       oldVnode.props?.children,
       newVnode.props?.children,
       base,
-      oldVnode,
+      oldVnode
     )
   }
 }
@@ -88,7 +95,7 @@ export function unmountTeleport(vnode: any) {
 
 export const Transition = /* @__PURE__ */ {
   __builtin: 'transition',
-  __setup: () => () => null, // 仅满足组件形状；实际渲染走内置分支
+  __setup: () => () => null // 仅满足组件形状；实际渲染走内置分支
 } as any
 
 /** 获取元素生效的过渡时长（秒）；0 = 无过渡 =》 立即完成 */
@@ -155,7 +162,12 @@ export function playEnter(el: Element, name: string, duration?: number) {
 }
 
 /** 播放离开动画，结束后回调（onDone 里执行真实卸载） */
-export function playLeave(el: Element, name: string, duration: number, onDone: () => void) {
+export function playLeave(
+  el: Element,
+  name: string,
+  duration: number,
+  onDone: () => void
+) {
   const base = name || 'v'
   addClass(el, `${base}-leave-from`, `${base}-leave-active`)
   doubleRaf().then(() => {
@@ -189,7 +201,7 @@ export function mountTransition(vnode: any, container: Element | null) {
 export function patchTransition(
   oldVnode: any,
   newVnode: any,
-  container: Element | null,
+  container: Element | null
 ) {
   const name = newVnode.props?.name
   const oldChildren = oldVnode.__avChildren ?? []
@@ -253,13 +265,24 @@ function normalizeSingle(children: any): any {
 function toVNodeSafe(child: any): any {
   if (child != null && typeof child === 'object' && child.$$typeof) return child
   if (typeof child === 'string' || typeof child === 'number') {
-    return { $$typeof: Symbol.for('react.element'), type: Symbol.for('react.text'), key: null, ref: null, props: { text: String(child) } }
+    return {
+      $$typeof: Symbol.for('react.element'),
+      type: Symbol.for('react.text'),
+      key: null,
+      ref: null,
+      props: { text: String(child) }
+    }
   }
   return child
 }
 
 /** 简化 children patch：挂载/更新到目标容器，返回 vnode 列表（带 el） */
-function patchChildrenSafe(oldChildren: any, newChildren: any, container: Element | null, oldVnode?: any): any[] {
+function patchChildrenSafe(
+  oldChildren: any,
+  newChildren: any,
+  container: Element | null,
+  oldVnode?: any
+): any[] {
   if (!container) return []
   if (!_patchChildren) {
     console.warn('[actview] Transition/Teleport: renderer 未注入 patchChildren')

@@ -12,7 +12,7 @@ import {
   mountTransition,
   patchTransition,
   unmountTransition,
-  bindPatchChildren,
+  bindPatchChildren
 } from './transition'
 
 const REACT_ELEMENT_TYPE = Symbol.for('react.element')
@@ -25,7 +25,7 @@ function createTextVNode(text: string) {
     type: Text,
     key: null,
     ref: null,
-    props: { text },
+    props: { text }
   }
 }
 
@@ -62,12 +62,18 @@ function normalizeChildren(children: any): any[] {
 function resolveDynamicVNode(vnode: any): any {
   if (vnode && vnode.type === 'component') {
     const is = vnode.props?.is
-    vnode.type = is && typeof is === 'object' ? is : typeof is === 'string' ? is : 'div'
+    vnode.type =
+      is && typeof is === 'object' ? is : typeof is === 'string' ? is : 'div'
   }
   return vnode
 }
 
-export function patch(oldVnode: any, newVnode: any, container: Element, index?: number) {
+export function patch(
+  oldVnode: any,
+  newVnode: any,
+  container: Element,
+  index?: number
+) {
   newVnode = resolveDynamicVNode(newVnode)
   if (oldVnode == null) {
     mountVNode(newVnode, container)
@@ -115,8 +121,10 @@ export function mountVNode(vnode: any, container: Element | null): any {
 
   // 内置组件（Teleport / Transition）：优先于普通组件分支
   // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
-  if (vnode.type?.__builtin === 'teleport') return mountTeleport(vnode, container)
-  if (vnode.type?.__builtin === 'transition') return mountTransition(vnode, container)
+  if (vnode.type?.__builtin === 'teleport')
+    return mountTeleport(vnode, container)
+  if (vnode.type?.__builtin === 'transition')
+    return mountTransition(vnode, container)
 
   // 组件
   if (isComponentVNode(vnode)) {
@@ -126,7 +134,11 @@ export function mountVNode(vnode: any, container: Element | null): any {
   // Fragment：自身无 DOM，直接挂载 children
   if (vnode.type === Fragment) {
     vnode.el = null
-    vnode.__avChildren = patchChildren(null, vnode.props?.children, container as Element)
+    vnode.__avChildren = patchChildren(
+      null,
+      vnode.props?.children,
+      container as Element
+    )
     return null
   }
   // 文本
@@ -156,7 +168,12 @@ export function mountVNode(vnode: any, container: Element | null): any {
 // 更新
 // ------------------------------------------------------------
 
-function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: number) {
+function patchVNode(
+  oldVnode: any,
+  newVnode: any,
+  container: Element,
+  index?: number
+) {
   // 内置组件（Teleport / Transition）
   if (newVnode.type?.__builtin === 'teleport') {
     patchTeleport(oldVnode, newVnode, container)
@@ -187,7 +204,8 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
       // 上次是空文本（已移除）或新增：创建文本节点，插入到 index 位置（childNodes[index] 前）
       el = document.createTextNode(newVnode.props.text)
       newVnode.el = el
-      const anchor = index != null ? container.childNodes[index] ?? null : null
+      const anchor =
+        index != null ? (container.childNodes[index] ?? null) : null
       container.insertBefore(el, anchor)
     } else {
       newVnode.el = el
@@ -204,7 +222,7 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
       oldVnode.props?.children,
       newVnode.props?.children,
       container,
-      oldVnode,
+      oldVnode
     )
     return
   }
@@ -215,7 +233,7 @@ function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: nu
     oldVnode.props?.children,
     newVnode.props?.children,
     el,
-    oldVnode,
+    oldVnode
   )
 }
 
@@ -280,7 +298,7 @@ function patchChildren(
   oldChildren: any,
   newChildren: any,
   container: Element,
-  oldVnode?: any,
+  oldVnode?: any
 ): any[] {
   // 旧 vnode 列表：优先用上次 diff 缓存的 vnode（带 el，文本节点可精确定位），
   // 否则对旧 children 重新包装（首次/异常兜底）
@@ -311,7 +329,11 @@ function patchChildren(
 //   5. 从后往前：新节点与非 LIS 节点 insertBefore 到 anchor 前，LIS 节点不动
 // ------------------------------------------------------------
 
-function patchKeyedChildren(oldList: any[], newList: any[], container: Element) {
+function patchKeyedChildren(
+  oldList: any[],
+  newList: any[],
+  container: Element
+) {
   const oldKeyToIndex = new Map<any, number>()
   oldList.forEach((vnode, i) => {
     if (vnode && vnode.key != null) oldKeyToIndex.set(vnode.key, i)
@@ -352,7 +374,7 @@ function patchKeyedChildren(oldList: any[], newList: any[], container: Element) 
     if (newVNode == null) continue
     // Fragment 等 el 为 null 的节点静默跳过（与旧行为一致）
     if (newVNode?.el == null) continue
-    const anchor = i + 1 < newLen ? newList[i + 1]?.el ?? null : null
+    const anchor = i + 1 < newLen ? (newList[i + 1]?.el ?? null) : null
     if (source[i] === 0) {
       // 新节点：插入到 anchor 前
       container.insertBefore(newVNode.el, anchor)
@@ -475,7 +497,12 @@ function setProp(el: any, key: string, value: any) {
     else el.removeAttribute('style')
     return
   }
-  if (key === 'value' || key === 'checked' || key === 'disabled' || key === 'readonly') {
+  if (
+    key === 'value' ||
+    key === 'checked' ||
+    key === 'disabled' ||
+    key === 'readonly'
+  ) {
     if (value == null || value === false) {
       el.removeAttribute(key)
     } else if (key === 'value') {
@@ -512,7 +539,11 @@ function setInputValue(el: any, value: any) {
 
   el.value = str
 
-  if (active && typeof start === 'number' && typeof el.selectionStart === 'number') {
+  if (
+    active &&
+    typeof start === 'number' &&
+    typeof el.selectionStart === 'number'
+  ) {
     el.selectionStart = Math.min(start, str.length)
     el.selectionEnd = Math.min(end ?? start, str.length)
   }
@@ -522,8 +553,14 @@ function setInputValue(el: any, value: any) {
 // 替换与卸载
 // ------------------------------------------------------------
 
-function replace(oldVnode: any, newVnode: any, container: Element, index?: number) {
-  const oldEl = oldVnode.el ?? (index != null ? container.childNodes[index] : null)
+function replace(
+  oldVnode: any,
+  newVnode: any,
+  container: Element,
+  index?: number
+) {
+  const oldEl =
+    oldVnode.el ?? (index != null ? container.childNodes[index] : null)
   const parent = oldEl?.parentNode
   const anchor = oldEl?.nextSibling ?? null
   // 先卸载旧节点：keep-alive 缓存的组件走缓存分支（DOM 移入隐藏容器、实例保留），
@@ -531,7 +568,13 @@ function replace(oldVnode: any, newVnode: any, container: Element, index?: numbe
   unmount(oldVnode, container, index)
   // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）
   const newEl = mountVNode(newVnode, container)
-  if (parent && newEl && newEl.parentNode === parent && anchor && anchor.parentNode === parent) {
+  if (
+    parent &&
+    newEl &&
+    newEl.parentNode === parent &&
+    anchor &&
+    anchor.parentNode === parent
+  ) {
     parent.insertBefore(newEl, anchor)
   }
 }
@@ -541,7 +584,13 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   // keep-alive 缓存：DOM 移入隐藏容器、实例保留（不销毁、不停 effect），
   // 重新激活时从缓存恢复
   const keepAlive = vnode.__keepAlive
-  if (keepAlive) { console.log('[unmount] 缓存分支 key=', keepAlive.key, 'el=', !!vnode.component?.subTree?.el)
+  if (keepAlive) {
+    console.log(
+      '[unmount] 缓存分支 key=',
+      keepAlive.key,
+      'el=',
+      !!vnode.component?.subTree?.el
+    )
     const { cache, storage, key } = keepAlive
     const el = vnode.component?.subTree?.el ?? vnode.el
     if (el && el.parentNode) storage.appendChild(el)
@@ -563,7 +612,9 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     vnode.component?.unmount?.()
   }
   // 文本旧节点无持久 el（每次 render 重建），按索引从 childNodes 恢复
-  const el = vnode.el ?? (container && index != null ? container.childNodes[index] : null)
+  const el =
+    vnode.el ??
+    (container && index != null ? container.childNodes[index] : null)
   if (el && el.parentNode) {
     el.parentNode.removeChild(el)
   }

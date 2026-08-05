@@ -5,5 +5,5 @@ export default defineConfig({
   format: ['esm'],
   dts: { compilerOptions: { ignoreDeprecations: '6.0' } },
   clean: true,
-  outDir: 'dist',
+  outDir: 'dist'
 })

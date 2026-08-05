@@ -14,7 +14,7 @@ export {
   isValidElement,
   Fragment,
   REACT_ELEMENT_TYPE,
-  REACT_FRAGMENT_TYPE,
+  REACT_FRAGMENT_TYPE
 } from './jsxFactory.js'
 
 export type {
@@ -26,5 +26,5 @@ export type {
   LazyVNode,
   HtmlProps,
   InputProps,
-  FormEvent,
+  FormEvent
 } from './types.js'
