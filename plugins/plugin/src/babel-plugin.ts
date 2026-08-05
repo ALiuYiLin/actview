@@ -128,8 +128,9 @@ export default function defineComponentPlugin() {
           const alreadyImported = path.node.body.some(
             (n: any) =>
               t.isImportDeclaration(n) &&
-              n.source.value === '@actview/core' &&
-              n.specifiers.some((s: any) => s.imported?.name === 'defineComponent')
+              n.specifiers.some(
+                (s: any) => s.imported?.name === 'defineComponent',
+              ),
           )
           if (alreadyImported) return
 

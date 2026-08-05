@@ -18,6 +18,12 @@ export function HomePage() {
         <RouterLink style={linkStyle} to="/list">② keyed diff</RouterLink>
         <RouterLink style={linkStyle} to="/props">③ props 细粒度更新</RouterLink>
         <RouterLink style={linkStyle} to="/toggle">④ 条件渲染</RouterLink>
+        <RouterLink style={linkStyle} to="/api">⑤ 响应式 API</RouterLink>
+        <RouterLink style={linkStyle} to="/array">⑥ 数组方法</RouterLink>
+        <RouterLink style={linkStyle} to="/slot">⑦ 插槽体系</RouterLink>
+        <RouterLink style={linkStyle} to="/lifecycle">⑧ 生命周期</RouterLink>
+        <RouterLink style={linkStyle} to="/dynamic">⑨ 动态+keep-alive</RouterLink>
+        <RouterLink style={linkStyle} to="/async">⑩ 错误边界+Suspense</RouterLink>
       </div>
     </div>
   );

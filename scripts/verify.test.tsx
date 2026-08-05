@@ -464,6 +464,42 @@ describe('冒烟：src/main.tsx 检验页', () => {
     await nextTick()
     expect(collectText(appRoot)).toContain('Apple')
   })
+
+  it('扩展能力页（⑤-⑩）渲染与交互', async () => {
+    // main.tsx 固定挂载 #app：若已被前一个用例创建则复用
+    if (!document.querySelector('#app')) {
+      const h = document.createElement('div')
+      h.id = 'app'
+      document.body.appendChild(h)
+    }
+    await import('../src/main.tsx')
+    const routerMod = await import('../src/router.ts')
+    const appRoot = document.querySelector('#app')!
+    const cases: [string, string][] = [
+      ['/api', '响应式 API'],
+      ['/array', '数组方法'],
+      ['/slot', '插槽'],
+      ['/lifecycle', '生命周期'],
+      ['/dynamic', 'keep-alive'],
+      ['/async', '错误边界'],
+    ]
+    for (const [path, keyword] of cases) {
+      routerMod.router.push(path)
+      await nextTick()
+      expect(collectText(appRoot)).toContain(keyword)
+    }
+    // 异步组件 1s 加载完成后渲染真实组件
+    await new Promise((r) => setTimeout(r, 1200))
+    await nextTick()
+    expect(collectText(appRoot)).toContain('异步组件加载完成')
+    // 错误边界：触发渲染错误 → fallback
+    const boomBtn = Array.from(appRoot.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('触发渲染错误'),
+    )
+    boomBtn?.dispatchEvent(new Event('click'))
+    await nextTick()
+    expect(collectText(appRoot)).toContain('渲染出错')
+  })
 })
 
 // ------------------------------------------------------------

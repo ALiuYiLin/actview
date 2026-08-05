@@ -15,9 +15,15 @@ export function App() {
       <nav style={navStyle}>
         <RouterLink style={linkStyle} to="/">首页</RouterLink>
         <RouterLink style={linkStyle} to="/reactive">① 响应式</RouterLink>
-        <RouterLink style={linkStyle} to="/list">② keyed diff</RouterLink>
+        <RouterLink style={linkStyle} to="/list">② keyed</RouterLink>
         <RouterLink style={linkStyle} to="/props">③ props</RouterLink>
-        <RouterLink style={linkStyle} to="/toggle">④ 条件渲染</RouterLink>
+        <RouterLink style={linkStyle} to="/toggle">④ 条件</RouterLink>
+        <RouterLink style={linkStyle} to="/api">⑤ API</RouterLink>
+        <RouterLink style={linkStyle} to="/array">⑥ 数组</RouterLink>
+        <RouterLink style={linkStyle} to="/slot">⑦ 插槽</RouterLink>
+        <RouterLink style={linkStyle} to="/lifecycle">⑧ 生命周期</RouterLink>
+        <RouterLink style={linkStyle} to="/dynamic">⑨ 动态</RouterLink>
+        <RouterLink style={linkStyle} to="/async">⑩ 异步</RouterLink>
       </nav>
       <RouterView />
       <p style={{ color: "#94a3b8", fontSize: "12px", textAlign: "center" }}>
