@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, renderToString, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
@@ -1287,5 +1287,67 @@ describe('场景 22：toRef / toRefs', () => {
     const r = ref(1)
     const state = reactive<{ n: typeof r }>({ n: r })
     expect(toRef(state, 'n')).toBe(r)
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 22：renderToString（构建期 VNode→HTML 静态序列化）
+// ------------------------------------------------------------
+describe('场景 22：renderToString 构建期静态序列化', () => {
+  it('原生标签 + 属性（class/style/布尔/事件跳过）+ 文本转义', () => {
+    const html = renderToString(
+      <div class="card" style={{ color: 'red', fontSize: '12px' }} onclick={() => {}} data-id="1">
+        hello <b>&</b>
+      </div>,
+    )
+    expect(html).toBe(
+      '<div class="card" style="color:red;fontSize:12px" data-id="1">hello <b>&amp;</b></div>',
+    )
+  })
+
+  it('空值/布尔/void 元素语义对齐 setProp', () => {
+    const html = renderToString(
+      <div>
+        <input type="text" value="a" disabled={true} readonly={false} placeholder={null} />
+        <br />
+        <img src="/x.png" alt="" />
+        <span hidden={true}>x</span>
+      </div>,
+    )
+    expect(html).toBe(
+      '<div><input type="text" value="a" disabled><br><img src="/x.png" alt=""><span hidden>x</span></div>',
+    )
+  })
+
+  it('Fragment 拼接 + className 归一化为 class', () => {
+    const html = renderToString(
+      <>
+        <span className="a">1</span>
+        {null}
+        {false}
+        {42}
+        <i>2</i>
+      </>,
+    )
+    expect(html).toBe('<span class="a">1</span>42<i>2</i>')
+  })
+
+  it('静态组件：__setup + render 递归（无副作用场景）', () => {
+    function Greet(props: { name: string }) {
+      return <p class="greet">Hi, {props.name}</p>
+    }
+    const html = renderToString(<Greet name="actview" />)
+    expect(html).toBe('<p class="greet">Hi, actview</p>')
+  })
+
+  it('children 数组 + 嵌套结构', () => {
+    const html = renderToString(
+      <ul>
+        {[1, 2].map((n) => (
+          <li key={n}>item{n}</li>
+        ))}
+      </ul>,
+    )
+    expect(html).toBe('<ul><li>item1</li><li>item2</li></ul>')
   })
 })
