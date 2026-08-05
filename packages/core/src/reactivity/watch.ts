@@ -109,3 +109,30 @@ function hasChanged(a: any, b: any): boolean {
   }
   return !Object.is(a, b)
 }
+
+// ============================================================
+// watchEffect — 立即执行并自动追踪依赖的副作用
+//   watchEffect(() => { console.log(state.count) })
+//   首次立即执行一次（收集依赖）；依赖变化异步触发（与组件批处理同帧）；
+//   返回 stop 函数；组件 setup 内创建 =》 随组件卸载自动停止
+// ============================================================
+
+export function watchEffect(effect: () => void): () => void {
+  const eff = new ReactiveEffect(effect)
+
+  let pending = false
+  eff.scheduler = () => {
+    if (pending) return
+    pending = true
+    Promise.resolve().then(() => {
+      pending = false
+      eff.run()
+    })
+  }
+
+  eff.run() // 立即执行一次，收集依赖
+
+  return () => {
+    eff.stop()
+  }
+}

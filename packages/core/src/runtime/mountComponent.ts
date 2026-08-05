@@ -51,6 +51,7 @@ export interface ComponentInstance {
   mounted: (() => void)[]
   updated: (() => void)[]
   beforeUnmount: (() => void)[]
+  unmounted: (() => void)[]
 }
 
 /** 挂载组件 VNode：实例化并建立响应式更新 effect */
@@ -77,6 +78,7 @@ export function mountComponent(vnode: any, container: Element | null) {
     mounted: [],
     updated: [],
     beforeUnmount: [],
+    unmounted: [],
   }
   vnode.component = instance
 
@@ -139,6 +141,8 @@ export function mountComponent(vnode: any, container: Element | null) {
     // 停止组件作用域内全部 effect（render effect + setup 期间的 watch/computed）
     instance.scope.stop()
     effect.stop() // 兜底（scope.stop 已含 render effect，幂等）
+    // unmounted：卸载完成后触发（Vue 3 语义：在 beforeUnmount 之后）
+    invokeHooks(instance.unmounted)
   }
 
   // 组件 VNode 的 el 指向其子树根节点

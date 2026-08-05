@@ -22,7 +22,7 @@ export function setCurrentInstance(instance: ComponentInstance | null) {
   instance?.scope?.on()
 }
 
-type HookType = 'mounted' | 'updated' | 'beforeUnmount'
+type HookType = 'mounted' | 'updated' | 'beforeUnmount' | 'unmounted'
 
 export function onMounted(fn: () => void) {
   registerHook('mounted', fn)
@@ -34,6 +34,11 @@ export function onUpdated(fn: () => void) {
 
 export function onBeforeUnmount(fn: () => void) {
   registerHook('beforeUnmount', fn)
+}
+
+/** 卸载完成后触发（beforeUnmount 之后、组件 effect 停止之后；Vue 3 语义） */
+export function onUnmounted(fn: () => void) {
+  registerHook('unmounted', fn)
 }
 
 function registerHook(type: HookType, fn: () => void) {

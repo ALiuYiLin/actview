@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
@@ -1509,5 +1509,73 @@ describe('场景 23：Teleport / Transition', () => {
     // duration 结束后真正卸载
     await new Promise((r) => setTimeout(r, 450))
     expect(host.querySelector('.tr-box2-d')).toBeNull()
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 24：onUnmounted / watchEffect 补导出
+// ------------------------------------------------------------
+describe('场景 24：onUnmounted / watchEffect', () => {
+  it('onUnmounted：卸载后触发，且在 beforeUnmount 之后', async () => {
+    const log: string[] = []
+    const state = reactive({ show: true })
+    function Child() {
+      onBeforeUnmount(() => log.push('beforeUnmount'))
+      onUnmounted(() => log.push('unmounted'))
+      return <span>child</span>
+    }
+    function App() {
+      return <div>{state.show ? <Child /> : null}</div>
+    }
+    const host = mount('#s24a', App)
+    expect(host.textContent).toContain('child')
+
+    state.show = false
+    await nextTick()
+    expect(host.textContent).not.toContain('child')
+    expect(log).toEqual(['beforeUnmount', 'unmounted'])
+  })
+
+  it('watchEffect：立即执行 + 依赖变化异步触发 + stop 停止', async () => {
+    const state = reactive({ count: 1 })
+    const calls: number[] = []
+    const stop = watchEffect(() => calls.push(state.count))
+
+    expect(calls).toEqual([1]) // 立即执行一次
+
+    state.count = 2
+    await nextTick()
+    expect(calls).toEqual([1, 2]) // 依赖变化异步触发
+
+    stop()
+    state.count = 3
+    await nextTick()
+    expect(calls).toEqual([1, 2]) // stop 后不再响应
+  })
+
+  it('watchEffect：组件内创建 =》 随组件卸载自动停止', async () => {
+    const state = reactive({ n: 0 })
+    const hits: number[] = []
+    const state2 = reactive({ show: true })
+    function Child() {
+      watchEffect(() => hits.push(state.n))
+      return <span>child</span>
+    }
+    function App() {
+      return <div>{state2.show ? <Child /> : null}</div>
+    }
+    mount('#s24c', App)
+    expect(hits).toEqual([0])
+
+    state.n = 1
+    await nextTick()
+    expect(hits).toEqual([0, 1])
+
+    // 卸载 Child =》 watchEffect 自动停止
+    state2.show = false
+    await nextTick()
+    state.n = 2
+    await nextTick()
+    expect(hits).toEqual([0, 1]) // 不再增加
   })
 })
