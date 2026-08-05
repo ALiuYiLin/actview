@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, renderToString, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
@@ -1349,5 +1349,165 @@ describe('场景 22：renderToString 构建期静态序列化', () => {
       </ul>,
     )
     expect(html).toBe('<ul><li>item1</li><li>item2</li></ul>')
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 23：Teleport / Transition 处置
+// ------------------------------------------------------------
+describe('场景 23：Teleport / Transition', () => {
+  it('Teleport：children 渲染到目标容器，卸载时移除', async () => {
+    const target = document.createElement('div')
+    target.id = 'tele-target'
+    document.body.appendChild(target)
+
+    const state = reactive({ show: true })
+    function App() {
+      return (
+        <div id="t-app">
+          {state.show ? (
+            <Teleport to="#tele-target">
+              <span class="tele-item">传送到目标</span>
+            </Teleport>
+          ) : null}
+        </div>
+      )
+    }
+    const host = mount('#s23a', App)
+
+    // 源码位置无内容，目标容器有内容
+    expect(host.querySelector('.tele-item')).toBeNull()
+    expect(target.querySelector('.tele-item')?.textContent).toBe('传送到目标')
+
+    state.show = false
+    await nextTick()
+    expect(target.querySelector('.tele-item')).toBeNull()
+  })
+
+  it('Teleport：to 切换迁移 DOM 到新目标', async () => {
+    const t1 = document.createElement('div')
+    t1.id = 'tele-t1'
+    const t2 = document.createElement('div')
+    t2.id = 'tele-t2'
+    document.body.appendChild(t1)
+    document.body.appendChild(t2)
+
+    const state = reactive({ target: '#tele-t1' })
+    function App() {
+      return (
+        <Teleport to={state.target}>
+          <span class="tele-move">移动</span>
+        </Teleport>
+      )
+    }
+    mount('#s23b', App)
+    expect(t1.querySelector('.tele-move')).not.toBeNull()
+
+    state.target = '#tele-t2'
+    await nextTick()
+    expect(t1.querySelector('.tele-move')).toBeNull()
+    expect(t2.querySelector('.tele-move')).not.toBeNull()
+  })
+
+  it('Transition：进入动画类（无时长立即清理，无残留）', async () => {
+    const state = reactive({ show: true })
+    function App() {
+      return (
+        <div id="t-tr">
+          <Transition name="fade">
+            {state.show ? <div class="tr-box">进入</div> : null}
+          </Transition>
+        </div>
+      )
+    }
+    const host = mount('#s23c', App)
+
+    // 挂载后进入动画类已同步添加（enter-from/enter-active）
+    const box = host.querySelector('.tr-box')
+    expect(box).not.toBeNull()
+    expect(box!.classList.contains('fade-enter-from')).toBe(true)
+    expect(box!.classList.contains('fade-enter-active')).toBe(true)
+
+    // 无过渡时长：双 rAF 后类立即清理（最终态无残留）
+    await new Promise((r) => setTimeout(r, 60))
+    expect(box!.classList.contains('fade-enter-from')).toBe(false)
+    expect(box!.classList.contains('fade-enter-active')).toBe(false)
+    expect(box!.classList.contains('fade-enter-to')).toBe(false)
+    expect(box!.textContent).toBe('进入')
+  })
+
+  it('Transition：显式 duration 保留 enter-to 中间态，结束后清理', async () => {
+    const state = reactive({ show: true })
+    function App() {
+      return (
+        <div id="t-tr-d">
+          <Transition name="fade" duration={300}>
+            {state.show ? <div class="tr-box-d">进入</div> : null}
+          </Transition>
+        </div>
+      )
+    }
+    const host = mount('#s23d2', App)
+    const box = host.querySelector('.tr-box-d')
+    expect(box!.classList.contains('fade-enter-from')).toBe(true)
+
+    // 双 rAF 后进入 enter-to 中间态（duration=300 =》 类保留）
+    await new Promise((r) => setTimeout(r, 60))
+    expect(box!.classList.contains('fade-enter-from')).toBe(false)
+    expect(box!.classList.contains('fade-enter-to')).toBe(true)
+    expect(box!.classList.contains('fade-enter-active')).toBe(true)
+
+    // duration 结束后清理
+    await new Promise((r) => setTimeout(r, 450))
+    expect(box!.classList.contains('fade-enter-to')).toBe(false)
+    expect(box!.classList.contains('fade-enter-active')).toBe(false)
+  })
+
+  it('Transition：子节点移除播 leave，无时长立即卸载', async () => {
+    const state = reactive({ show: true })
+    function App() {
+      return (
+        <div id="t-tr2">
+          <Transition name="fade">
+            {state.show ? <div class="tr-box2">内容</div> : null}
+          </Transition>
+        </div>
+      )
+    }
+    const host = mount('#s23e', App)
+    expect(host.querySelector('.tr-box2')).not.toBeNull()
+
+    state.show = false
+    await nextTick()
+    // 无过渡时长：双 rAF 后立即完成卸载
+    await new Promise((r) => setTimeout(r, 60))
+    expect(host.querySelector('.tr-box2')).toBeNull()
+  })
+
+  it('Transition：显式 duration 离开动画保留 DOM 与 leave 类，结束后卸载', async () => {
+    const state = reactive({ show: true })
+    function App() {
+      return (
+        <div id="t-tr2-d">
+          <Transition name="fade" duration={300}>
+            {state.show ? <div class="tr-box2-d">内容</div> : null}
+          </Transition>
+        </div>
+      )
+    }
+    const host = mount('#s23f', App)
+    state.show = false
+    await nextTick()
+
+    // 动画期间：DOM 保留 + leave 中间态类
+    await new Promise((r) => setTimeout(r, 60))
+    const box = host.querySelector('.tr-box2-d')
+    expect(box).not.toBeNull()
+    expect(box!.classList.contains('fade-leave-active')).toBe(true)
+    expect(box!.classList.contains('fade-leave-to')).toBe(true)
+
+    // duration 结束后真正卸载
+    await new Promise((r) => setTimeout(r, 450))
+    expect(host.querySelector('.tr-box2-d')).toBeNull()
   })
 })

@@ -22,6 +22,8 @@ export {
   onUpdated,
   onBeforeUnmount,
   renderToString,
+  Teleport,
+  Transition,
   KeepAlive,
   ErrorBoundary,
   Suspense,

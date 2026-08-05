@@ -5,6 +5,15 @@
 // ============================================================
 
 import { mountComponent } from './mountComponent'
+import {
+  mountTeleport,
+  patchTeleport,
+  unmountTeleport,
+  mountTransition,
+  patchTransition,
+  unmountTransition,
+  bindPatchChildren,
+} from './transition'
 
 const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 const Fragment = Symbol.for('react.fragment')
@@ -85,6 +94,10 @@ export function render(vnode: any, container: Element) {
   patch(null, vnode, container)
 }
 
+// 模块评估完成后注入 patchChildren（transition 模块不 import 本模块，
+// 避免循环依赖；此调用在函数声明全部就绪后执行）
+bindPatchChildren(patchChildren)
+
 // ------------------------------------------------------------
 // 挂载
 // ------------------------------------------------------------
@@ -99,6 +112,11 @@ export function applyRef(ref: any, value: any) {
 export function mountVNode(vnode: any, container: Element | null): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
+
+  // 内置组件（Teleport / Transition）：优先于普通组件分支
+  // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
+  if (vnode.type?.__builtin === 'teleport') return mountTeleport(vnode, container)
+  if (vnode.type?.__builtin === 'transition') return mountTransition(vnode, container)
 
   // 组件
   if (isComponentVNode(vnode)) {
@@ -139,6 +157,15 @@ export function mountVNode(vnode: any, container: Element | null): any {
 // ------------------------------------------------------------
 
 function patchVNode(oldVnode: any, newVnode: any, container: Element, index?: number) {
+  // 内置组件（Teleport / Transition）
+  if (newVnode.type?.__builtin === 'teleport') {
+    patchTeleport(oldVnode, newVnode, container)
+    return
+  }
+  if (newVnode.type?.__builtin === 'transition') {
+    patchTransition(oldVnode, newVnode, container)
+    return
+  }
   // 组件
   if (isComponentVNode(newVnode)) {
     patchComponent(oldVnode, newVnode, container)
@@ -520,6 +547,15 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     if (el && el.parentNode) storage.appendChild(el)
     cache.set(key, vnode)
     delete vnode.__keepAlive
+    return
+  }
+  // 内置组件：Teleport =》 从目标容器移除；Transition =》 直接卸载子节点（无动画）
+  if (vnode.type?.__builtin === 'teleport') {
+    unmountTeleport(vnode)
+    return
+  }
+  if (vnode.type?.__builtin === 'transition') {
+    unmountTransition(vnode)
     return
   }
   // 组件：先停止其更新 effect，防止响应式变化操作已移除的 DOM
