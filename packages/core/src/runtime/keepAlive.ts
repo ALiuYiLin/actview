@@ -31,7 +31,12 @@ export const KeepAlive = defineComponent(function (props: any) {
   return () => {
     const child = props.children
     if (child && typeof child === 'object') {
-      const key = child.key != null ? child.key : child.type
+      // 动态组件（type='component'）在 patch 时才解析为真实组件，
+      // 缓存 key 必须用解析后的真实类型（组件对象/标签名），
+      // 否则 A/B/C 共享 'component' 同一 key 互相覆盖
+      const realType =
+        child.type === 'component' ? (child.props?.is ?? 'div') : child.type
+      const key = child.key != null ? child.key : realType
       if (cache.has(key)) {
         // 命中缓存：更新 props、恢复 DOM、复用实例（不重建）
         const cached = cache.get(key)

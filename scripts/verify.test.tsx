@@ -727,6 +727,41 @@ describe('场景 14：插槽与动态组件', () => {
     expect(aMounted).toBe(1) // 不重建：onMounted 只触发一次
     expect(host.children[0].children[0]).toBe(aDiv) // DOM 复用
   })
+
+  it('keep-alive 多组件循环切换（动态组件 key 冲突回归）', async () => {
+    // 回归：<component is> 的 vnode type 是 'component'（未解析），
+    // 若缓存 key 直接取 type，A/B/C 共享同一 key 互相覆盖 → 切换错乱
+    const state = reactive({ tab: 'a' })
+    function A() {
+      return <div>CompA</div>
+    }
+    function B() {
+      return <div>CompB</div>
+    }
+    function C() {
+      return <div>CompC</div>
+    }
+    function App() {
+      return (
+        <KeepAlive>
+          <component is={state.tab === 'a' ? A : state.tab === 'b' ? B : C} />
+        </KeepAlive>
+      )
+    }
+    const host = mount('#s14d', App)
+    const expectTab = async (tab: string, text: string) => {
+      state.tab = tab
+      await nextTick()
+      expect(collectText(host)).toContain(text)
+    }
+    // 循环三组件多轮：每次都应渲染目标组件
+    await expectTab('b', 'CompB')
+    await expectTab('c', 'CompC')
+    await expectTab('a', 'CompA')
+    await expectTab('b', 'CompB')
+    await expectTab('c', 'CompC')
+    await expectTab('a', 'CompA')
+  })
 })
 
 // ------------------------------------------------------------
