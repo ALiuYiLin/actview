@@ -1,4 +1,10 @@
 import { ReactiveEffect, track, trigger } from "../runtime/reactive-system"
+import type { Ref } from "./ref"
+
+/** computed 的公开类型：带 __v_isRef 标记的只读 Ref（与运行时实现一致） */
+export interface ComputedRef<T = any> extends Ref<T> {
+  readonly value: T
+}
 
 // ============================================================
 // computed — 基于 effect + 脏标记的惰性计算值
@@ -44,6 +50,6 @@ export class ComputedRefImpl<T> {
   }
 }
 
-export function computed<T>(getter: () => T): { readonly value: T } {
+export function computed<T>(getter: () => T): ComputedRef<T> {
   return new ComputedRefImpl(getter)
 }
