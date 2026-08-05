@@ -156,6 +156,9 @@ export default function defineComponentPlugin() {
         const last = body[body.length - 1]
         if (!t.isReturnStatement(last)) return
         const ret = last.argument
+        // 显式非空收窄（isJsx/isJsxCall 是 boolean 变量，不提供类型守卫，
+        // 后续 arrowFunctionExpression/functionExpression 需要非空 Expression）
+        if (ret == null) return
         const isJsx = t.isJSXElement(ret) || t.isJSXFragment(ret)
         // esbuild/rolldown automatic runtime 已把 JSX 转成 _jsx()/_jsxs() 调用
         // （rolldown-vite 的 rust 转换先于 enforce:'pre' 插件执行时，Babel 收到
@@ -173,7 +176,7 @@ export default function defineComponentPlugin() {
         if (isJsx) walkJSX(last.argument)
 
         // ---------- 3. return JSX → return () => JSX ----------
-        last.argument = t.arrowFunctionExpression([], last.argument)
+        last.argument = t.arrowFunctionExpression([], ret)
 
         // ---------- 4. defineComponent(function(){}) ----------
         const func = t.functionExpression(null, node.params, node.body, false, false)
