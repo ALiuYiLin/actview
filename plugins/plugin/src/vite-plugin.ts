@@ -20,7 +20,10 @@ export function actviewPlugin() {
       // 否则 `id.endsWith('.tsx')` 永不匹配、Babel 转换不执行 → 组件以裸函数
       // 进入 ActView 运行时（只认 { __setup } VNode）→ createElement('function ...')
       const cleanId = id.split('?')[0]
-      if (!cleanId.endsWith('.tsx')) return null
+      // 也处理 .js：vitepress 的 dist/client 是 tsc 编译产物（.js，JSX 已降级为
+      // _jsx() 调用），浏览器加载的是这些 .js 而非源码 .tsx——若跳过会导致
+      // 函数组件以裸函数进入 ActView 运行时（createElement('function ...') 崩溃）
+      if (!cleanId.endsWith('.tsx') && !cleanId.endsWith('.js')) return null
 
       const result = babel.transformSync(code, {
         filename: id,
