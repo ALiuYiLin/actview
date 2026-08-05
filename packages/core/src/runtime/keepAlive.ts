@@ -48,6 +48,10 @@ export const KeepAlive = defineComponent(function (props: any) {
           self.container.appendChild(el) // 从隐藏容器移回挂载容器
         }
         instance?.update?.()
+        // 重新打标记：本次复用结束后，下次卸载仍需走缓存分支；
+        // 否则 vnode 无标记 =》 实例被真卸载（effect stop + DOM 移除）=》
+        // 再切回时缓存命中但实例已死 =》 replace 重建 =》 DOM 累积
+        cached.__keepAlive = { cache, storage, key }
         return cached
       }
       child.__keepAlive = { cache, storage, key }

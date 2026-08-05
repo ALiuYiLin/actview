@@ -753,11 +753,16 @@ describe('场景 14：插槽与动态组件', () => {
       state.tab = tab
       await nextTick()
       expect(collectText(host)).toContain(text)
+      expect(host.children.length).toBe(1) // 每轮只保留一个活动组件 DOM（不累积）
     }
-    // 循环三组件多轮：每次都应渲染目标组件
+    // 循环三组件两轮：每次都应渲染目标组件且不累积 DOM
     await expectTab('b', 'CompB')
     await expectTab('c', 'CompC')
     await expectTab('a', 'CompA')
+    await expectTab('b', 'CompB')
+    await expectTab('c', 'CompC')
+    await expectTab('a', 'CompA')
+    // 第三轮（回归：缓存命中复用后重新标记，否则实例被真卸载导致 replace 重建累积）
     await expectTab('b', 'CompB')
     await expectTab('c', 'CompC')
     await expectTab('a', 'CompA')
