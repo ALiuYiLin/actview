@@ -375,19 +375,52 @@ function patchKeyedChildren(
   for (let i = newLen - 1; i >= 0; i--) {
     const newVNode = newList[i]
     if (newVNode == null) continue
-    // Fragment 等 el 为 null 的节点静默跳过（与旧行为一致）
-    if (newVNode?.el == null) continue
-    const anchor = i + 1 < newLen ? (newList[i + 1]?.el ?? null) : null
+    // 收集子树所有真实 DOM 元素：组件 render 返回 Fragment 时组件 vnode.el 为
+    // null（Fragment 无自身 DOM），若跳过整棵子树永不插入 DOM（keyed diff bug）；
+    // 多个子节点（Fragment 多根）需全部按序插入
+    const els = collectDomEls(newVNode)
+    if (els.length === 0) continue
+    const anchor = i + 1 < newLen ? firstDomEl(newList[i + 1]) : null
     if (source[i] === 0) {
       // 新节点：插入到 anchor 前
-      container.insertBefore(newVNode.el, anchor)
+      for (const el of els) container.insertBefore(el, anchor)
     } else if (j < 0 || i !== seq[j]) {
       // 复用节点但不在 LIS 上 → 需要移动
-      container.insertBefore(newVNode.el, anchor)
+      for (const el of els) container.insertBefore(el, anchor)
     } else {
       j-- // 在 LIS 上，保持原位
     }
   }
+}
+
+/**
+ * 收集 vnode 子树中所有真实 DOM 元素（文档顺序）。
+ * 普通节点 =》 [el]；组件/Fragment 递归（__avChildren 为 patchChildren 缓存的
+ * vnode 列表，文本节点 el 持久化，可精确定位）。用于 keyed diff 插入/移动：
+ * Fragment 根组件可能贡献多个 DOM 节点，需全部插入。
+ */
+function collectDomEls(vnode: any, out: Node[] = []): Node[] {
+  if (vnode == null) return out
+  if (vnode.el != null) {
+    out.push(vnode.el)
+    return out
+  }
+  // 组件：取子树（subTree 更新后 el 已刷新）
+  if (vnode.component?.subTree) {
+    collectDomEls(vnode.component.subTree, out)
+    return out
+  }
+  // Fragment：children 列表
+  if (Array.isArray(vnode.__avChildren)) {
+    for (const child of vnode.__avChildren) collectDomEls(child, out)
+  }
+  return out
+}
+
+/** 取 vnode 子树中第一个真实 DOM 元素（锚点计算用） */
+function firstDomEl(vnode: any): Node | null {
+  const els = collectDomEls(vnode)
+  return els.length > 0 ? els[0] : null
 }
 
 // 最长递增子序列（返回下标数组；贪心 + 二分 + 前驱链回溯，值 0 表示新节点不参与）
@@ -614,12 +647,22 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   if (isComponentVNode(vnode)) {
     vnode.component?.unmount?.()
   }
-  // 文本旧节点无持久 el（每次 render 重建），按索引从 childNodes 恢复
-  const el =
-    vnode.el ??
-    (container && index != null ? container.childNodes[index] : null)
-  if (el && el.parentNode) {
-    el.parentNode.removeChild(el)
+  // 移除 vnode 子树的所有真实 DOM：组件 render 返回 Fragment 时组件 vnode.el
+  // 为 null（Fragment 无自身 DOM），按 childNodes[index] 恢复会取错/漏删节点，
+  // 必须沿子树收集全部 DOM 逐一移除
+  const domEls = collectDomEls(vnode)
+  if (domEls.length > 0) {
+    for (const el of domEls) {
+      if (el && el.parentNode) el.parentNode.removeChild(el)
+    }
+  } else {
+    // 文本旧节点无持久 el（每次 render 重建），按索引从 childNodes 恢复
+    const el =
+      vnode.el ??
+      (container && index != null ? container.childNodes[index] : null)
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el)
+    }
   }
   // 模板引用：卸载时置 null
   applyRef(vnode.props?.ref, null)

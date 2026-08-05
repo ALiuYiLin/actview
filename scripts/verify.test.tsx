@@ -1606,3 +1606,112 @@ describe('场景 25：图标页（SVG）', () => {
     expect(appRoot.textContent).toContain('Vite')
   })
 })
+
+// ------------------------------------------------------------
+// 场景 26：keyed diff — Fragment 根组件（keyed 列表中的组件返回 Fragment）
+// ------------------------------------------------------------
+describe('场景 26：keyed diff Fragment 根组件', () => {
+  const Group = defineComponent((props: any) => {
+    return () => (
+      <>
+        <div class="group-item">{props.text}</div>
+      </>
+    )
+  })
+
+  it('带 key 的 Fragment 根组件正常挂载（不再丢失）', () => {
+    function App() {
+      return (
+        <div>
+          <span class="label">L</span>
+          <Group key={0} text="G" />
+        </div>
+      )
+    }
+    const host = mount('#s26a', App)
+    const item = host.querySelector('.group-item')
+    expect(item).not.toBeNull()
+    expect(item!.textContent).toBe('G')
+    // 顺序：label 在 group-item 前
+    expect(host.textContent).toContain('LG')
+  })
+
+  it('对照：去掉 key 走普通 patch 也正常', () => {
+    function App() {
+      return (
+        <div>
+          <span class="label">L</span>
+          <Group text="G" />
+        </div>
+      )
+    }
+    const host = mount('#s26b', App)
+    expect(host.querySelector('.group-item')?.textContent).toBe('G')
+  })
+
+  it('key 交换重排：Fragment 根组件参与移动，DOM 顺序正确无重复', async () => {
+    const state = reactive({ order: [0, 1, 2] })
+    function App() {
+      return (
+        <div id="s26c">
+          {state.order.map((i) => (
+            <Group key={i} text={'G' + i} />
+          ))}
+        </div>
+      )
+    }
+    const host = mount('#s26c', App)
+    const texts = () => Array.from(host.querySelectorAll('.group-item')).map((n) => n.textContent)
+
+    expect(texts()).toEqual(['G0', 'G1', 'G2'])
+
+    // 交换 0 与 2
+    state.order = [2, 1, 0]
+    await nextTick()
+    expect(texts()).toEqual(['G2', 'G1', 'G0'])
+
+    // 增删：头部插入 + 删除尾部
+    state.order = [3, 2, 1]
+    await nextTick()
+    expect(texts()).toEqual(['G3', 'G2', 'G1'])
+
+    // 无重复、无丢失
+    const flat = texts().join(',')
+    expect(new Set(texts()).size).toBe(texts().length)
+    expect(flat).toContain('G3')
+    expect(flat).not.toContain('G0')
+  })
+
+  it('Fragment 根组件与普通元素混排（相邻兄弟是 Fragment 根 =》 anchor 正确）', async () => {
+    const state = reactive({ flip: false })
+    const A = defineComponent((_p: any) => () => (
+      <>
+        <i class="a1">A1</i>
+        <i class="a2">A2</i>
+      </>
+    ))
+    const B = defineComponent((_p: any) => () => (
+      <>
+        <b class="b1">B1</b>
+      </>
+    ))
+    function App() {
+      return (
+        <div id="s26d">
+          {state.flip ? <B key={1} /> : <A key={1} />}
+          <span class="tail">T</span>
+        </div>
+      )
+    }
+    void 0
+    const host = mount('#s26d', App)
+    expect(host.textContent).toContain('A1A2T')
+
+    state.flip = true
+    await nextTick()
+    // A（Fragment 双节点）被 B 替换，tail 仍在其后
+    expect(host.textContent).toContain('B1T')
+    expect(host.querySelector('.a1')).toBeNull()
+    expect(host.querySelector('.a2')).toBeNull()
+  })
+})
