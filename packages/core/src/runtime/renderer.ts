@@ -51,7 +51,10 @@ function toVNode(child: any): any {
 
 function normalizeChildren(children: any): any[] {
   if (children == null || children === false || children === true) return []
-  return Array.isArray(children) ? children : [children]
+  // 扁平化嵌套数组：JSX children 可以是 `[el, arr.map(...)]`（数组含数组），
+  // 不扁平化会把子数组当成单个 child → mountVNode(数组) → createElement(数组)
+  // → 渲染出 <undefined> 元素（vitepress nav.map 场景）
+  return Array.isArray(children) ? children.flat(Infinity) : [children]
 }
 
 // ------------------------------------------------------------
