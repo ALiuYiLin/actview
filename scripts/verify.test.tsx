@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, onMounted, onUpdated, onBeforeUnmount, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
@@ -1100,5 +1100,46 @@ describe('场景 21：EffectScope 自动停止', () => {
     await nextTick()
     expect(externalWatchLog).toContain(10) // 组件外 watch 仍生效（需手动 stop）
     stopExternal()
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 22：toRef / toRefs（对象属性转 ref）
+// ------------------------------------------------------------
+describe('场景 22：toRef / toRefs', () => {
+  it('toRef 属性读写响应式', () => {
+    const state = reactive({ count: 0 })
+    const countRef = toRef(state, 'count')
+    expect(countRef.value).toBe(0)
+    expect(isRef(countRef)).toBe(true)
+
+    let dummy: any
+    const e = runEffect(() => (dummy = countRef.value))
+    state.count = 5 // 源对象变化 → ref 读取触发
+    expect(dummy).toBe(5)
+    countRef.value = 10 // ref 写入 → 写回源对象并触发
+    expect(state.count).toBe(10)
+    expect(dummy).toBe(10)
+    e.stop()
+  })
+
+  it('toRefs 解构保持响应式', () => {
+    const state = reactive({ a: 1, b: 2 })
+    const { a, b } = toRefs(state)
+    let dummy: any
+    const e = runEffect(() => (dummy = a.value + b.value))
+    expect(dummy).toBe(3)
+    state.a = 10
+    expect(dummy).toBe(12)
+    b.value = 5
+    expect(dummy).toBe(15)
+    expect(state.b).toBe(5)
+    e.stop()
+  })
+
+  it('toRef 对已是 ref 的属性原样返回', () => {
+    const r = ref(1)
+    const state = reactive<{ n: typeof r }>({ n: r })
+    expect(toRef(state, 'n')).toBe(r)
   })
 })

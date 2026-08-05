@@ -196,7 +196,7 @@ Vue 3 `packages/runtime-core/__tests__/` 覆盖渲染器/组件能力，最能�
 ### 4.2 补齐 reactivity 语义差异（P2，低成本高价值）
 
 - **数组 identity 方法**：`indexOf` / `includes` / `lastIndexOf` 对 reactive 元素的 toRaw 比较（Vue 3 `arrayInstrumentations` 有专门处理；我们目前直接透传，`includes(reactiveObj)` 可能找不到）
-- **`toRef` / `toRefs`**：对象属性转 ref（`toRefs(state).count`）
+- ~~**`toRef` / `toRefs`**~~ ✅（已实现，verify 场景 22）：对象属性转 ref（`ObjectRefImpl` 读写委托源对象，天然 track/trigger；已是 ref 的属性原样返回）
 - **`shallowRef` / `triggerRef`**：浅层 ref（不包 reactive，手动 triggerRef）
 - **ref 在 reactive 嵌套中的自动解包**（Vue 3：`reactive({ n: ref(1) }).n === 1`；我们返回 ref 本体）
 - **`isReactive` / `isReadonly` / `toRaw` 工具函数**（需在代理上标记 `ReactiveFlags`）

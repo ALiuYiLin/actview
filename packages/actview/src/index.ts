@@ -15,6 +15,8 @@ export {
   ref,
   isRef,
   unref,
+  toRef,
+  toRefs,
   watch,
   onMounted,
   onUpdated,
