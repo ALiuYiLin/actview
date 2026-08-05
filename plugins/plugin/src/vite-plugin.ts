@@ -16,7 +16,11 @@ export function actviewPlugin() {
     name: 'actview-transform',
     enforce: 'pre' as const,
     async transform(code: string, id: string) {
-      if (!id.endsWith('.tsx')) return null
+      // rolldown-vite dev 的模块 id 带 ?t= 时间戳 query（HMR），剥掉再判断扩展名，
+      // 否则 `id.endsWith('.tsx')` 永不匹配、Babel 转换不执行 → 组件以裸函数
+      // 进入 ActView 运行时（只认 { __setup } VNode）→ createElement('function ...')
+      const cleanId = id.split('?')[0]
+      if (!cleanId.endsWith('.tsx')) return null
 
       const result = babel.transformSync(code, {
         filename: id,
