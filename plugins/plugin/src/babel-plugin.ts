@@ -176,22 +176,26 @@ export default function defineComponentPlugin() {
         if (isJsx) walkJSX(last.argument)
 
         // ---------- 3. 所有 return JSX/JSXCall/null 的语句 → return () => ... ----------
-        // 早退 return（`if (cond) return null` / `return <JSX/>`）也必须包成 render
-        // 函数，否则 __setup() 早退返回非函数 → instance.render is not a function
-        for (const stmt of body) {
-          if (!t.isReturnStatement(stmt)) continue
-          const arg = stmt.argument
-          if (arg == null) continue
-          const isStmtJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
-          const isStmtJsxCall =
-            t.isCallExpression(arg) &&
-            t.isIdentifier(arg.callee) &&
-            /^_?jsx/.test(arg.callee.name)
-          const isStmtNull = t.isNullLiteral(arg)
-          if (isStmtJsx || isStmtJsxCall || isStmtNull) {
-            stmt.argument = t.arrowFunctionExpression([], arg)
+        // 早退 return（`if (cond) return null` / `return <JSX/>`，可能在 if/switch/
+        // 循环内部）也必须包成 render 函数，否则 __setup() 早退返回非函数 →
+        // instance.render is not a function。仅处理组件函数体自身的 return
+        //（排除嵌套函数，子组件由各自的 FunctionDeclaration visitor 处理）。
+        path.traverse({
+          ReturnStatement(innerPath: any) {
+            if (innerPath.getFunctionParent() !== path) return
+            const arg = innerPath.node.argument
+            if (arg == null) return
+            const isStmtJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
+            const isStmtJsxCall =
+              t.isCallExpression(arg) &&
+              t.isIdentifier(arg.callee) &&
+              /^_?jsx/.test(arg.callee.name)
+            const isStmtNull = t.isNullLiteral(arg)
+            if (isStmtJsx || isStmtJsxCall || isStmtNull) {
+              innerPath.node.argument = t.arrowFunctionExpression([], arg)
+            }
           }
-        }
+        })
 
         // ---------- 4. defineComponent(function(){}) ----------
         const func = t.functionExpression(null, node.params, node.body, false, false)
