@@ -24,6 +24,7 @@ export function App() {
         <RouterLink style={linkStyle} to="/lifecycle">⑧ 生命周期</RouterLink>
         <RouterLink style={linkStyle} to="/dynamic">⑨ 动态</RouterLink>
         <RouterLink style={linkStyle} to="/async">⑩ 异步</RouterLink>
+        <RouterLink style={linkStyle} to="/icon">⑪ 图标</RouterLink>
       </nav>
       <RouterView />
       <p style={{ color: "#94a3b8", fontSize: "12px", textAlign: "center" }}>
