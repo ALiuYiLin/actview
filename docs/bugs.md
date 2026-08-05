@@ -64,6 +64,29 @@
 
 ---
 
+### 5. ✅ 已修复 — P1 生命周期钩子内改响应式无限循环（本次提交，verify 场景 12 回归）
+
+- **原问题**（已实测 `worker exited unexpectedly`，栈溢出崩溃）：
+
+  ```tsx
+  const counts = reactive({ updated: 0 })
+  function Child() {
+    onUpdated(() => counts.updated++) // 父组件渲染依赖 counts.updated
+    return <span>{n.v}</span>
+  }
+  function Page() {
+    return <div>upd:{counts.updated}<Child /></div>
+  }
+  ```
+
+  `counts.updated++` 在 onUpdated 钩子（Child 渲染 effect 的 run 上下文）里执行：`++` 复合操作符的**读**会把 `counts.updated` track 进 Child 的渲染 effect → 写时 trigger 自身 → 无限循环。
+
+- **修复**（`mountComponent.ts`）：钩子触发统一走 `invokeHooks`，**执行期间 `pauseTracking()`** —— 钩子里读写响应式不建立渲染依赖。Vue 3 的钩子在 post 队列执行（`activeEffect` 为 null）天然无此问题，pauseTracking 对齐该语义。
+- **验证**（verify 场景 12 回归「onUpdated 钩子里改响应式不无限循环」）：Child 渲染恰 1 次、计数恰 1、不循环。
+- **页面侧配套**（`src/pages/LifecyclePage.tsx` 重构）：计数用普通模块变量 + `state.tick` 渲染时钟（tick 必须在 render 内容里被读才能 track 进页面 effect）；避免「钩子里读写页面渲染依赖的响应式」反模式。
+
+---
+
 ## 二、已知限制（⚠️ 设计取舍）
 
 | 限制 | 说明 | 缓解/替代 |
@@ -73,6 +96,7 @@
 | `mounted` 顺序 | **子先父后，与 Vue 3 一致**（Vue 3 官方测试 `apiLifecycle.spec.ts` 断言：child onMounted → mid → root）；挂载是深度优先遍历，子组件先完成挂载；差异仅在我们同步触发、Vue 3 走 post 队列异步批量 | 无需处理；「父先子后」的是 `beforeMount`（Vue 3 同步、跟随遍历顺序） |
 | `watch` 自动停止 | ✅ 已实现（本次提交，verify 场景 21）：组件实例持 `EffectScope`，setup 期间创建的 watch/computed/render effect 自动注册，组件卸载时 `scope.stop()` 统一停止；setup 外创建的 watch 仍需手动 stop（Vue 3 同） | 组件内 watch 无需手动清理 |
 | `ErrorBoundary` 捕获后不自动恢复 | 触发 fallback 后持续显示直到边界重建 | 用 key 重建边界 |
+| 路由连续切换后旧页面 effect 可能残留 | 连续 `router.push` 遍历多个路由页面后，旧页面组件的渲染 effect 可能未从响应式 dep 中完全清理（实测：遍历含 /lifecycle 的路由后，再挂载新实例时旧 Child effect 仍响应 state.n，导致一次更新触发两次渲染） | 单次路由切换不受影响；涉及「路由切换后组件实例的 effect 清理完整性」，后续排查（plan：卸载时主动核对 vnode.component 链） |
 | `lazy` 的 loader 需返回组件产物 | 须为 `defineComponent` 产物（setup 返回 render 函数）；`import('./x')` 用 `m.default` | 见 verify 场景 15 用法 |
 | `effect` 内修改自身依赖的数组 | 异步队列场景下会无限循环（与 Vue 3 相同，属反模式）；同步场景已修复不爆栈（见已修复 Bug 1） | 事件 handler 内修改 |
 | 空文本节点不残留 | 空文本不产生 DOM 节点（修复后）；多个连续空文本+后续节点同时恢复的边缘场景可能轻微错位 | 边缘场景少见 |

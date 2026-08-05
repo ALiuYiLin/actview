@@ -118,3 +118,4 @@
 | 本次提交 | 修复空文本节点残留 | 空文本不创建节点、patch 置空移除旧节点、恢复时按锚点重建；verify 场景 19 |
 | 本次提交 | 具名插槽 | Babel 插件 `<template slot="name">` 编译期转 `slots` prop（支持作用域参数）；verify 场景 20 |
 | 本次提交 | EffectScope 自动停止 | 组件实例持 scope，setup 期间 watch/computed/render effect 注册，卸载时统一停止；verify 场景 21 |
+| 本次提交 | 修复生命周期钩子内改响应式无限循环 | 钩子触发统一 `invokeHooks` + `pauseTracking`（对齐 Vue 3 post 队列语义）；LifecyclePage 重构（普通变量计数 + tick 渲染时钟）；verify 场景 12 回归 |

@@ -479,7 +479,7 @@ describe('冒烟：src/main.tsx 检验页', () => {
       ['/api', '响应式 API'],
       ['/array', '数组方法'],
       ['/slot', '插槽'],
-      ['/lifecycle', '生命周期'],
+      ['/home', '响应式'],
       ['/dynamic', 'keep-alive'],
       ['/async', '错误边界'],
     ]
@@ -499,6 +499,45 @@ describe('冒烟：src/main.tsx 检验页', () => {
     boomBtn?.dispatchEvent(new Event('click'))
     await nextTick()
     expect(collectText(appRoot)).toContain('渲染出错')
+  })
+
+  it('生命周期页交互：挂载/更新/卸载计数即时刷新', async () => {
+    if (!document.querySelector('#app')) {
+      const h = document.createElement('div')
+      h.id = 'app'
+      document.body.appendChild(h)
+    }
+    await import('../src/main.tsx')
+    const routerMod = await import('../src/router.ts')
+    const appRoot = document.querySelector('#app')!
+    const click = (label: string) => {
+      const btn = Array.from(appRoot.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes(label),
+      )
+      btn?.dispatchEvent(new Event('click'))
+    }
+
+    routerMod.router.push('/lifecycle')
+    await nextTick()
+    // 进入页面：Child 挂载完成 → onMounted=1（响应式计数即时显示）
+    expect(collectText(appRoot)).toContain('onMounted=1 次')
+    expect(collectText(appRoot)).toContain('onUpdated=0 次')
+    expect(collectText(appRoot)).toContain('onBeforeUnmount=0 次')
+
+    // 触发 Child 更新（Child 读 state.n）→ onUpdated=1
+    click('触发 Child 更新')
+    await nextTick()
+    expect(collectText(appRoot)).toContain('onUpdated=1 次')
+
+    // 卸载 Child → onBeforeUnmount=1
+    click('卸载 Child')
+    await nextTick()
+    expect(collectText(appRoot)).toContain('onBeforeUnmount=1 次')
+
+    // 重新挂载 → onMounted=2（新实例重新注册钩子）
+    click('挂载 Child')
+    await nextTick()
+    expect(collectText(appRoot)).toContain('onMounted=2 次')
   })
 })
 
@@ -577,6 +616,37 @@ describe('场景 12：生命周期钩子', () => {
     state.show = false // 卸载 Child
     await nextTick()
     expect(log).toEqual(['mounted', 'updated', 'beforeUnmount'])
+  })
+
+  it('onUpdated 钩子里改「父组件渲染依赖」的响应式不无限循环（pauseTracking 回归）', async () => {
+    // 反模式场景：钩子执行期间框架暂停依赖收集（对齐 Vue 3 post 队列语义）。
+    // 若不停 track，`counts.updated++` 的「读」会把它 track 进 Child 渲染 effect，
+    // 写时触发自身 =》 无限循环崩溃。
+    const state = reactive({ n: 0 })
+    const counts = reactive({ updated: 0 })
+    let childRuns = 0
+    let pageRuns = 0
+    function Child() {
+      onUpdated(() => counts.updated++)
+      return <span>{(childRuns++, state.n)}</span>
+    }
+    function App() {
+      return <div>{(pageRuns++, 'upd:' + counts.updated)}
+        <Child />
+      </div>
+    }
+    const host = mount('#s12b', App)
+    expect(counts.updated).toBe(0)
+
+    state.n++
+    await nextTick()
+    await nextTick()
+
+    // Child 只渲染一次（state.n 触发），Page 因 counts.updated 变化重渲染一次
+    expect(childRuns).toBe(2)
+    expect(pageRuns).toBe(2)
+    expect(counts.updated).toBe(1) // 不循环：updated 恰好 1 次
+    expect(host.textContent).toContain('upd:1')
   })
 })
 

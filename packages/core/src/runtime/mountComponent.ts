@@ -7,11 +7,28 @@
 //   })
 // ============================================================
 
-import { runEffect, queueJob } from './reactive-system'
+import { runEffect, queueJob, pauseTracking, resetTracking } from './reactive-system'
 import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
 import { EffectScope } from './effectScope'
+
+/**
+ * 触发生命周期钩子：暂停依赖收集。
+ * 钩子在组件 effect 的 run 上下文内同步执行，若钩子里读写响应式
+ * （如 onUpdated 里 count++），`++` 的读会把该响应式 track 进组件渲染 effect，
+ * 写时触发自身 =》 无限循环。Vue 3 的钩子在 post 队列执行（activeEffect 为 null）
+ * 天然无此问题 —— 这里用 pauseTracking 对齐该语义。
+ */
+function invokeHooks(hooks: (() => void)[]) {
+  if (!hooks.length) return
+  pauseTracking()
+  try {
+    hooks.forEach((fn) => fn())
+  } finally {
+    resetTracking()
+  }
+}
 
 /** 组件实例：保存 setup/render 及当前子树 */
 export interface ComponentInstance {
@@ -83,7 +100,7 @@ export function mountComponent(vnode: any, container: Element | null) {
       vnode.el = instance.subTree ? instance.subTree.el : null
       // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated
       if (instance.isMounted) {
-        instance.updated.forEach((fn) => fn())
+        invokeHooks(instance.updated)
       } else {
         instance.isMounted = true
       }
@@ -106,7 +123,7 @@ export function mountComponent(vnode: any, container: Element | null) {
 
   // 首次渲染已完成（DOM 已挂载）→ 触发 onMounted
   // 注意：子组件的 mounted 先于父组件触发（同步挂载顺序，与 Vue 3 相反）
-  instance.mounted.forEach((fn) => fn())
+  invokeHooks(instance.mounted)
 
   // props 更新路径（父组件 patchComponent 手动调度）同样入队，
   // 获得 cleanup + 正确 activeEffect 上下文 + 批处理语义；
@@ -118,7 +135,7 @@ export function mountComponent(vnode: any, container: Element | null) {
   instance.isActive = () => effect.active
 
   instance.unmount = () => {
-    instance.beforeUnmount.forEach((fn) => fn())
+    invokeHooks(instance.beforeUnmount)
     // 停止组件作用域内全部 effect（render effect + setup 期间的 watch/computed）
     instance.scope.stop()
     effect.stop() // 兜底（scope.stop 已含 render effect，幂等）
