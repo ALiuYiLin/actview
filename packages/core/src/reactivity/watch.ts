@@ -1,6 +1,6 @@
-import { ReactiveEffect } from "../runtime/reactive-system"
-import { isRef } from "./ref"
-import type { Ref } from "./ref"
+import { ReactiveEffect } from '../runtime/reactive-system'
+import { isRef } from './ref'
+import type { Ref } from './ref'
 
 // ============================================================
 // watch — 监听响应式源变化
@@ -19,15 +19,22 @@ export interface WatchOptions {
 
 export type WatchCleanup = (fn: () => void) => void
 
+/** watch 的 source 类型：单值 / ref / getter / 同质数组 / 混合 ref+getter 数组 */
+export type WatchSource<T> = T | Ref<T> | (() => T)
+
 export function watch<T>(
-  source: T | Ref<T> | (() => T) | Array<T | Ref<T> | (() => T)>,
+  source:
+    | WatchSource<T>
+    | WatchSource<T>[]
+    | Array<Ref<any> | (() => any)>, // 混合来源数组（Vue 兼容：元素可不同类型）
   cb: (newVal: any, oldVal: any, onCleanup: WatchCleanup) => void,
-  options: WatchOptions = {},
+  options: WatchOptions = {}
 ): () => void {
   const getter = createGetter(source)
   // 对象/数组源：默认深度监听（traverse 全量收集），
   // 新旧值同为同一引用，回调应始终触发（Vue 3 deep 语义）
-  const isDeepSource = source != null && typeof source === 'object' && !isRef(source)
+  const isDeepSource =
+    source != null && typeof source === 'object' && !isRef(source)
 
   let oldValue: any
   let cleanup: (() => void) | null = null
@@ -83,7 +90,7 @@ function createGetter(source: any): () => any {
   if (Array.isArray(source)) {
     return () =>
       source.map((s) =>
-        isRef(s) ? s.value : typeof s === 'function' ? s() : s,
+        isRef(s) ? s.value : typeof s === 'function' ? s() : s
       )
   }
   // 普通对象：深度遍历（递归读全部属性，建立全量依赖）
@@ -92,7 +99,8 @@ function createGetter(source: any): () => any {
 
 /** 深度遍历：递归读取对象/数组的全部属性（WeakSet 防环） */
 function traverse(value: any, seen = new Set<any>()): any {
-  if (value === null || typeof value !== 'object' || seen.has(value)) return value
+  if (value === null || typeof value !== 'object' || seen.has(value))
+    return value
   seen.add(value)
   if (Array.isArray(value)) {
     value.forEach((v) => traverse(v, seen))
