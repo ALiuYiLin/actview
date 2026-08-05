@@ -155,12 +155,22 @@ export default function defineComponentPlugin() {
         const body = node.body.body
         const last = body[body.length - 1]
         if (!t.isReturnStatement(last)) return
-        if (!t.isJSXElement(last.argument) && !t.isJSXFragment(last.argument)) return
+        const ret = last.argument
+        const isJsx = t.isJSXElement(ret) || t.isJSXFragment(ret)
+        // esbuild/rolldown automatic runtime 已把 JSX 转成 _jsx()/_jsxs() 调用
+        // （rolldown-vite 的 rust 转换先于 enforce:'pre' 插件执行时，Babel 收到
+        //   的是转换后代码；同样视为组件，包裹 defineComponent）
+        const isJsxCall =
+          t.isCallExpression(ret) &&
+          t.isIdentifier(ret.callee) &&
+          /^_?jsx/.test(ret.callee.name)
+        if (!isJsx && !isJsxCall) return
 
         hasTransformed = true
 
         // ---------- 2.5 具名插槽转换（提取 <template slot="x"> → slots prop） ----------
-        walkJSX(last.argument)
+        // 仅对源码 JSX 生效；已转换的 _jsx() 调用中无 JSX 节点可提取
+        if (isJsx) walkJSX(last.argument)
 
         // ---------- 3. return JSX → return () => JSX ----------
         last.argument = t.arrowFunctionExpression([], last.argument)
