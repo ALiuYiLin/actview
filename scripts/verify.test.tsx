@@ -1714,4 +1714,34 @@ describe('场景 26：keyed diff Fragment 根组件', () => {
     expect(host.querySelector('.a1')).toBeNull()
     expect(host.querySelector('.a2')).toBeNull()
   })
+
+  it('嵌套 keyed：Fragment 根组件内部含 keyed children 不崩溃、完整挂载', () => {
+    // 回归：未命中 oldKeyToIndex 的新节点挂到 null 容器时，内层
+    // patchKeyedChildren 的 insertBefore(container=null) 会 TypeError。
+    // 修复：新节点直接挂到真实 container（参照 Vue），插入阶段仅调整顺序。
+    const Group = defineComponent((props: any) => {
+      return () => (
+        <>
+          {[0, 1].map((i) => (
+            <span key={i} class="inner">
+              G{props.text}-{i}
+            </span>
+          ))}
+        </>
+      )
+    })
+    function App() {
+      return (
+        <div>
+          <span class="label">L</span>
+          <Group key={0} text="A" />
+          <Group key={1} text="B" />
+        </div>
+      )
+    }
+    const host = mount('#s26e', App)
+    const inners = Array.from(host.querySelectorAll('.inner')).map((n) => n.textContent)
+    expect(inners).toEqual(['GA-0', 'GA-1', 'GB-0', 'GB-1'])
+    expect(host.querySelectorAll('.inner').length).toBe(4)
+  })
 })

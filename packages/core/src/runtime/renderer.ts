@@ -355,8 +355,12 @@ function patchKeyedChildren(
       patch(oldList[oldIndex], newVNode, container)
       source[i] = oldIndex + 1
     } else {
-      // 无 key 或未命中：先创建（不挂载），最后统一插入
-      mountVNode(newVNode, null)
+      // 无 key 或未命中：直接挂到真实容器（非 null！）
+      // 挂到 null 容器时，若新节点是「render 返回 Fragment 的组件」且其 children
+      // 又含 keyed 节点，内层 patchKeyedChildren 的 insertBefore(container=null)
+      // 会 TypeError（子树丢失）。挂到 container 后元素已在容器内，第 5 步
+      // insertBefore 仅调整顺序（参照 Vue：新增节点直接 patch 到真实 container）
+      mountVNode(newVNode, container)
     }
   }
 
