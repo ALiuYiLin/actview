@@ -104,6 +104,9 @@ export function mountComponent(vnode: any, container: Element | null) {
   const update = () => {
     try {
       const newSubTree = instance.render()
+      // attribute fallthrough：外部传入的非内部属性（attrs）合并到单根元素的
+      // props（class 拼接、其余根元素显式声明优先；Fragment 多根不透传）
+      mergeAttrsToRoot(newSubTree, props)
       const oldSubTree = instance.subTree
       instance.subTree = newSubTree
       patch(oldSubTree, newSubTree, container as Element)
@@ -158,4 +161,56 @@ export function mountComponent(vnode: any, container: Element | null) {
 
   // 组件 VNode 的 el 指向其子树根节点
   vnode.el = instance.subTree ? instance.subTree.el : null
+}
+
+// ============================================================
+// Attribute Fallthrough（阶段 1：全量透传）
+//   外部传入组件但组件未在根元素显式使用的属性（attrs）自动合并到
+//   单根元素 props，解决 `<Content class="vp-doc" />` 丢 class 问题。
+//   详见 docs/attr-fallthrough.md
+// ============================================================
+
+const FragmentTag = Symbol.for('react.fragment')
+
+/** 是否忽略该 key（内部字段，不参与 fallthrough） */
+function isInternalAttrKey(key: string): boolean {
+  return key === 'key' || key === 'ref' || key === 'children' || key === 'slots'
+}
+
+/**
+ * 把外部传入 props 中「根元素未声明」的属性合并到根 vnode 的 props。
+ * 规则（对齐 Vue 单根语义）：
+ *   - 仅单根生效：Fragment（多根）不透传
+ *   - class：拼接合并（组件自带 + 外部共存）
+ *   - style：根元素显式声明优先（阶段 1 简化，不做对象深合并）
+ *   - 事件 on*：根元素已有 → 跳过（显式优先）；没有 → 透传自动绑定
+ *   - 其余：根元素显式声明优先
+ * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
+ */
+export function mergeAttrsToRoot(subTree: any, props: any) {
+  if (subTree == null) return
+  // Fragment 多根：不自动 fallthrough（Vue 同款，需显式 {...attrs} 绑定）
+  if (subTree.type === FragmentTag) return
+  // 内置组件（Teleport/Transition）：props 有特殊语义，不透传
+  if (subTree.type?.__builtin) return
+  if (!props) return
+
+  const rootProps = { ...(subTree.props || {}) }
+  for (const key of Object.keys(props)) {
+    if (isInternalAttrKey(key)) continue
+    const value = props[key]
+    if (value == null || value === false) continue
+
+    if (key === 'class' || key === 'className') {
+      // class 合并：根元素已有 + 外部，统一落到 class
+      const existing = rootProps.class ?? rootProps.className ?? ''
+      const combined = [existing, value].filter(Boolean).join(' ')
+      rootProps.class = combined
+      delete rootProps.className
+      continue
+    }
+    // 其余（含 style）：根元素显式声明优先
+    if (!(key in rootProps)) rootProps[key] = value
+  }
+  subTree.props = rootProps
 }

@@ -1745,3 +1745,126 @@ describe('场景 26：keyed diff Fragment 根组件', () => {
     expect(host.querySelectorAll('.inner').length).toBe(4)
   })
 })
+
+// ------------------------------------------------------------
+// 场景 27：attribute fallthrough（非 prop 属性透传到根元素）
+// ------------------------------------------------------------
+describe('场景 27：attribute fallthrough', () => {
+  it('背景场景：外部 class 落到组件根元素（.vp-doc 生效）', () => {
+    function Content(props: any) {
+      return <div class="content-body">{props.children}</div>
+    }
+    function App() {
+      return <Content class="vp-doc">内容</Content>
+    }
+    const host = mount('#s27a', App)
+    const root = host.querySelector('.content-body')!
+    expect(root.classList.contains('vp-doc')).toBe(true)
+    expect(root.classList.contains('content-body')).toBe(true) // 自带 class 保留
+  })
+
+  it('class 合并：组件自带 + 外部共存', () => {
+    function Panel() {
+      return <section class="panel">P</section>
+    }
+    function App() {
+      return <Panel class="extra-1 extra-2" />
+    }
+    const host = mount('#s27b', App)
+    const sec = host.querySelector('section')!
+    expect(sec.classList.contains('panel')).toBe(true)
+    expect(sec.classList.contains('extra-1')).toBe(true)
+    expect(sec.classList.contains('extra-2')).toBe(true)
+  })
+
+  it('显式优先：根元素已声明的属性不被外部覆盖', () => {
+    function Btn(props: any) {
+      return <button type="button" id="inner">{props.children}</button>
+    }
+    function App() {
+      return <Btn type="submit" id="outer">点</Btn>
+    }
+    const host = mount('#s27c', App)
+    const btn = host.querySelector('button')!
+    expect(btn.getAttribute('type')).toBe('button') // 内部显式优先
+    expect(btn.id).toBe('inner')
+  })
+
+  it('普通属性透传：外部 title 落到根元素', () => {
+    function Card() {
+      return <div class="card">C</div>
+    }
+    function App() {
+      return <Card title="提示" data-x="1" />
+    }
+    const host = mount('#s27d', App)
+    const card = host.querySelector('.card')!
+    expect(card.getAttribute('title')).toBe('提示')
+    expect(card.getAttribute('data-x')).toBe('1')
+  })
+
+  it('Fragment 多根：不自动 fallthrough', () => {
+    function Multi() {
+      return (
+        <>
+          <p class="m1">1</p>
+          <p class="m2">2</p>
+        </>
+      )
+    }
+    function App() {
+      return <Multi class="should-not-apply" />
+    }
+    const host = mount('#s27e', App)
+    expect(host.querySelector('.m1')!.classList.contains('should-not-apply')).toBe(false)
+    expect(host.querySelector('.m2')!.classList.contains('should-not-apply')).toBe(false)
+  })
+
+  it('更新：外部 class 变化 =》 根元素 class 更新（走 updateProps → update）', async () => {
+    const state = reactive({ cls: 'a' })
+    function Content() {
+      return <div class="body">B</div>
+    }
+    function App() {
+      return <Content class={state.cls} />
+    }
+    const host = mount('#s27f', App)
+    const root = host.querySelector('.body')!
+    expect(root.classList.contains('a')).toBe(true)
+
+    state.cls = 'b'
+    await nextTick()
+    expect(root.classList.contains('a')).toBe(false)
+    expect(root.classList.contains('b')).toBe(true)
+    expect(root.classList.contains('body')).toBe(true) // 自带 class 始终保留
+  })
+
+  it('事件透传：外部 onclick 落到无事件根元素并触发', () => {
+    let clicked = 0
+    function Wrap(props: any) {
+      return <div class="wrap">{props.children}</div>
+    }
+    function App() {
+      return <Wrap onclick={() => clicked++}>W</Wrap>
+    }
+    const host = mount('#s27g', App)
+    host.querySelector('.wrap')!.dispatchEvent(new Event('click'))
+    expect(clicked).toBe(1)
+  })
+
+  it('排除：key / ref / children / slots 不落根元素', () => {
+    let refVal: any = null
+    function Item(props: any) {
+      return <li class="item">{props.children}</li>
+    }
+    function App() {
+      return <Item key="k1" ref={(el: any) => (refVal = el)}>文本</Item>
+    }
+    const host = mount('#s27h', App)
+    const li = host.querySelector('.item')!
+    expect(li.getAttribute('key')).toBeNull()
+    expect(li.getAttribute('ref')).toBeNull()
+    expect(li.textContent).toBe('文本') // children 正常渲染而非落属性
+    expect(refVal).not.toBeNull() // ref 回调正常执行
+  })
+})

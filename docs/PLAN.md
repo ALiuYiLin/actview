@@ -89,6 +89,12 @@
     - 顺带修复：patch 复用分支检测实例活性（`isActive`），失效实例（如 Suspense fallback 替换后）重建而非复用
 11. ~~**`ref` 模板引用**~~ ✅（本次提交，verify 场景 15）
     - 已实现：`props.ref`（函数或 `{ value }`）挂载时指向 DOM（元素）/ 组件实例，卸载时置 null
+12. **attribute fallthrough 阶段 2：Vue options 形态**（📋 设计见 docs/attr-fallthrough.md，阶段 1 已完成）
+    - `defineComponent` 支持对象参数 `{ props: [...], setup(props, ctx) }`；函数形态归一化为「props 白名单为空」
+    - props 白名单分离：setup 只收白名单内属性，其余进 `ctx.attrs`（暴露 `$attrs`）
+    - fallthrough 细化：白名单内属性不透传；白名单外全量透传（class/style 合并、显式优先）
+    - `inheritAttrs: false` 支持
+    - 函数形态兼容策略：保持「props 全量 + 全量 fallthrough」（向后兼容，建议）
 
 ### 阶段四：工程化（P2-P3）
 
@@ -119,3 +125,4 @@
 | 本次提交 | 具名插槽 | Babel 插件 `<template slot="name">` 编译期转 `slots` prop（支持作用域参数）；verify 场景 20 |
 | 本次提交 | EffectScope 自动停止 | 组件实例持 scope，setup 期间 watch/computed/render effect 注册，卸载时统一停止；verify 场景 21 |
 | 本次提交 | 修复生命周期钩子内改响应式无限循环 | 钩子触发统一 `invokeHooks` + `pauseTracking`（对齐 Vue 3 post 队列语义）；LifecyclePage 重构（普通变量计数 + tick 渲染时钟）；verify 场景 12 回归 |
+| 本次提交 | attribute fallthrough 阶段 1（全量透传） | `mergeAttrsToRoot`：render 后把外部 props（attrs）合并到单根元素（class 拼接、其余根元素显式优先、事件透传、Fragment 多根/内置组件不透传）；解决 `<Content class="vp-doc" />` 丢 class；verify 场景 27（8 用例）；阶段 2 见「阶段三 12」 |
