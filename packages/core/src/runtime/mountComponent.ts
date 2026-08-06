@@ -187,6 +187,28 @@ function isInternalAttrKey(key: string): boolean {
  *   - 其余：根元素显式声明优先
  * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
  */
+/** 白名单：允许透传到根元素的 attrs（Vue 语义：非 prop 的 class/style/id/事件）
+ *  业务 props（如 features/items 等组件自定义 prop）不透传，避免
+ *  setAttribute(String(数组/对象)) =》 "[object Array]" 污染根元素 */
+const FALLTHROUGH_KEYS = new Set(['class', 'className', 'style', 'id'])
+
+/** 事件透传：onXxx（含 onClickCapture、小写 onclick）；on 后须为字母 */
+function isEventKey(key: string): boolean {
+  return key.length > 2 && /^on[A-Za-z]/.test(key)
+}
+
+/**
+ * 把外部传入 props 中「白名单内的 attrs」合并到根 vnode 的 props。
+ * 规则（对齐 Vue 单根语义 + 白名单）：
+ *   - 仅单根生效：Fragment（多根）不透传
+ *   - 白名单：class/className/style/id + on* 事件；其余 key（业务 props、
+ *     以及 data- / aria- 前缀等）一律不透传
+ *   - class：拼接合并（组件自带 + 外部共存）
+ *   - style：对象合并（根已有 style 时 {...root, ...attrs}，不覆盖）
+ *   - 事件 on*：根元素已有 → 跳过（显式优先）；没有 → 透传自动绑定
+ *   - 其余：根元素显式声明优先
+ * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
+ */
 export function mergeAttrsToRoot(subTree: any, props: any) {
   if (subTree == null) return
   // Fragment 多根：不自动 fallthrough（Vue 同款，需显式 {...attrs} 绑定）
@@ -198,6 +220,8 @@ export function mergeAttrsToRoot(subTree: any, props: any) {
   const rootProps = { ...(subTree.props || {}) }
   for (const key of Object.keys(props)) {
     if (isInternalAttrKey(key)) continue
+    // 白名单过滤：非 class/style/id/on* 的业务 props 不透传
+    if (!FALLTHROUGH_KEYS.has(key) && !isEventKey(key)) continue
     const value = props[key]
     if (value == null || value === false) continue
 
@@ -209,8 +233,15 @@ export function mergeAttrsToRoot(subTree: any, props: any) {
       delete rootProps.className
       continue
     }
-    // 其余（含 style）：根元素显式声明优先
+    if (key === 'style' && rootProps.style) {
+      // style 对象合并：根已有 style 时深一层浅合并，不覆盖
+      const base = typeof rootProps.style === 'object' ? rootProps.style : {}
+      rootProps.style = { ...base, ...value }
+      continue
+    }
+    // 其余（id/on* 等）：根元素显式声明优先
     if (!(key in rootProps)) rootProps[key] = value
   }
   subTree.props = rootProps
 }
+

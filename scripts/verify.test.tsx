@@ -1790,17 +1790,46 @@ describe('场景 27：attribute fallthrough', () => {
     expect(btn.id).toBe('inner')
   })
 
-  it('普通属性透传：外部 title 落到根元素', () => {
+  it('白名单透传：id 透传；title/data-x 等业务 props 不透传', () => {
     function Card() {
       return <div class="card">C</div>
     }
     function App() {
-      return <Card title="提示" data-x="1" />
+      return <Card id="card-1" title="提示" data-x="1" />
     }
     const host = mount('#s27d', App)
     const card = host.querySelector('.card')!
-    expect(card.getAttribute('title')).toBe('提示')
-    expect(card.getAttribute('data-x')).toBe('1')
+    expect(card.id).toBe('card-1') // 白名单内：id 透传
+    expect(card.getAttribute('title')).toBeNull() // 白名单外：不透传
+    expect(card.getAttribute('data-x')).toBeNull() // 白名单外：不透传
+  })
+
+  it('bug 回归：业务 props（数组/对象）不透传 =》 根元素无 features 属性', () => {
+    // 全量透传时 <VPFeatures features={[...]}> 根元素带 features="[object Array]"
+    function VPFeatures(props: any) {
+      return <div class="VPFeatures">{props.children}</div>
+    }
+    function App() {
+      return <VPFeatures features={[{ title: 'a' }, { title: 'b' }]}>内容</VPFeatures>
+    }
+    const host = mount('#s27d2', App)
+    const root = host.querySelector('.VPFeatures')!
+    expect(root.hasAttribute('features')).toBe(false) // 业务 prop 不透传
+    expect(root.hasAttribute('title')).toBe(false)
+    expect(root.className).toBe('VPFeatures')
+  })
+
+  it('style 对象合并：根 {color} + attrs {fontSize} =》 两者都在', () => {
+    function Panel() {
+      return <section class="panel" style={{ color: 'red' }}>P</section>
+    }
+    function App() {
+      return <Panel style={{ fontSize: '12px' }} />
+    }
+    const host = mount('#s27d3', App)
+    const sec = host.querySelector('section')!
+    expect(sec.style.color).toBe('red') // 根自带保留
+    expect(sec.style.fontSize).toBe('12px') // attrs 合并进来
   })
 
   it('Fragment 多根：不自动 fallthrough', () => {
@@ -1818,6 +1847,26 @@ describe('场景 27：attribute fallthrough', () => {
     const host = mount('#s27e', App)
     expect(host.querySelector('.m1')!.classList.contains('should-not-apply')).toBe(false)
     expect(host.querySelector('.m2')!.classList.contains('should-not-apply')).toBe(false)
+  })
+
+  it('内置组件根（Teleport）不透传', () => {
+    const target = document.createElement('div')
+    target.id = 's27-target'
+    document.body.appendChild(target)
+    function TeleWrapper() {
+      return (
+        <Teleport to="#s27-target">
+          <span class="tele-child">T</span>
+        </Teleport>
+      )
+    }
+    function App() {
+      return <TeleWrapper class="should-not" title="no" />
+    }
+    mount('#s27e2', App)
+    const child = target.querySelector('.tele-child')!
+    expect(child.classList.contains('should-not')).toBe(false)
+    expect(child.hasAttribute('title')).toBe(false)
   })
 
   it('更新：外部 class 变化 =》 根元素 class 更新（走 updateProps → update）', async () => {
