@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
-import { runEffect } from '@actview/core'
+import { runEffect, unmount } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
@@ -1915,5 +1915,92 @@ describe('场景 27：attribute fallthrough', () => {
     expect(li.getAttribute('ref')).toBeNull()
     expect(li.textContent).toBe('文本') // children 正常渲染而非落属性
     expect(refVal).not.toBeNull() // ref 回调正常执行
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 28：renderToString SSR 上下文（BUG-001 回归）
+// ------------------------------------------------------------
+describe('场景 28：renderToString 生命周期上下文', () => {
+  it('setup 里调用 onMounted 不警告、产物正确（钩子不执行）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let mountedRan = false
+    function Greet(props: any) {
+      onMounted(() => {
+        mountedRan = true
+      })
+      return <p class="greet">Hi, {props.name}</p>
+    }
+    const html = renderToString(<Greet name="actview" />)
+    expect(html).toBe('<p class="greet">Hi, actview</p>')
+    // 不再输出「生命周期钩子只能在组件 setup 中调用」
+    expect(warn).not.toHaveBeenCalled()
+    // SSR 语义：mounted 钩子不执行
+    expect(mountedRan).toBe(false)
+    warn.mockRestore()
+  })
+})
+
+// ------------------------------------------------------------
+// 场景 29：混合列表连续切换（BUG-002 回归守护）
+// ------------------------------------------------------------
+describe('场景 29：混合列表连续切换无累积（BUG-002）', () => {
+  it('无 key <p> + 有 key <span> 连续 5 次切换，p 恒为 1、DOM 顺序正确', async () => {
+    const lang = ref('en')
+    function App() {
+      return (
+        <div id="s29">
+          <p class="title">{lang.value === 'en' ? 'English' : '中文'}</p>
+          {lang.value === 'en' ? (
+            <span key="zh">zh</span>
+          ) : (
+            <span key="en">en</span>
+          )}
+        </div>
+      )
+    }
+    const host = mount('#s29', App)
+    const pcount = () => host.querySelectorAll('.title').length
+
+    for (const v of ['zh', 'en', 'zh', 'en', 'zh']) {
+      lang.value = v
+      await nextTick()
+      expect(pcount()).toBe(1)
+    }
+    // 最终状态正确
+    expect(host.querySelector('.title')!.textContent).toBe('中文')
+    const box = host.querySelector('#s29')!
+    const kids = Array.from(box.children).map((n) => n.tagName)
+    expect(kids).toEqual(['P', 'SPAN'])
+  })
+
+  it('unmount 兜底：el 已不在 DOM 时按 index 移除容器内对应节点', () => {
+    const host = document.createElement('div')
+    host.id = 's29b'
+    document.body.appendChild(host)
+    function App() {
+      return (
+        <div>
+          <p class="a">A</p>
+          <p class="b">B</p>
+        </div>
+      )
+    }
+    createApp(App).mount('#s29b')
+    const ps = host.querySelectorAll('p')
+    expect(ps.length).toBe(2)
+
+    // 模拟脱节：vnode.el 指向已移除的节点（parentNode 为 null），
+    // unmount 应兜底用 index 移除容器内对应节点
+    const container = host.firstElementChild!
+    const fake = document.createElement('p')
+    unmount(
+      { $$typeof: Symbol.for('react.element'), type: 'p', key: null, ref: null, props: {}, el: fake },
+      container,
+      0,
+    )
+    // index 0 的节点被兜底移除，B 保留
+    expect(host.querySelectorAll('p').length).toBe(1)
+    expect(host.textContent).toContain('B')
   })
 })

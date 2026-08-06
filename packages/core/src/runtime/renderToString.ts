@@ -1,4 +1,5 @@
 import type { VNode } from '@actview/jsx'
+import { setCurrentInstance } from './lifecycle'
 
 // ============================================================
 // renderToString — 构建期/SSR 前置：VNode 树 → HTML 字符串
@@ -109,8 +110,24 @@ function serializeNode(node: any): string {
       typeof (type as any).__setup === 'function')
   if (isComponent) {
     const setup = (type as any).__setup
-    const render =
-      typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
+    // 静态生成上下文：setup 里调用 onMounted 等生命周期钩子时必须有
+    // currentInstance（否则警告「只能在组件 setup 中调用」并丢弃）。
+    // 用轻量 instance（带钩子空数组即可注册），钩子注册后**不 flush**
+    // （SSR/静态生成语义：setup + render，不执行 DOM 钩子，与 Vue SSR 一致）。
+    const ssrInstance = {
+      mounted: [] as (() => void)[],
+      updated: [] as (() => void)[],
+      beforeUnmount: [] as (() => void)[],
+      unmounted: [] as (() => void)[],
+      scope: null,
+    }
+    setCurrentInstance(ssrInstance as any)
+    let render: any
+    try {
+      render = typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
+    } finally {
+      setCurrentInstance(null)
+    }
     if (typeof render === 'function') {
       return serializeNode(render())
     }

@@ -142,3 +142,12 @@
 - `onWatcherCleanup` / `once` / `call` / `scheduler` 等 watch 选项
 - 数组 identity 方法（`indexOf`/`includes` 对 reactive 元素的 toRaw 比较）
 - ref 在 reactive 嵌套中的自动解包（Vue 3 有，我们无）
+
+### 6. ⚠️ 已防御 — 混合列表多次连续渲染 DOM 累积（BUG-002，真实浏览器）
+
+- **场景**：`VPNavBarExtra` 语言切换（en↔zh），`.group.translations` 的 children `[p(无 key), VPMenuLink(有 key)]` 连续多次重渲染时 `<p class="trans-title">` 净增 1 个。
+- **根因**（已定位）：语言切换触发多次独立渲染（route.data/localeIndex/site 响应式分批更新，真实浏览器异步调度）。keyed diff 对无 key 的 p 执行 mount 新 + unmount 旧；多次渲染间 **vnode.el 与实际 DOM 脱节**，`unmount` 的 `removeChild(vnode.el)` 移除的不是实际残留节点（el 已不在 DOM 时 removeChild 落空）→ 旧节点残留 + 新节点追加。
+- **happy-dom 不复现**：同步 flush 合并渲染，无中间脱节状态（已用「手动多次 patch + el 一致性断言」验证同步路径正确）。
+- **防御**（`renderer.ts` unmount）：collectDomEls 收集的 el 若 `parentNode` 为 null（已不在 DOM）→ 用 `container.childNodes[index]` 兜底移除（仅 el 无效时，不误伤）。
+- **验证**：verify 场景 29（连续 5 次切换 p 恒 1 + unmount el 脱节兜底单测）。
+- **遗留**：真实浏览器（playwright）验证：语言连续切换 5+ 次 `.trans-title` 数量恒为 1。若仍有累积，需进一步追踪真实调度下 vnode.el 脱节的产生点（insertBefore 移动/组件 children 透传路径）。

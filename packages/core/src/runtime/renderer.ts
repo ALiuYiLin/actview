@@ -656,8 +656,17 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   // 必须沿子树收集全部 DOM 逐一移除
   const domEls = collectDomEls(vnode)
   if (domEls.length > 0) {
-    for (const el of domEls) {
-      if (el && el.parentNode) el.parentNode.removeChild(el)
+    for (let i = 0; i < domEls.length; i++) {
+      const el = domEls[i]
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el)
+      } else if (i === 0 && container && index != null) {
+        // el 已不在 DOM（真实浏览器多次连续渲染下 vnode.el 可能与实际 DOM
+        // 脱节，见 BUG-002：removeChild 落空 =》 旧节点残留累积）。
+        // 仅当 el 无效（parentNode 为 null）时用 index 兜底定位，避免误伤。
+        const alt = container.childNodes[index]
+        if (alt && alt.parentNode) alt.parentNode.removeChild(alt)
+      }
     }
   } else {
     // 文本旧节点无持久 el（每次 render 重建），按索引从 childNodes 恢复
