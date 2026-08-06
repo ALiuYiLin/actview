@@ -1,6 +1,6 @@
 {
   "name": "@actview/core",
-  "version": "1.0.15",
+  "version": "1.0.18",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
