@@ -23,7 +23,7 @@
 
 | API | 说明 |
 |---|---|
-| `computed(getter)` | 惰性缓存派生值（脏标记） |
+| `computed(getter)` / `computed({ get, set })` | 惰性缓存派生值（脏标记）；选项形态支持 **setter**（可写 computed），只读 computed 赋值 warn |
 | `watch(source, cb, opts?)` | 侦听（支持 ref/函数/数组/对象深度；`immediate`；`onCleanup`；返回 stop） |
 | `watchEffect(fn)` | 立即执行并自动追踪依赖（异步批处理触发；返回 stop） |
 

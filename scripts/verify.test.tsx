@@ -1282,6 +1282,33 @@ describe('场景 22：toRef / toRefs', () => {
     expect(state.b).toBe(5)
     e.stop()
   })
+  it('computed 可写：{ get, set } 形态赋值触发 setter 并重算', () => {
+    const state = reactive({ firstName: '张', lastName: '三' })
+    const fullName = computed({
+      get: () => state.firstName + state.lastName,
+      set: (v: string) => {
+        // 简化的拆分赋值：前 1 字为姓，其余为名
+        state.firstName = v.slice(0, 1)
+        state.lastName = v.slice(1)
+      },
+    })
+
+    expect(fullName.value).toBe('张三')
+    fullName.value = '李四' // 触发 setter
+    expect(state.firstName).toBe('李')
+    expect(state.lastName).toBe('四')
+    expect(fullName.value).toBe('李四') // 重算一致
+  })
+
+  it('computed 只读：无 setter 时赋值 warn 且值不变', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const state = reactive({ n: 1 })
+    const double = computed(() => state.n * 2)
+    ;(double as any).value = 100 // 只读 computed 赋值
+    expect(warn).toHaveBeenCalled()
+    expect(double.value).toBe(2) // 值未被修改
+    warn.mockRestore()
+  })
 
   it('toRef 对已是 ref 的属性原样返回', () => {
     const r = ref(1)
