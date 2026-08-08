@@ -1,6 +1,8 @@
 // ============================================================
-// Bug 复现:完全等价 VPNavBarTranslations 形态
-//   defineComponent(外层) → defineComponent(内部 __setup 读 ref) → 渲染 [p无key, 嵌套数组[keyed a]]
+// Bug 复现:语言切换时「无 key 元素 + 有 key 元素」混合列表不累积
+//   原 VPNavBarTranslations 形态（setup 风格 + 嵌套组件）已因组件嵌套
+//   方案废弃而改写为简写组件形态；验证目标不变：
+//   children = [p(无key), 数组[keyed a]] 交替切换 =》 .title 恒为 1
 // ============================================================
 import { describe, it, expect } from 'vitest'
 import { createApp, ref, nextTick, defineComponent } from 'actview'
@@ -13,25 +15,18 @@ function mount(containerId: string, component: any) {
   return host
 }
 
-describe('等价 VPNavBarTranslations 嵌套形态', () => {
-  it('内部 __setup 读 ref,children=[p, [keyed a]] 交替:title 不累积', async () => {
+describe('语言切换混合列表不累积（简写组件形态）', () => {
+  it('children=[p 无key, 嵌套数组 keyed a] 交替:title 恒为 1', async () => {
     const lang = ref('en')
-    // 等价产物:外层 setup(模拟 useLangs) + 内部 __setup(读响应式) + 渲染
     const Comp = defineComponent(function () {
-      // 外层 setup
-      const current = lang
-      return defineComponent(function () {
-        // 内部 __setup:读响应式做条件 + 返回渲染函数
-        if (!current.value) return null
-        return () => (
-          <div class="flyout">
-            <div class="items">
-              <p class="title">{current.value}</p>
-              {[<a key="l" href="#">{current.value}</a>]}
-            </div>
+      return () => (
+        <div class="flyout">
+          <div class="items">
+            <p class="title">{lang.value}</p>
+            {[<a key="l" href="#">{lang.value}</a>]}
           </div>
-        )
-      })
+        </div>
+      )
     })
     const host = mount('#trel1', Comp)
     await nextTick()
@@ -46,5 +41,6 @@ describe('等价 VPNavBarTranslations 嵌套形态', () => {
     lang.value = 'en'
     await nextTick()
     expect(host.querySelectorAll('.title').length).toBe(1)
+    expect(host.querySelector('.title')?.textContent).toBe('en')
   })
 })

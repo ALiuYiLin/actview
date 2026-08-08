@@ -27,14 +27,17 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toMatch(/import \{ defineComponent \} from "@actview\/core"/)
   })
 
-  it('缺陷 1：setup 风格 —— 无参渲染函数 =》 render 语义（__setup 返回它原样）', () => {
+  it('废弃方案文档化：setup 风格（return 渲染函数）不被转换——保持裸函数', () => {
+    // 组件嵌套方案已废弃（bug 多）：只允许简写组件（return JSX）。
+    // return function(){...} 的组件保持原样（插件不包装，不注入 import）。
     const out = transform(
       `function B(props) { const n = 1; return function() { return <div>{n}</div> } }`,
     )
-    expect(out).toContain('const B = defineComponent(function (props) {')
-    // 无参渲染函数：内部组件 __setup 返回它（render 语义，早退 return null 留在 render）
-    expect(out).toContain('return defineComponent(() => function () {')
+    expect(out).toContain('function B(props)')
+    expect(out).toContain('return function () {')
     expect(out).toContain('return <div>{n}</div>')
+    // 未转换：无 defineComponent
+    expect(out).not.toContain('defineComponent')
   })
 
   it('缺陷 2：函数表达式组件 const X = function(props) {...} → defineComponent', () => {
@@ -49,13 +52,14 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toContain('return () => <span>d</span>')
   })
 
-  it('缺陷 2 + 缺陷 1：箭头函数 block body + setup 风格（无参渲染函数）', () => {
+  it('废弃方案文档化：箭头函数 block body + setup 风格也不转换', () => {
     const out = transform(
       `const E = () => { const x = 1; return function() { return <i>{x}</i> } }`,
     )
-    expect(out).toContain('const E = defineComponent(() => {')
-    expect(out).toContain('return defineComponent(() => function () {')
+    expect(out).toContain('const E = () => {')
+    expect(out).toContain('return function () {')
     expect(out).toContain('return <i>{x}</i>')
+    expect(out).not.toContain('defineComponent')
   })
 
   it('早退 return JSX / null 包成 render 函数', () => {
@@ -125,29 +129,5 @@ describe('defineComponentPlugin：补充场景', () => {
     )
     expect(out).toContain('const E = defineComponent')
     expect(out).toContain('return () => _jsx')
-  })
-})
-
-describe('defineComponentPlugin：渲染函数早退（VPSidebar bug 回归）', () => {
-  it('无参渲染函数内早退 return null 留在 render（不提升到内部 __setup）', () => {
-    const out = transform(
-      `function Sidebar() { const has = ref(false); return function() { if (!has.value) return null; return <aside>s</aside> } }`,
-    )
-    // 内部组件 __setup 返回渲染函数（render 语义）
-    expect(out).toContain('return defineComponent(() => function () {')
-    // 早退 return null 保留在渲染函数内（响应式读取在 render effect =》 track ✓）
-    expect(out).toContain('if (!has.value) return null;')
-    expect(out).toContain('return <aside>s</aside>')
-    // 不被提升为「内部 setup 的 return null」
-    expect(out).not.toContain('return defineComponent(function () {')
-  })
-
-  it('带参渲染函数（子组件语义）：早退 return null 包成 () => null', () => {
-    const out = transform(
-      `function Item(props) { return function(innerProps) { if (!innerProps.show) return null; return <li>{innerProps.x}</li> } }`,
-    )
-    expect(out).toContain('return defineComponent(function (innerProps) {')
-    expect(out).toContain('if (!innerProps.show) return () => null')
-    expect(out).toContain('return () => <li>{innerProps.x}</li>')
   })
 })

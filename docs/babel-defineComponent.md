@@ -15,14 +15,15 @@ function A() {
 
 const A = defineComponent(function () { return () => <div>hi</div> })
 
-// 形态 2：return 渲染函数（setup 风格组件）——原样保留
-function B(props) {
-  const n = useSomething()
-  return function () {
-    return <div>{n}</div>
-  }
-}
-// 编译后：const B = defineComponent(function (props) { ...; return function () {...} })
+> ⚠️ **设计约束（2026-08）**：只支持简写组件（最后 `return JSX` / `_jsx()` / `null`）。
+> `return function(){...}`（setup 风格 / 渲染函数）**不允许**——组件嵌套方案已废弃（bug 多），
+> 此类组件保持裸函数不被转换（运行时若被当组件会报 `InvalidCharacterError`，属非法写法）。
+>
+> 组件写法唯一形态：
+> ```tsx
+> function X(props) { setup...; return <JSX/> }   // setup 阶段逻辑 + 最后 return JSX
+> // =》 const X = defineComponent(function (props) { setup...; return () => <JSX/> })
+> ```
 ```
 
 ## 会被自动转换的代码（所有场景）
@@ -36,20 +37,23 @@ function A() { return <div>hi</div> }
 const A = defineComponent(function () { return () => <div>hi</div> })
 ```
 
-### 2. function 声明（setup 风格：最后 return 渲染函数）
+### 2. ⚠️ 已废弃 —— setup 风格（最后 return 渲染函数）不被转换
 
 ```tsx
+// 不允许（组件嵌套方案已废弃）：
 function B(props) {
   const n = useSomething()
   return function () { return <div>{n}</div> }
 }
 ```
 ```js
-const B = defineComponent(function (props) {
+// 编译后：保持裸函数（不包装、不注入 defineComponent）
+function B(props) {
   const n = useSomething()
-  return defineComponent(function () { return () => <div>{n}</div> })  // 渲染函数嵌套包装为内部组件
-})
+  return function () { return <div>{n}</div> }
+}
 ```
+正确写法：把渲染逻辑直接 `return JSX`（简写组件）。
 
 ### 3. function 声明（return null 结尾）
 
@@ -78,16 +82,15 @@ const E = () => <span>e</span>
 const E = defineComponent(() => { return () => <span>e</span> })
 ```
 
-### 6. 箭头函数（block body + setup 风格）
+### 6. ⚠️ 已废弃 —— 箭头函数 block body + setup 风格不被转换
 
 ```tsx
+// 不允许：
 const F = () => { const n = 1; return function () { return <i>{n}</i> } }
 ```
 ```js
-const F = defineComponent(() => {
-  const n = 1
-  return defineComponent(function () { return () => <i>{n}</i> })
-})
+// 编译后：保持原样（不包装）
+const F = () => { const n = 1; return function () { return <i>{n}</i> } }
 ```
 
 ### 7. export default 箭头 / 函数组件
@@ -164,8 +167,8 @@ const Card = defineComponent(() => { return () => <Panel slots={{ h: () => <>H</
 最后一条语句的返回值 ret：
   ret 是 JSX 元素 / Fragment        → 组件，return 包成 () => ret
   ret 是 _jsx/_jsxs/jsx 调用        → 组件，return 包成 () => ret
-  ret 是函数表达式 / 箭头函数        → 组件（setup 风格），原样保留
   ret 是 null                       → 组件，return 包成 () => null
+  ret 是函数（渲染函数，setup 风格） → ❌ 不允许（嵌套方案已废弃），不转换
   其他                              → 非组件，跳过
 ```
 

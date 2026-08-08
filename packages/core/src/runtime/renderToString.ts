@@ -1,6 +1,5 @@
 import type { VNode } from '@actview/jsx'
 import { setCurrentInstance } from './lifecycle'
-import { normalizeSetupResult } from './mountComponent'
 
 // ============================================================
 // renderToString — 构建期/SSR 前置：VNode 树 → HTML 字符串
@@ -125,14 +124,7 @@ function serializeNode(node: any): string {
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
-      // 与客户端 mountComponent 一致：__setup 结果过 normalizeSetupResult——
-      // 函数 =》 渲染函数；组件对象（嵌套 defineComponent）=》 () => 组件 vnode；
-      // vnode =》 () => vnode；其他 =》 () => null。修复 SSR 白屏：
-      // setup 风格组件的 __setup 返回组件对象（非函数），旧逻辑直接序列化
-      // 组件对象（无 $$typeof）=》 渲染空。
-      const setupResult =
-        typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
-      render = normalizeSetupResult(setupResult, props)
+      render = typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
     } finally {
       setCurrentInstance(null)
     }

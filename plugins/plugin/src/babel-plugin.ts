@@ -217,15 +217,16 @@ export default function defineComponentPlugin() {
 
 /**
  * 判断并包装组件函数，返回 defineComponent(...) 调用节点；非组件返回 null。
- * 支持的组件函数形态（__setup 契约）：
+ * 支持的组件函数形态（__setup 契约，仅简写组件——组件嵌套方案已废弃）：
  *   1. 直接 return JSX（简写）：function X() { return <JSX/> }
  *   2. 直接 return _jsx(...)（JSX 已被 rolldown/esbuild 降级）
- *   3. return 渲染函数（setup 风格）：function X() { ...; return function() { return <JSX/> } }
+ *   3. return null 结尾（条件渲染收尾）
  * 处理：
  *   - 形态 1/2：最后 return 包成 () => <JSX>（__setup 返回 render 函数）
- *   - 形态 3：原样保留（__setup 直接返回渲染函数是合法形态）
+ *   - 形态 3：return () => null
  *   - 箭头函数 expression body（() => <JSX>）：包成 { return () => <JSX> }
  *   - 具名插槽提取：仅源码 JSX 形态（含 expression body）
+ * 注意：setup 风格（最后 return 渲染函数）不允许——保持裸函数不转换
  */
 function wrapComponentFn(fn: any): any | null {
   const body = fn.body
@@ -250,13 +251,13 @@ function wrapComponentFn(fn: any): any | null {
   //   的是转换后代码；同样视为组件，包裹 defineComponent）
   const isJsxCall =
     t.isCallExpression(ret) && t.isIdentifier(ret.callee) && /^_?jsx/.test(ret.callee.name)
-  // 缺陷 1 修复：setup 风格 —— 最后 return 渲染函数（函数表达式/箭头函数）
-  const isRenderFn =
-    t.isFunctionExpression(ret) || t.isArrowFunctionExpression(ret)
   // 结尾 return null：条件渲染组件（`if (c) return <JSX/>; return null`）
   // 的合法收尾，__setup 返回 () => null 渲染空（与早退 return null 一致）
   const isNullRet = t.isNullLiteral(ret)
-  if (!isJsx && !isJsxCall && !isRenderFn && !isNullRet) return null
+  // 设计约束（2026-08）：只支持简写组件（最后 return JSX / _jsx / null）。
+  // setup 风格（return 渲染函数）不允许——组件嵌套方案已废弃（bug 多），
+  // return function(){...} 的组件保持裸函数（不转换）。
+  if (!isJsx && !isJsxCall && !isNullRet) return null
 
   // 具名插槽转换（提取 <template slot="x"> → slots prop）——
   // 仅对源码 JSX 生效（含箭头 expression body；已转换的 _jsx() 调用中无 JSX 节点）
@@ -273,26 +274,6 @@ function wrapComponentFn(fn: any): any | null {
   } else if (isNullRet) {
     // return null → return () => null（渲染空）
     last.argument = t.arrowFunctionExpression([], t.nullLiteral())
-  } else if (isRenderFn) {
-    // 渲染函数 → 嵌套组件。按参数区分两种语义：
-    // 1) 无参渲染函数（return function() {...}）=> render 语义：内部组件
-    //    __setup 返回它【原样】——早退 return null 留在 render 函数内（响应式
-    //    读取在 render effect =》 track ✓，修复 VPSidebar「导航后 sidebar 不渲染」）
-    // 2) 带参渲染函数（return function(innerProps) {...}）=> 子组件语义：递归
-    //    包装为内部组件（内部 setup 接收 props），早退 return 包成 () => X
-    if (ret.params.length === 0) {
-      const wrapper = t.arrowFunctionExpression([], ret)
-      last.argument = t.callExpression(t.identifier('defineComponent'), [wrapper])
-    } else {
-      const inner = wrapComponentFn(ret)
-      if (inner) {
-        // 早退 return JSX / _jsx / null → 包成 () => ...（否则提升到内部
-        // __setup 的 return null =》 render 固化，响应式不更新）
-        wrapEarlyReturnsAst(ret.body)
-        last.argument = inner
-      }
-      // 非组件形态的带参渲染函数（如 return function(p){ return 1 }）原样保留
-    }
   }
 
   return t.callExpression(t.identifier('defineComponent'), [fn])
@@ -321,52 +302,4 @@ function wrapEarlyReturns(fnPath: any) {
       }
     },
   })
-}
-
-/**
- * AST 级早退 return 包装（无 path 依赖）：
- * 递归遍历函数体语句，把「直接 return JSX / _jsx() / null」包成箭头函数；
- * 嵌套函数（Function/Arrow）跳过——由各自的包装逻辑处理。
- * 用于带参渲染函数递归包装（wrapComponentFn 内部无法访问 NodePath）。
- */
-function wrapEarlyReturnsAst(node: any) {
-  if (!node) return
-  if (t.isBlockStatement(node)) {
-    for (const stmt of node.body) wrapEarlyReturnsAst(stmt)
-  } else if (t.isReturnStatement(node)) {
-    const arg = node.argument
-    if (arg == null) return
-    const isJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
-    const isJsxCall =
-      t.isCallExpression(arg) &&
-      t.isIdentifier(arg.callee) &&
-      /^_?jsx/.test(arg.callee.name)
-    const isNull = t.isNullLiteral(arg)
-    if (isJsx || isJsxCall || isNull) {
-      node.argument = t.arrowFunctionExpression([], arg)
-    }
-  } else if (t.isIfStatement(node)) {
-    wrapEarlyReturnsAst(node.consequent)
-    if (node.alternate) wrapEarlyReturnsAst(node.alternate)
-  } else if (
-    t.isForStatement(node) ||
-    t.isForInStatement(node) ||
-    t.isForOfStatement(node) ||
-    t.isWhileStatement(node) ||
-    t.isDoWhileStatement(node)
-  ) {
-    wrapEarlyReturnsAst(node.body)
-  } else if (t.isSwitchStatement(node)) {
-    for (const c of node.cases) {
-      for (const s of c.consequent) wrapEarlyReturnsAst(s)
-    }
-  } else if (t.isTryStatement(node)) {
-    wrapEarlyReturnsAst(node.block)
-    if (node.handler) wrapEarlyReturnsAst(node.handler.body)
-    if (node.finalizer) wrapEarlyReturnsAst(node.finalizer)
-  } else if (t.isLabeledStatement(node)) {
-    wrapEarlyReturnsAst(node.body)
-  }
-  // 嵌套函数节点：FunctionDeclaration / FunctionExpression / ArrowFunction
-  // 不进入（它们有自己的 return 语义，由递归包装处理）
 }
