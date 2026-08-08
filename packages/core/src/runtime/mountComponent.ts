@@ -104,7 +104,7 @@ export function mountComponent(vnode: any, container: Element | null) {
   //   组件对象    =》 () => 组件 vnode（嵌套组件：__setup 返回 defineComponent）
   //   vnode       =》 () => vnode
   //   其他        =》 () => null
-  instance.render = normalizeSetupResult(setupResult)
+  instance.render = normalizeSetupResult(setupResult, props)
 
   // 更新函数：重新 render 并与旧子树 patch
   const update = () => {
@@ -183,17 +183,20 @@ const FragmentTag = Symbol.for('react.fragment')
  * Babel 插件把 setup 风格的渲染函数包成 defineComponent（嵌套组件）后，
  * __setup 返回的是组件对象而非函数——这里统一处理。
  */
-function normalizeSetupResult(result: any): () => any {
+function normalizeSetupResult(result: any, props: any): () => any {
   if (typeof result === 'function') return result
   if (result != null && typeof result === 'object') {
-    // 组件对象（defineComponent 产物）：包成组件 vnode 渲染（嵌套组件）
+    // 组件对象（defineComponent 产物）：包成组件 vnode 渲染（嵌套组件）。
+    // 透传外层 props（内层 innerProps 可收到；外层 props 变化 =》 patchComponent
+    // 更新内层）——嵌套组件 = 外层渲染实现，接收同一份 props（用户场景内层
+    // 也可用闭包 + 响应式取数）
     if (typeof result.__setup === 'function') {
       return () => ({
         $$typeof: Symbol.for('react.element'),
         type: result,
         key: null,
         ref: null,
-        props: {},
+        props: { ...props },
       })
     }
     // vnode：直接渲染

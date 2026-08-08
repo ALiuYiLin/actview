@@ -2002,4 +2002,23 @@ describe('场景 30：嵌套组件（__setup 返回 defineComponent）', () => {
     const host = mount('#s30c', Comp)
     expect(host.querySelector('.direct')?.textContent).toBe('direct')
   })
+
+  it('嵌套组件透传外层 props：innerProps 收到值 + props 更新触发内层重渲染', async () => {
+    const state = reactive({ label: 'a' })
+    const Comp = defineComponent((props: any) => {
+      // 模拟插件产物：渲染函数带参（innerProps）+ 内部 setup
+      return defineComponent((innerProps: any) => {
+        return () => <p class="inner">{innerProps.label}</p>
+      })
+    })
+    function App() {
+      return <Comp label={state.label} />
+    }
+    const host = mount('#s30d', App)
+    expect(host.querySelector('.inner')!.textContent).toBe('a')
+
+    state.label = 'b'
+    await nextTick()
+    expect(host.querySelector('.inner')!.textContent).toBe('b')
+  })
 })
