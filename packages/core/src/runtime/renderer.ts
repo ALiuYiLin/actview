@@ -86,6 +86,10 @@ export function patch(
     unmount(oldVnode)
     return
   }
+  // 同一对象短路：组件未重渲染时缓存 subTree 被当 newVnode 继续 patch（自我
+  // patch）。若不短路，keyed diff 会对同一 vnode 执行 mount+unmount，
+  // mountVNode 无条件重建覆盖 vnode.el =》 旧 DOM 残留累积（语言切换 .title +1）
+  if (oldVnode === newVnode) return
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
     patchVNode(oldVnode, newVnode, container, index)
@@ -360,13 +364,18 @@ function patchKeyedChildren(
       // 又含 keyed 节点，内层 patchKeyedChildren 的 insertBefore(container=null)
       // 会 TypeError（子树丢失）。挂到 container 后元素已在容器内，第 5 步
       // insertBefore 仅调整顺序（参照 Vue：新增节点直接 patch 到真实 container）
+      //
+      // 同一对象短路（缓存 subTree 自我 patch）：newVNode 已在 oldList 中（同一
+      // 对象），DOM 已挂载——若 mountVNode 会无条件重建覆盖 vnode.el =》 旧 DOM
+      // 残留累积。跳过 mount，位置由第 5 步 insertBefore 调整。
+      if (oldList.includes(newVNode)) continue
       mountVNode(newVNode, container)
     }
   }
 
-  // 3. 卸载未被复用的旧节点
+  // 3. 卸载未被复用的旧节点（同一对象已在 newList 中 =》 不卸载，防自我 patch 误删）
   oldList.forEach((oldVNode, i) => {
-    if (oldVNode && !source.includes(i + 1)) {
+    if (oldVNode && !source.includes(i + 1) && !newList.includes(oldVNode)) {
       unmount(oldVNode, container, i)
     }
   })

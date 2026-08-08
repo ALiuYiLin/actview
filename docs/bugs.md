@@ -143,10 +143,13 @@
 - 数组 identity 方法（`indexOf`/`includes` 对 reactive 元素的 toRaw 比较）
 - ref 在 reactive 嵌套中的自动解包（Vue 3 有，我们无）
 
-### 6. 🐛 未修复 — 混合列表多次连续渲染 DOM 累积（BUG-002，真实浏览器，待可复现用例）
+### 6. ✅ 已修复 — 混合列表多次连续渲染 DOM 累积（BUG-002，同一对象自我 patch）
 
-- **场景**：`VPNavBarExtra` 语言切换（en↔zh），`.group.translations` 的 children `[p(无 key), VPMenuLink(有 key)]` 连续多次重渲染时 `<p class="trans-title">` 净增 1 个。
-- **根因**（已定位）：语言切换触发多次独立渲染（route.data/localeIndex/site 响应式分批更新，真实浏览器异步调度）。keyed diff 对无 key 的 p 执行 mount 新 + unmount 旧；多次渲染间 **vnode.el 与实际 DOM 脱节**，`unmount` 的 `removeChild(vnode.el)` 移除的不是实际残留节点（el 已不在 DOM 时 removeChild 落空）→ 旧节点残留 + 新节点追加。
-- **happy-dom 不复现**：同步 flush 合并渲染，无中间脱节状态（已用「手动多次 patch + el 一致性断言」验证同步路径正确）。
-- **尝试的防御已回退**：unmount 的 `childNodes[index]` 兜底（el 无效时）未真正解决（真实浏览器验证 bug 仍存在），且 happy-dom 无法复现无法验证——按用户决定**回退代码，等待可复现用例后再修**（提交 3fd3792 的 BUG-002 部分已回退，仅保留 BUG-001 修复）。
-- **下一步**：编写真实浏览器（playwright）可复现用例，追踪真实调度下 vnode.el 脱节的产生点（insertBefore 移动/组件 children 透传路径）。
+- **场景**：语言切换（en↔zh），children `[p(无 key), link(有 key)]` 连续多次重渲染时无 key `<p>` 净增 1 个。
+- **根因**（最终定位）：组件未重渲染时（isSameProps true），patch 链把**缓存 subTree 作为 newVnode** 继续传给下层——同一容器连续 patch 时 `newList[0] === oldList[0]`（同一 vnode 对象）。keyed diff 对无 key 节点走 `mountVNode(newVNode, container)`——mountVNode **无条件重建**（`document.createElement` 覆盖 `vnode.el`，旧 el 残留）→ 卸载阶段 `unmount(oldVNode)`（同一对象）删的是被覆盖的新 el → **旧 DOM 残留累积**。有 key 节点走 keyed 匹配 patch（不 mount+unmount）→ 不累积。
+- **修复**（renderer.ts）：
+  - `patch()` 顶层短路：`if (oldVnode === newVnode) return`（同一对象自我 patch 直接跳过）
+  - keyed diff 第一轮无 key 节点：`if (oldList.includes(newVNode)) continue`（同一对象已在 DOM，跳过 mount，位置由插入阶段调整）
+  - 卸载阶段：`!newList.includes(oldVNode)`（同一对象在新列表 =》 不卸载，防误删）
+- **验证**：verify 场景 31（同一对象自我 patch 连续 4 次 title 恒 1 / 对照新对象 / 顶层短路）。
+- **前置**：早期 happy-dom 单组件测试不复现（只 patch 一次）；手动驱动「同一容器连续 patch 多次 + newVnode===oldVnode」可复现（已用于验证修复）。

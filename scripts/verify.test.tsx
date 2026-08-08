@@ -6,6 +6,8 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { jsx } from '@actview/jsx'
+import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
 import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
@@ -1967,4 +1969,62 @@ describe('场景 28：renderToString 生命周期上下文', () => {
     warn.mockRestore()
   })
 
+})
+
+// ------------------------------------------------------------
+// 场景 31：同一对象自我 patch（缓存 subTree 场景）不累积
+// ------------------------------------------------------------
+describe('场景 31：同一对象自我 patch 短路（语言切换 title 不累积）', () => {
+  it('children [无key p(同一对象), keyed a] 连续 4 次自我 patch：title 恒 1', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    // 模拟组件缓存 subTree：children 里的 p 是同一 vnode 对象被多次 patch 复用
+    const cachedP = jsx('p', { class: 'title', children: 'en' })
+    const makeTree = () =>
+      jsx('div', { children: [cachedP, jsx('a', { key: 'l' }, 'link')] })
+
+    let old = makeTree()
+    patch(null, old, container)
+    const titles = () => container.querySelectorAll('.title').length
+    const links = () => container.querySelectorAll('a').length
+    expect(titles()).toBe(1)
+
+    for (let i = 0; i < 4; i++) {
+      const next = makeTree()
+      patch(old, next, container)
+      old = next
+      expect(titles()).toBe(1) // 无 key p 不累积
+      expect(links()).toBe(1) // 有 key a 不累积
+    }
+  })
+
+  it('对照：非同一对象（正常新渲染）也正常', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const makeTree = () =>
+      jsx('div', {
+        children: [
+          jsx('p', { class: 'title', children: 'en' }),
+          jsx('a', { key: 'l' }, 'link'),
+        ],
+      })
+    let old = makeTree()
+    patch(null, old, container)
+    for (let i = 0; i < 4; i++) {
+      const next = makeTree() // 每次全新对象（正常渲染）
+      patch(old, next, container)
+      old = next
+      expect(container.querySelectorAll('.title').length).toBe(1)
+    }
+  })
+
+  it('patch(old, new) 同对象顶层短路：DOM 不变', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const tree = jsx('div', { children: [jsx('p', { class: 'x' }, 'x')] })
+    patch(null, tree, container)
+    expect(container.querySelectorAll('.x').length).toBe(1)
+    patch(tree, tree, container) // 同一对象自我 patch
+    expect(container.querySelectorAll('.x').length).toBe(1)
+  })
 })
