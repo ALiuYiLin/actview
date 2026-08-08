@@ -106,7 +106,8 @@ function normalizeSetupResult(result, props) {
    - **props 透传**：内层 `innerProps` 收到外层 props（外层 props 变化会更新内层）
    - **闭包 + 响应式**：内层渲染函数读外层 ref/reactive → 自动响应更新
 2. **非响应式局部变量是快照**：外层 `setup` 只执行一次，`const n = 1` 是挂载时的值；需要动态 → 用 ref/reactive
-3. **浅嵌套约定**：递归包装每层都包一层 defineComponent——**深层嵌套（>2 层）不推荐**（每层多一个组件实例开销）；设计上每层独立组件能力可用
+3. **条件渲染放 render**：响应式条件判断（`if (!x) return null`）必须写在**渲染函数内**（无参渲染函数）——写在内部 `__setup` 阶段是反模式（setup 只执行一次 =》 固化不更新；新插件不产出该形态，手写需避免）
+4. **浅嵌套约定**：递归包装每层都包一层 defineComponent——**深层嵌套（>2 层）不推荐**（每层多一个组件实例开销）；设计上每层独立组件能力可用
 
 ### 已验证行为（verify 场景 30）
 
