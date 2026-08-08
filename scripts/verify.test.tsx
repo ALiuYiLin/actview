@@ -2054,4 +2054,28 @@ describe('场景 30：嵌套组件（__setup 返回 defineComponent）', () => {
     await nextTick()
     expect(host.querySelector('.inner')!.textContent).toBe('b')
   })
+
+  it('VPSidebar 回归：无参渲染函数早退 return null 响应式正确（不固化）', async () => {
+    // 插件产物：内部组件 __setup 返回渲染函数（render 语义），早退 null 留在 render
+    const state = reactive({ hasSidebar: false })
+    const Comp = defineComponent(() => {
+      return defineComponent(() => {
+        return function () {
+          if (!state.hasSidebar) return null
+          return <aside class="sb">SIDEBAR</aside>
+        }
+      })
+    })
+    const host = mount('#s30e', Comp)
+    expect(host.querySelector('.sb')).toBeNull() // hasSidebar=false =》 不渲染
+
+    state.hasSidebar = true
+    await nextTick()
+    // 响应式读取在 render effect 内 =》 变化触发重渲染 =》 sidebar 出现
+    expect(host.querySelector('.sb')?.textContent).toBe('SIDEBAR')
+
+    state.hasSidebar = false
+    await nextTick()
+    expect(host.querySelector('.sb')).toBeNull()
+  })
 })
