@@ -11,7 +11,9 @@
 function A() {
   return <div>hi</div>
 }
-// 编译后：const A = defineComponent(function () { return () => <div>hi</div> })
+// 编译后：
+
+const A = defineComponent(function () { return () => <div>hi</div> })
 
 // 形态 2：return 渲染函数（setup 风格组件）——原样保留
 function B(props) {
@@ -25,20 +27,126 @@ function B(props) {
 
 ## 会被自动转换的代码（所有场景）
 
-| # | 写法 | 示例 | 说明 |
-|---|---|---|---|
-| 1 | **function 声明（简写）** | `function A() { return <div/> }` | 首字母大写 + 最后 return JSX |
-| 2 | **function 声明（setup 风格）** | `function B() { ...; return function() { return <div/> } }` | 最后 return **渲染函数**（函数表达式/箭头函数） |
-| 3 | **function 声明（return null 结尾）** | `function C() { if (x) return <div/>; return null }` | 条件渲染合法收尾，`return null` → `() => null` |
-| 4 | **函数表达式** | `const D = function (props) { return <p/> }` | 大写变量名 + 函数表达式 |
-| 5 | **箭头函数（expression body）** | `const E = () => <span/>` | `() => <JSX>` → `() => { return () => <JSX> }` |
-| 6 | **箭头函数（block body + setup 风格）** | `const F = () => { ...; return function() { return <i/> } }` | 同场景 2 |
-| 7 | **export default 箭头/函数** | `export default () => <div/>` | 默认导出，无命名也转换 |
-| 8 | **export default 匿名函数** | `export default function () { return <div/> }` | 匿名函数声明 |
-| 9 | **早退 return JSX / null** | `if (cond) return <div/>` / `return null` | 函数体**任意位置**的直接 return JSX/null 都包成 render 函数 |
-| 10 | **JSX 已降级为 `_jsx()` 调用** | `return _jsx('div', {...})` | rolldown/esbuild 先转换时（`_jsx` / `_jsxs` / `jsx`） |
-| 11 | **嵌套子组件** | `function App() { function Child() { return <span/> } return <Child/> }` | 子组件函数被各自的 visitor 转换，父的早退遍历不误包子 return |
-| 12 | **具名插槽** | `<Panel><template slot="h">H</template></Panel>` | 编译期提取为 `slots` prop（含箭头 expression body 组件内） |
+### 1. function 声明（简写：最后 return JSX）
+
+```tsx
+function A() { return <div>hi</div> }
+```
+```js
+const A = defineComponent(function () { return () => <div>hi</div> })
+```
+
+### 2. function 声明（setup 风格：最后 return 渲染函数）
+
+```tsx
+function B(props) {
+  const n = useSomething()
+  return function () { return <div>{n}</div> }
+}
+```
+```js
+const B = defineComponent(function (props) {
+  const n = useSomething()
+  return function () { return <div>{n}</div> }   // 渲染函数原样保留（直接 return JSX）
+})
+```
+
+### 3. function 声明（return null 结尾）
+
+```tsx
+function C() { if (x) return <div/>; return null }
+```
+```js
+const C = defineComponent(function () { if (x) return () => <div/>; return () => null })
+```
+
+### 4. 函数表达式（const X = function）
+
+```tsx
+const D = function (props) { return <p>{props.a}</p> }
+```
+```js
+const D = defineComponent(function (props) { return () => <p>{props.a}</p> })
+```
+
+### 5. 箭头函数（expression body：() => JSX）
+
+```tsx
+const E = () => <span>e</span>
+```
+```js
+const E = defineComponent(() => { return () => <span>e</span> })
+```
+
+### 6. 箭头函数（block body + setup 风格）
+
+```tsx
+const F = () => { const n = 1; return function () { return <i>{n}</i> } }
+```
+```js
+const F = defineComponent(() => {
+  const n = 1
+  return function () { return <i>{n}</i> }
+})
+```
+
+### 7. export default 箭头 / 函数组件
+
+```tsx
+export default () => <div>def</div>
+```
+```js
+export default defineComponent(() => { return () => <div>def</div> })
+```
+
+### 8. export default 匿名函数
+
+```tsx
+export default function () { return <div>anon</div> }
+```
+```js
+export default defineComponent(function () { return () => <div>anon</div> })
+```
+
+### 9. 早退 return JSX / null（函数体任意位置）
+
+```tsx
+function F(props) { if (props.show) return <div>y</div>; return null }
+```
+```js
+const F = defineComponent(function (props) {
+  if (props.show) return () => <div>y</div>
+  return () => null
+})
+```
+
+### 10. JSX 已降级为 `_jsx()` 调用（rolldown/esbuild 先转换）
+
+```tsx
+const E2 = function (p) { return _jsx('div', { children: p.x }) }
+```
+```js
+const E2 = defineComponent(function (p) { return () => _jsx('div', { children: p.x }) })
+```
+
+### 11. 嵌套子组件（父组件体内的子组件函数也被转换）
+
+```tsx
+function App() { function Child() { return <span/> } return <Child/> }
+```
+```js
+const App = defineComponent(function () { ... return () => <Child/> })
+const Child = defineComponent(function () { return () => <span/> })
+```
+
+### 12. 具名插槽（编译期提取为 slots prop）
+
+```tsx
+const Card = () => <Panel><template slot="h">H</template><i>body</i></Panel>
+```
+```js
+const Card = defineComponent(() => { return () => <Panel slots={{ h: () => <>H</> }}><i>body</i></Panel> })
+```
 
 ## 不会被转换的代码
 
