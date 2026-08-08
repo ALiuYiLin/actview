@@ -27,16 +27,14 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toMatch(/import \{ defineComponent \} from "@actview\/core"/)
   })
 
-  it('缺陷 1：setup 风格 —— 最后 return 渲染函数也转换（return 函数原样保留）', () => {
+  it('缺陷 1：setup 风格 —— 最后 return 渲染函数嵌套包装为 defineComponent', () => {
     const out = transform(
       `function B(props) { const n = 1; return function() { return <div>{n}</div> } }`,
     )
     expect(out).toContain('const B = defineComponent(function (props) {')
-    // setup 直接返回渲染函数（不再包一层箭头函数）
-    expect(out).toContain('return function () {')
-    expect(out).toContain('return <div>{n}</div>')
-    // 没有出现「return () => function」的二次包装
-    expect(out).not.toContain('return () => function')
+    // 渲染函数被嵌套包装为内部组件（__setup 返回组件对象 =》 mountComponent 嵌套处理）
+    expect(out).toContain('return defineComponent(function () {')
+    expect(out).toContain('return () => <div>{n}</div>')
   })
 
   it('缺陷 2：函数表达式组件 const X = function(props) {...} → defineComponent', () => {
@@ -51,13 +49,13 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toContain('return () => <span>d</span>')
   })
 
-  it('缺陷 2 + 缺陷 1：箭头函数 block body + setup 风格', () => {
+  it('缺陷 2 + 缺陷 1：箭头函数 block body + setup 风格（嵌套 defineComponent）', () => {
     const out = transform(
       `const E = () => { const x = 1; return function() { return <i>{x}</i> } }`,
     )
     expect(out).toContain('const E = defineComponent(() => {')
-    expect(out).toContain('return function () {')
-    expect(out).toContain('return <i>{x}</i>')
+    expect(out).toContain('return defineComponent(function () {')
+    expect(out).toContain('return () => <i>{x}</i>')
   })
 
   it('早退 return JSX / null 包成 render 函数', () => {

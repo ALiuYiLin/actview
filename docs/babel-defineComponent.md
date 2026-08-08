@@ -47,7 +47,7 @@ function B(props) {
 ```js
 const B = defineComponent(function (props) {
   const n = useSomething()
-  return function () { return <div>{n}</div> }   // 渲染函数原样保留（直接 return JSX）
+  return defineComponent(function () { return () => <div>{n}</div> })  // 渲染函数嵌套包装为内部组件
 })
 ```
 
@@ -86,7 +86,7 @@ const F = () => { const n = 1; return function () { return <i>{n}</i> } }
 ```js
 const F = defineComponent(() => {
   const n = 1
-  return function () { return <i>{n}</i> }
+  return defineComponent(function () { return () => <i>{n}</i> })
 })
 ```
 

@@ -273,8 +273,13 @@ function wrapComponentFn(fn: any): any | null {
   } else if (isNullRet) {
     // return null → return () => null（渲染空）
     last.argument = t.arrowFunctionExpression([], t.nullLiteral())
+  } else if (isRenderFn) {
+    // 渲染函数 → 递归包装为内部组件（嵌套 defineComponent）：
+    // __setup 返回组件对象 =》 mountComponent 嵌套处理（normalizeSetupResult）
+    const inner = wrapComponentFn(ret)
+    if (inner) last.argument = inner
+    // 非组件形态的渲染函数（如 return function(){ return 1 }）原样保留
   }
-  // isRenderFn：原样保留（__setup 直接返回渲染函数是合法形态）
 
   return t.callExpression(t.identifier('defineComponent'), [fn])
 }

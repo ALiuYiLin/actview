@@ -1967,3 +1967,39 @@ describe('场景 28：renderToString 生命周期上下文', () => {
     warn.mockRestore()
   })
 })
+
+// ------------------------------------------------------------
+// 场景 30：__setup 返回组件对象（嵌套组件 / setup 风格产物）
+// ------------------------------------------------------------
+describe('场景 30：嵌套组件（__setup 返回 defineComponent）', () => {
+  it('setup 风格：__setup 返回内部组件对象 =》 嵌套渲染', () => {
+    const Comp = defineComponent(() => {
+      const n = 1
+      // 渲染函数被包成内部组件（Babel 产物形态）
+      return defineComponent(() => () => <p class="nest">nested-{n}</p>)
+    })
+    const host = mount('#s30a', Comp)
+    const p = host.querySelector('.nest')
+    expect(p).not.toBeNull()
+    expect(p!.textContent).toBe('nested-1')
+  })
+
+  it('多层嵌套：三层组件链正常渲染', () => {
+    const Level3 = defineComponent(() => () => <b class="l3">L3</b>)
+    const Level2 = defineComponent(() => {
+      return defineComponent(() => () => <i class="l2">L2<Level3 /></i>)
+    })
+    const Level1 = defineComponent(() => {
+      return defineComponent(() => () => <span class="l1">L1<Level2 /></span>)
+    })
+    const host = mount('#s30b', Level1)
+    expect(host.querySelector('.l3')?.textContent).toBe('L3')
+    expect(host.textContent).toBe('L1L2L3')
+  })
+
+  it('__setup 直接返回 vnode（非函数非组件对象）也能渲染', () => {
+    const Comp = defineComponent(() => <em class="direct">direct</em> as any)
+    const host = mount('#s30c', Comp)
+    expect(host.querySelector('.direct')?.textContent).toBe('direct')
+  })
+})
