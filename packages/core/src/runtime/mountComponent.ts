@@ -183,7 +183,7 @@ const FragmentTag = Symbol.for('react.fragment')
  * Babel 插件把 setup 风格的渲染函数包成 defineComponent（嵌套组件）后，
  * __setup 返回的是组件对象而非函数——这里统一处理。
  */
-function normalizeSetupResult(result: any, props: any): () => any {
+export function normalizeSetupResult(result: any, props: any): () => any {
   if (typeof result === 'function') return result
   if (result != null && typeof result === 'object') {
     // 组件对象（defineComponent 产物）：包成组件 vnode 渲染（嵌套组件）。

@@ -1966,6 +1966,39 @@ describe('场景 28：renderToString 生命周期上下文', () => {
     expect(mountedRan).toBe(false)
     warn.mockRestore()
   })
+
+  it('SSR 支持 __setup 返回组件对象（嵌套组件）——不再白屏', () => {
+    // 模拟插件 1.0.8 产物：setup 风格组件的 __setup 返回内部 defineComponent 对象
+    const Comp = defineComponent((props: any) => {
+      return defineComponent((innerProps: any) => {
+        return () => (
+          <div class="ssr-nest">
+            <p>{innerProps.label}</p>
+          </div>
+        )
+      })
+    })
+    const html = renderToString(<Comp label="nested" />)
+    expect(html).toContain('<div class="ssr-nest">')
+    expect(html).toContain('<p>nested</p>') // props 透传生效
+    // 不再渲染空字符串
+    expect(html.length).toBeGreaterThan(0)
+  })
+
+  it('SSR 多层嵌套组件链正常序列化', () => {
+    const L3 = defineComponent(() => () => <b class="ssr-l3">L3</b>)
+    const L2 = defineComponent(() => {
+      return defineComponent(() => () => <i class="ssr-l2">L2<L3 /></i>)
+    })
+    const L1 = defineComponent(() => {
+      return defineComponent(() => () => <span class="ssr-l1">L1<L2 /></span>)
+    })
+    const html = renderToString(<L1 />)
+    expect(html).toContain('<span class="ssr-l1">L1')
+    expect(html).toContain('<i class="ssr-l2">L2')
+    expect(html).toContain('<b class="ssr-l3">L3')
+    expect(html).toContain('</span>')
+  })
 })
 
 // ------------------------------------------------------------
