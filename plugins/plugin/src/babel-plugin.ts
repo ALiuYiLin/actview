@@ -151,63 +151,155 @@ export default function defineComponentPlugin() {
         // 首字母大写才是组件
         if (!/^[A-Z]/.test(name)) return
 
-        // ---------- 2. 找 return ----------
-        const body = node.body.body
-        const last = body[body.length - 1]
-        if (!t.isReturnStatement(last)) return
-        const ret = last.argument
-        // 显式非空收窄（isJsx/isJsxCall 是 boolean 变量，不提供类型守卫，
-        // 后续 arrowFunctionExpression/functionExpression 需要非空 Expression）
-        if (ret == null) return
-        const isJsx = t.isJSXElement(ret) || t.isJSXFragment(ret)
-        // esbuild/rolldown automatic runtime 已把 JSX 转成 _jsx()/_jsxs() 调用
-        // （rolldown-vite 的 rust 转换先于 enforce:'pre' 插件执行时，Babel 收到
-        //   的是转换后代码；同样视为组件，包裹 defineComponent）
-        const isJsxCall =
-          t.isCallExpression(ret) &&
-          t.isIdentifier(ret.callee) &&
-          /^_?jsx/.test(ret.callee.name)
-        if (!isJsx && !isJsxCall) return
+        // ---------- 2. 包装为 defineComponent（含 setup 风格 / 具名插槽） ----------
+        const fn = t.functionExpression(null, node.params, node.body, false, false)
+        const call = wrapComponentFn(fn)
+        if (!call) return
 
         hasTransformed = true
+        // 函数体内早退 return JSX/null → 包成 render 函数（替换前遍历原 path）
+        wrapEarlyReturns(path)
 
-        // ---------- 2.5 具名插槽转换（提取 <template slot="x"> → slots prop） ----------
-        // 仅对源码 JSX 生效；已转换的 _jsx() 调用中无 JSX 节点可提取
-        if (isJsx) walkJSX(last.argument)
+        // ---------- 3. const X = defineComponent(...) ----------
+        path.replaceWith(
+          t.variableDeclaration('const', [
+            t.variableDeclarator(node.id, call),
+          ]),
+        )
+      },
+      // 缺陷 2 修复：函数表达式 / 箭头函数组件
+      //   const X = function (props) {...}
+      //   const X = (props) => <JSX>  /  (props) => { ...; return function(){...} }
+      VariableDeclarator(path: any) {
+        const node = path.node
+        const id = node.id
+        if (!t.isIdentifier(id) || !/^[A-Z]/.test(id.name)) return
+        const init = node.init
+        const isFn =
+          t.isFunctionExpression(init) || t.isArrowFunctionExpression(init)
+        if (!isFn) return
+        // 手动 defineComponent 包装的跳过（init 是 call，非函数）
+        const call = wrapComponentFn(init)
+        if (!call) return
 
-        // ---------- 3. 所有 return JSX/JSXCall/null 的语句 → return () => ... ----------
-        // 早退 return（`if (cond) return null` / `return <JSX/>`，可能在 if/switch/
-        // 循环内部）也必须包成 render 函数，否则 __setup() 早退返回非函数 →
-        // instance.render is not a function。仅处理组件函数体自身的 return
-        //（排除嵌套函数，子组件由各自的 FunctionDeclaration visitor 处理）。
-        path.traverse({
-          ReturnStatement(innerPath: any) {
-            if (innerPath.getFunctionParent() !== path) return
-            const arg = innerPath.node.argument
-            if (arg == null) return
-            const isStmtJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
-            const isStmtJsxCall =
-              t.isCallExpression(arg) &&
-              t.isIdentifier(arg.callee) &&
-              /^_?jsx/.test(arg.callee.name)
-            const isStmtNull = t.isNullLiteral(arg)
-            if (isStmtJsx || isStmtJsxCall || isStmtNull) {
-              innerPath.node.argument = t.arrowFunctionExpression([], arg)
-            }
-          }
-        })
+        hasTransformed = true
+        const initPath = path.get('init')
+        wrapEarlyReturns(initPath)
 
-        // ---------- 4. defineComponent(function(){}) ----------
-        const func = t.functionExpression(null, node.params, node.body, false, false)
-        const call = t.callExpression(t.identifier('defineComponent'), [func])
+        node.init = call
+      },
+      // 顺带支持：export default (props) => <JSX>（默认导出箭头/函数/匿名函数组件）
+      ExportDefaultDeclaration(path: any) {
+        const decl = path.node.declaration
+        const isFn =
+          t.isFunctionExpression(decl) ||
+          t.isArrowFunctionExpression(decl) ||
+          // export default function() {...}（匿名函数声明）
+          t.isFunctionDeclaration(decl)
+        if (!isFn) return
+        // FunctionDeclaration 不是 Expression（CallExpression 参数类型不符），
+        // 转成 FunctionExpression 再包装（共享 body，wrapComponentFn 改动生效）
+        const fn = t.isFunctionDeclaration(decl)
+          ? t.functionExpression(null, decl.params, decl.body, false, false)
+          : decl
+        const call = wrapComponentFn(fn)
+        if (!call) return
 
-        // ---------- 5. const X = defineComponent(...) ----------
-        const declaration = t.variableDeclaration('const', [
-          t.variableDeclarator(node.id, call),
-        ])
+        hasTransformed = true
+        const declPath = path.get('declaration')
+        wrapEarlyReturns(declPath)
 
-        path.replaceWith(declaration)
+        path.node.declaration = call
       },
     },
   }
+}
+
+/**
+ * 判断并包装组件函数，返回 defineComponent(...) 调用节点；非组件返回 null。
+ * 支持的组件函数形态（__setup 契约）：
+ *   1. 直接 return JSX（简写）：function X() { return <JSX/> }
+ *   2. 直接 return _jsx(...)（JSX 已被 rolldown/esbuild 降级）
+ *   3. return 渲染函数（setup 风格）：function X() { ...; return function() { return <JSX/> } }
+ * 处理：
+ *   - 形态 1/2：最后 return 包成 () => <JSX>（__setup 返回 render 函数）
+ *   - 形态 3：原样保留（__setup 直接返回渲染函数是合法形态）
+ *   - 箭头函数 expression body（() => <JSX>）：包成 { return () => <JSX> }
+ *   - 具名插槽提取：仅源码 JSX 形态（含 expression body）
+ */
+function wrapComponentFn(fn: any): any | null {
+  const body = fn.body
+  const isExprBody = !t.isBlockStatement(body)
+  let last: any = null
+  let ret: any
+  if (isExprBody) {
+    // 箭头函数 expression body：body 就是返回值
+    ret = body
+  } else {
+    const stmts = body.body
+    if (stmts.length === 0) return null
+    last = stmts[stmts.length - 1]
+    if (!t.isReturnStatement(last)) return null
+    ret = last.argument
+    if (ret == null) return null
+  }
+
+  const isJsx = t.isJSXElement(ret) || t.isJSXFragment(ret)
+  // esbuild/rolldown automatic runtime 已把 JSX 转成 _jsx()/_jsxs() 调用
+  // （rolldown-vite 的 rust 转换先于 enforce:'pre' 插件执行时，Babel 收到
+  //   的是转换后代码；同样视为组件，包裹 defineComponent）
+  const isJsxCall =
+    t.isCallExpression(ret) && t.isIdentifier(ret.callee) && /^_?jsx/.test(ret.callee.name)
+  // 缺陷 1 修复：setup 风格 —— 最后 return 渲染函数（函数表达式/箭头函数）
+  const isRenderFn =
+    t.isFunctionExpression(ret) || t.isArrowFunctionExpression(ret)
+  // 结尾 return null：条件渲染组件（`if (c) return <JSX/>; return null`）
+  // 的合法收尾，__setup 返回 () => null 渲染空（与早退 return null 一致）
+  const isNullRet = t.isNullLiteral(ret)
+  if (!isJsx && !isJsxCall && !isRenderFn && !isNullRet) return null
+
+  // 具名插槽转换（提取 <template slot="x"> → slots prop）——
+  // 仅对源码 JSX 生效（含箭头 expression body；已转换的 _jsx() 调用中无 JSX 节点）
+  if (isJsx) walkJSX(ret)
+
+  // return JSX → return () => JSX（__setup 返回 render 函数）
+  if (isExprBody) {
+    // () => <JSX>  →  () => { return () => <JSX> }
+    fn.body = t.blockStatement([
+      t.returnStatement(t.arrowFunctionExpression([], ret)),
+    ])
+  } else if (isJsx || isJsxCall) {
+    last.argument = t.arrowFunctionExpression([], ret)
+  } else if (isNullRet) {
+    // return null → return () => null（渲染空）
+    last.argument = t.arrowFunctionExpression([], t.nullLiteral())
+  }
+  // isRenderFn：原样保留（__setup 直接返回渲染函数是合法形态）
+
+  return t.callExpression(t.identifier('defineComponent'), [fn])
+}
+
+/**
+ * 把组件函数体内所有「直接 return JSX / _jsx() / null」的语句包成 render 函数
+ * （早退 return，可能在 if/switch/循环内部）——否则 __setup() 早退返回
+ * 非函数 =》 instance.render is not a function。仅处理函数体自身的 return
+ * （排除嵌套函数，子组件由各自的 visitor 处理）。
+ */
+function wrapEarlyReturns(fnPath: any) {
+  fnPath.traverse({
+    ReturnStatement(innerPath: any) {
+      if (innerPath.getFunctionParent() !== fnPath) return
+      const arg = innerPath.node.argument
+      if (arg == null) return
+      const isStmtJsx = t.isJSXElement(arg) || t.isJSXFragment(arg)
+      const isStmtJsxCall =
+        t.isCallExpression(arg) &&
+        t.isIdentifier(arg.callee) &&
+        /^_?jsx/.test(arg.callee.name)
+      const isStmtNull = t.isNullLiteral(arg)
+      if (isStmtJsx || isStmtJsxCall || isStmtNull) {
+        innerPath.node.argument = t.arrowFunctionExpression([], arg)
+      }
+    },
+  })
 }
