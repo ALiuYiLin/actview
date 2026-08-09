@@ -124,7 +124,13 @@ function serializeNode(node: any): string {
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
-      render = typeof setup === 'function' ? setup(props ?? {}) : type(props ?? {})
+      // 阶段 2：options 形态 setup(props, ctx)——SSR 无 attrs fallthrough
+      // （与运行时 mergeAttrsToRoot 不同），传空 attrs 避免 ctx.attrs 崩溃
+      const ctx = { attrs: {} as Record<string, any> }
+      render =
+        typeof setup === 'function'
+          ? setup(props ?? {}, ctx)
+          : type(props ?? {})
     } finally {
       setCurrentInstance(null)
     }

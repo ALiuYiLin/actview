@@ -1,0 +1,48 @@
+/* ============================================================
+   ⑫ attribute fallthrough + scoped 跨文件继承（scoped）
+   选择器由 @actview/plugin-scoped 自动追加 [data-v-<hash>]
+   ============================================================ */
+
+.panel-demo {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #ffffff;
+}
+
+.panel-body {
+  margin-top: 8px;
+  color: #475569;
+}
+
+.box-demo {
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #eff6ff;
+}
+
+.box-note {
+  margin-left: 12px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.hint {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* 跨文件继承：.child-skin 命中 FallthroughChild 的根元素
+   （根元素继承本文件 data-v-hash，class 透传后选择器可命中） */
+.child-skin {
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+/* 子组件内部元素（独立文件、不带本文件 hash）需 :deep 才能命中 */
+.child-skin :deep(strong) {
+  color: #b45309;
+}

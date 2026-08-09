@@ -99,7 +99,7 @@ import './x.css?scoped'   ──►   Babel 注入 data-v-xxxx   ──►   <di
 | `@keyframes spin` | `@keyframes spin-h` | keyframes 重命名，`animation` 引用同步改写 |
 
 - **多个 `?scoped` import**：注入多个 hash，每个 css 文件独立作用域。
-- **跨文件组件**（如 `RouterLink` 渲染的 `<a>` 定义在 `@actview/router`）：目标元素不带本文件 hash，需用 `:deep()` 命中，例如 `.app nav :deep(a) { ... }`。
+- **跨文件组件 root**：父组件透传到子组件根的 attrs（含 scoped 的 `data-v-*`）经运行时 fallthrough 自动继承到子组件 root（对齐 Vue「子 root 带父 scopeId」，多级嵌套逐级累积）——父的 `.classC[data-v-父]` 能命中透传 class 的子 root；**深入子组件内部元素**仍需 `:deep()`，例如 `.app nav :deep(a) { ... }`。
 
 ## API
 

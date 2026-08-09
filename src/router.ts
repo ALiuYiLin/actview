@@ -11,6 +11,7 @@ import { LifecyclePage } from "./pages/LifecyclePage";
 import { DynamicPage } from "./pages/DynamicPage";
 import { AsyncPage } from "./pages/AsyncPage";
 import { IconPage } from "./pages/IconPage";
+import { FallthroughPage } from "./pages/FallthroughPage";
 
 // ============================================================
 // 路由配置 — 路由切换 =》 组件切换
@@ -31,5 +32,6 @@ export const router = createRouter({
     { path: "/dynamic", component: DynamicPage },
     { path: "/async", component: AsyncPage },
     { path: "/icon", component: IconPage },
+    { path: "/fallthrough", component: FallthroughPage },
   ],
 });

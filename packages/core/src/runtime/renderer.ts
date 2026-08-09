@@ -4,7 +4,7 @@
 //   oldVnode 为 null → 挂载；type/key 相同 → 更新；否则替换
 // ============================================================
 
-import { mountComponent } from './mountComponent'
+import { mountComponent, collectAttrs } from './mountComponent'
 import {
   mountTeleport,
   patchTeleport,
@@ -258,8 +258,15 @@ function patchComponent(oldVnode: any, newVnode: any, container: Element) {
   }
 
   if (!isSameProps(oldVnode.props, newVnode.props)) {
-    // 增量更新 props，值有变化时手动触发子组件更新
-    if (updateProps(instance.props, newVnode.props)) {
+    // 增量更新 props 与 attrs，任一有变化都触发子组件更新：
+    // attrs-only 变化（options 形态下仅外部属性变化，如 <Box id="a"> → id="b"）
+    // 也必须重渲染，否则 mergeAttrsToRoot 不重跑、根 DOM 属性陈旧
+    const options = oldVnode.type
+    const declared = options?.__props
+    const propsChanged = updateProps(instance.props, newVnode.props)
+    const newAttrs = collectAttrs(declared, newVnode.props)
+    const attrsChanged = updateProps(instance.attrs, newAttrs)
+    if (propsChanged || attrsChanged) {
       instance.update()
     }
   }

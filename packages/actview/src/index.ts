@@ -33,4 +33,4 @@ export {
   getCurrentScope
 } from '@actview/core'
 
-export type { App } from '@actview/core'
+export type { App, SetupContext, ComponentOptions } from '@actview/core'

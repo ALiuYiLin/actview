@@ -1819,7 +1819,7 @@ describe('场景 27：attribute fallthrough', () => {
     expect(btn.id).toBe('inner')
   })
 
-  it('白名单透传：id 透传；title/data-x 等业务 props 不透传', () => {
+  it('全量透传：id/title/data-x 等标量 attrs 透传（阶段 2）', () => {
     function Card() {
       return <div class="card">C</div>
     }
@@ -1828,9 +1828,9 @@ describe('场景 27：attribute fallthrough', () => {
     }
     const host = mount('#s27d', App)
     const card = host.querySelector('.card')!
-    expect(card.id).toBe('card-1') // 白名单内：id 透传
-    expect(card.getAttribute('title')).toBeNull() // 白名单外：不透传
-    expect(card.getAttribute('data-x')).toBeNull() // 白名单外：不透传
+    expect(card.id).toBe('card-1')
+    expect(card.getAttribute('title')).toBe('提示') // 标量 attrs 全量透传
+    expect(card.getAttribute('data-x')).toBe('1')
   })
 
   it('bug 回归：业务 props（数组/对象）不透传 =》 根元素无 features 属性', () => {
@@ -1876,6 +1876,128 @@ describe('场景 27：attribute fallthrough', () => {
     const host = mount('#s27e', App)
     expect(host.querySelector('.m1')!.classList.contains('should-not-apply')).toBe(false)
     expect(host.querySelector('.m2')!.classList.contains('should-not-apply')).toBe(false)
+  })
+
+  it('options 形态：props 白名单分离，声明外进 attrs 落根', () => {
+    const Box = defineComponent({
+      props: ['title'],
+      setup(props: any, ctx: any) {
+        return () => <div class="box" title={props.title}>{props.title}</div>
+      },
+    })
+    function App() {
+      return <Box title="内部" id="box-id" data-k="v" />
+    }
+    const host = mount('#s27-opt1', App)
+    const box = host.querySelector('.box')!
+    expect(box.textContent).toBe('内部') // 声明内：进 setup props
+    expect(box.getAttribute('title')).toBe('内部') // 根显式绑定
+    expect(box.id).toBe('box-id') // 声明外：attrs 落根
+    expect(box.getAttribute('data-k')).toBe('v') // data-* attrs 落根
+  })
+
+  it('inheritAttrs: false：不自动透传，需显式 {...ctx.attrs}', () => {
+    const NoInherit = defineComponent({
+      inheritAttrs: false,
+      setup(_props: any, ctx: any) {
+        return () => <div class="noinherit">{ctx.attrs.title}</div>
+      },
+    })
+    function App() {
+      return <NoInherit title="看得到" data-y="2" />
+    }
+    const host = mount('#s27-opt2', App)
+    const div = host.querySelector('.noinherit')!
+    expect(div.textContent).toBe('看得到') // ctx.attrs 可读
+    expect(div.getAttribute('data-y')).toBeNull() // 未显式绑定 → 不透传
+    const WithSpread = defineComponent({
+      inheritAttrs: false,
+      setup(_props: any, ctx: any) {
+        return () => <div class="withspread" {...ctx.attrs}></div>
+      },
+    })
+    function App2() {
+      return <WithSpread data-y="2" />
+    }
+    const host2 = mount('#s27-opt3', App2)
+    expect(host2.querySelector('.withspread')!.getAttribute('data-y')).toBe('2')
+  })
+
+  it('scoped 继承：data-v-* attrs 落子 root，多级嵌套逐级累积', () => {
+    // 父文件编译产物：<Child/> 组件元素带 data-v-parent（父文件 scoped hash）
+    function Leaf() {
+      return <div class="leaf">L</div>
+    }
+    const Mid = defineComponent(function () {
+      return () => <Leaf />
+    })
+    function Root() {
+      return <Mid data-v-parent="abc123" />
+    }
+    const host = mount('#s27-opt4', Root)
+    const leaf = host.querySelector('.leaf')!
+    // data-v-parent 经 Mid（函数形态无声明 → attrs 全量）→ Leaf 根（同样 attrs 全量）逐级累积
+    expect(leaf.getAttribute('data-v-parent')).toBe('abc123')
+  })
+
+  it('attrs-only 更新：options 形态仅外部属性变化也重渲染', async () => {
+    const state = reactive({ boxId: 'a' })
+    const Box = defineComponent({
+      props: ['title'],
+      setup(props: any, _ctx: any) {
+        return () => <div class="box" title={props.title}>B</div>
+      },
+    })
+    function App() {
+      return <Box title="t" id={state.boxId} />
+    }
+    const host = mount('#s27-opt5', App)
+    const box = host.querySelector('.box')!
+    expect(box.id).toBe('a') // attrs 落根
+
+    state.boxId = 'b' // 仅 attrs（id）变化，声明 props（title）不变
+    await nextTick()
+    expect(box.id).toBe('b') // 修复：attrsChanged 也触发 update
+  })
+
+  it('renderToString：options 形态 setup 访问 ctx.attrs 不崩溃', () => {
+    const Box = defineComponent({
+      props: ['title'],
+      setup(props: any, ctx: any) {
+        // SSR 传空 attrs（无 attrs fallthrough），访问不抛错
+        expect(ctx.attrs).toBeDefined()
+        return () => <div class="box">{props.title}</div>
+      },
+    })
+    const html = renderToString(<Box title="SSR" />)
+    expect(html).toContain('SSR')
+  })
+
+  it('style 值类型过滤：数组/函数不透传，根无污染', () => {
+    function Plain() {
+      return <div class="plain">P</div>
+    }
+    function App() {
+      return <Plain style={[1, 2] as any} />
+    }
+    const host = mount('#s27-opt6', App)
+    const div = host.querySelector('.plain')!
+    // style 数组被值类型过滤拦截 → 根不落 style
+    expect(div.getAttribute('style')).toBeNull()
+  })
+
+  it('根字符串 style 保留（外部 style 对象不覆盖字符串）', () => {
+    function Colored() {
+      return <div class="colored" style="color: red">C</div>
+    }
+    function App() {
+      return <Colored style={{ background: 'blue' }} />
+    }
+    const host = mount('#s27-opt7', App)
+    const div = host.querySelector('.colored')!
+    // 根 style 为字符串：显式优先，外部对象不合并、不丢弃字符串
+    // （happy-dom 序列化会给字符串 style 补分号，用包含断言）
+    expect(div.getAttribute('style')).toContain('color: red')
   })
 
   it('条件渲染三元组件（Babel 转换产物形态）：单根时 class 透传', () => {

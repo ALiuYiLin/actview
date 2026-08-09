@@ -25,6 +25,7 @@ export function App() {
         <RouterLink to="/dynamic">⑨ 动态</RouterLink>
         <RouterLink to="/async">⑩ 异步</RouterLink>
         <RouterLink to="/icon">⑪ 图标</RouterLink>
+        <RouterLink to="/fallthrough">⑫ 透传/scoped</RouterLink>
       </nav>
       <RouterView />
       <p>
