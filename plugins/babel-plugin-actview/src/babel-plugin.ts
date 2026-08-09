@@ -254,10 +254,13 @@ function wrapComponentFn(fn: any): any | null {
   // 结尾 return null：条件渲染组件（`if (c) return <JSX/>; return null`）
   // 的合法收尾，__setup 返回 () => null 渲染空（与早退 return null 一致）
   const isNullRet = t.isNullLiteral(ret)
-  // 设计约束（2026-08）：只支持简写组件（最后 return JSX / _jsx / null）。
+  // 结尾 return 三元/逻辑表达式：`return cond ? <A/> : null` / `return cond && <A/>`
+  // （React 惯例条件渲染；任一分支含 JSX/_jsx/null 即视为渲染返回）
+  const isCondRet = isRenderExpr(ret)
+  // 设计约束（2026-08）：只支持简写组件（最后 return JSX / _jsx / null / 三元渲染）。
   // setup 风格（return 渲染函数）不允许——组件嵌套方案已废弃（bug 多），
   // return function(){...} 的组件保持裸函数（不转换）。
-  if (!isJsx && !isJsxCall && !isNullRet) return null
+  if (!isJsx && !isJsxCall && !isNullRet && !isCondRet) return null
 
   // 具名插槽转换（提取 <template slot="x"> → slots prop）——
   // 仅对源码 JSX 生效（含箭头 expression body；已转换的 _jsx() 调用中无 JSX 节点）
@@ -269,7 +272,7 @@ function wrapComponentFn(fn: any): any | null {
     fn.body = t.blockStatement([
       t.returnStatement(t.arrowFunctionExpression([], ret)),
     ])
-  } else if (isJsx || isJsxCall) {
+  } else if (isJsx || isJsxCall || isCondRet) {
     last.argument = t.arrowFunctionExpression([], ret)
   } else if (isNullRet) {
     // return null → return () => null（渲染空）
@@ -297,9 +300,43 @@ function wrapEarlyReturns(fnPath: any) {
         t.isIdentifier(arg.callee) &&
         /^_?jsx/.test(arg.callee.name)
       const isStmtNull = t.isNullLiteral(arg)
-      if (isStmtJsx || isStmtJsxCall || isStmtNull) {
+      // 早退 return 三元/逻辑：`if (c) return cond ? <A/> : <B/>`
+      const isStmtCond = isRenderExpr(arg)
+      if (isStmtJsx || isStmtJsxCall || isStmtNull || isStmtCond) {
         innerPath.node.argument = t.arrowFunctionExpression([], arg)
       }
     },
   })
+}
+
+/**
+ * 表达式是否含「渲染返回」内容——递归检查三元/逻辑表达式的分支：
+ *   - JSXElement / JSXFragment（源码 JSX）
+ *   - _jsx() / _jsxs() / _jsxDEV() 调用（JSX 已降级）
+ *   - null 分支本身**不触发**：仅在三元中配合 JSX 分支时有效
+ *     （`cond ? <A/> : null` 由 JSX 分支触发；`p.ok ? null : p.name`
+ *     与 `a && null` 均保持不转换——组件不应返回裸值）
+ * 例：`cond ? <A/> : null` ✓、`cond && <A/>` ✓、`a ? <A/> : <B/>` ✓、
+ *     `x ? 1 : 2` ✗、`p.v ?? null` ✗、`a && null` ✗
+ */
+function isRenderExpr(expr: any): boolean {
+  if (!expr) return false
+  if (t.isJSXElement(expr) || t.isJSXFragment(expr)) return true
+  if (
+    t.isCallExpression(expr) &&
+    t.isIdentifier(expr.callee) &&
+    /^_?jsx/.test(expr.callee.name)
+  ) {
+    return true
+  }
+  if (t.isConditionalExpression(expr)) {
+    // 三元：任一分支是渲染（JSX/_jsx）即触发；null 分支不单独触发
+    return isRenderExpr(expr.consequent) || isRenderExpr(expr.alternate)
+  }
+  if (t.isLogicalExpression(expr)) {
+    // `cond && <A/>`：左侧为条件、右侧渲染；`<A/> || <B/>`：双渲染兜底。
+    // null 不参与（`a && null` 保持不转换）
+    return isRenderExpr(expr.right) || isRenderExpr(expr.left)
+  }
+  return false
 }

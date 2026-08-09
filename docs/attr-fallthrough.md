@@ -103,6 +103,7 @@ update() 里 render() 之后、patch 之前：
 | props 副本 | 合并到根的 props 需克隆（`{ ...subTree.props, ...attrs }`），避免改到可复用的 vnode |
 | 更新路径 | `updateProps` 增量写 `instance.props` → `instance.update()` → render → 重新合并，attrs 变化自动反映，无需改 `patchComponent` |
 | 多根组件 | 不自动 fallthrough —— 文档标注「用 `{...attrs}` 显式绑定到目标元素」（JSX 展开） |
+| 条件渲染组件 | `return cond ? <Comp/> : null`（React 惯例，babel-plugin-actview 已支持三元/`&&`）返回单根元素 → fallthrough 正常；若用 `<>...</>` 包裹（Fragment 根）则不透传，与 Vue 一致，需显式 `{...attrs}` |
 | 事件覆盖 | 显式优先下「外部 onclick 落到无事件的根元素」✓；「内部已有 onclick」时外部被忽略 —— 与 Vue 的 invoker 并存不同，属可接受差异（边缘场景） |
 | 多余属性 | 函数形态下 `<Button type="submit">` 若组件不在根元素用 type，type 会落到根 div（HTML 无效属性但无害）—— 与 Vue 无白名单语义一致 |
 | `inheritAttrs: false` | 阶段 2 options 形态时顺带支持（白名单机制的开关） |

@@ -1878,6 +1878,24 @@ describe('场景 27：attribute fallthrough', () => {
     expect(host.querySelector('.m2')!.classList.contains('should-not-apply')).toBe(false)
   })
 
+  it('条件渲染三元组件（Babel 转换产物形态）：单根时 class 透传', () => {
+    // 等价于 `function Child(props) { return props.condition ? <Comp/> : null }`
+    // 经 babel-plugin-actview 转换后的产物（defineComponent + render 三元）
+    function Comp() {
+      return <div class="inner">C</div>
+    }
+    const Cond = defineComponent(function (props: any) {
+      return () => (props.condition ? <Comp /> : null)
+    })
+    function App() {
+      return <Cond class="from-parent" condition={true} />
+    }
+    const host = mount('#s27-cond', App)
+    const root = host.querySelector('.inner')!
+    expect(root.classList.contains('from-parent')).toBe(true)
+    expect(root.classList.contains('inner')).toBe(true)
+  })
+
   it('内置组件根（Teleport）不透传', () => {
     const target = document.createElement('div')
     target.id = 's27-target'

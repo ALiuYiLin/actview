@@ -131,3 +131,72 @@ describe('defineComponentPlugin：补充场景', () => {
     expect(out).toContain('return () => _jsx')
   })
 })
+
+describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
+  it('结尾三元 `? <Comp/> : null` 包成 render 函数', () => {
+    const out = transform(
+      `function Child(props) { return props.condition ? <Comp /> : null }`,
+    )
+    expect(out).toContain('const Child = defineComponent(function (props) {')
+    expect(out).toContain('return () => props.condition ? <Comp /> : null')
+  })
+
+  it('结尾三元双 JSX 分支 `? <A/> : <B/>`', () => {
+    const out = transform(
+      `function P(props) { return props.ok ? <A /> : <B /> }`,
+    )
+    expect(out).toContain('return () => props.ok ? <A /> : <B />')
+  })
+
+  it('逻辑与 `return cond && <Comp/>`', () => {
+    const out = transform(
+      `function Child(props) { return props.condition && <Comp /> }`,
+    )
+    expect(out).toContain('return () => props.condition && <Comp />')
+  })
+
+  it('早退三元：if 内 return cond ? <A/> : <B/>', () => {
+    const out = transform(
+      `function F(p) { if (p.a) return p.b ? <A/> : <B/>; return null }`,
+    )
+    expect(out).toContain('return () => p.b ? <A /> : <B />')
+    expect(out).toContain('return () => null')
+  })
+
+  it('嵌套三元', () => {
+    const out = transform(
+      `function G(p) { return p.a ? (p.b ? <A/> : <B/>) : null }`,
+    )
+    expect(out).toContain('return () => p.a ? p.b ? <A /> : <B /> : null')
+  })
+
+  it('箭头 expression body 三元', () => {
+    const out = transform(`const C = (p) => (p.a ? <A/> : null)`)
+    expect(out).toContain('const C = defineComponent(p => {')
+    expect(out).toContain('return () => p.a ? <A /> : null')
+  })
+
+  it('纯数值三元不转换（保持裸函数）', () => {
+    const out = transform(`function H(p) { return p.a ? 1 : 2 }`)
+    expect(out).not.toContain('defineComponent')
+    expect(out).toContain('return p.a ? 1 : 2')
+  })
+
+  it('空值合并 `p.v ?? null` 不转换（null 分支不触发）', () => {
+    const out = transform(`function H(p) { return p.v ?? null }`)
+    expect(out).not.toContain('defineComponent')
+    expect(out).toContain('return p.v ?? null')
+  })
+
+  it('`a && null` 不转换（逻辑表达式内 null 不参与）', () => {
+    const out = transform(`function H(p) { return p.a && null }`)
+    expect(out).not.toContain('defineComponent')
+    expect(out).toContain('return p.a && null')
+  })
+
+  it('`p.ok ? null : p.name` 不转换（null 分支配非渲染分支）', () => {
+    const out = transform(`function H(p) { return p.ok ? null : p.name }`)
+    expect(out).not.toContain('defineComponent')
+    expect(out).toContain('return p.ok ? null : p.name')
+  })
+})

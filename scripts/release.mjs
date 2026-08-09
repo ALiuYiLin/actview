@@ -19,6 +19,7 @@ const PACKAGES = [
   { dir: 'plugins/babel-plugin-actview', name: '@actview/babel-plugin-actview' },
   { dir: 'plugins/plugin-vite', name: '@actview/plugin-vite' },
   { dir: 'plugins/plugin', name: '@actview/plugin' },
+  { dir: 'plugins/plugin-scoped', name: '@actview/plugin-scoped' },
   { dir: 'packages/router', name: '@actview/router' },
   { dir: 'packages/actview', name: 'actview' },
 ]
