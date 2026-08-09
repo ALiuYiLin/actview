@@ -23,6 +23,8 @@
       "@actview/core": ["./packages/core/src/index.ts"],
       "@actview/core/*": ["./packages/core/src/*"],
       "@actview/plugin": ["./plugins/plugin/src/index.ts"],
+      "@actview/plugin-scoped": ["./plugins/plugin-scoped/src/index.ts"],
+      "@actview/plugin-scoped/*": ["./plugins/plugin-scoped/src/*"],
       "@actview/router": ["./packages/router/src/index.ts"],
       "actview": ["./packages/actview/src/index.ts"]
     },

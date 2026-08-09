@@ -29,13 +29,6 @@ export const inputStyle = {
 export const hintStyle = { color: "#64748b", fontSize: "12px", marginTop: "10px" };
 export const valueStyle = { color: "#dc2626", fontWeight: 700, fontSize: "20px" };
 
-export const navStyle = {
-  display: "flex",
-  gap: "8px",
-  marginBottom: "20px",
-  flexWrap: "wrap",
-};
-
 export const linkStyle = {
   padding: "6px 14px",
   border: "1px solid #cbd5e1",

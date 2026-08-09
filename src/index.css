@@ -1,0 +1,44 @@
+/* ============================================================
+   App 根组件样式（scoped：App.tsx 通过 import './index.css?scoped' 启用）
+   选择器由 @actview/plugin-scoped 的 PostCSS 变换自动追加 [data-v-<hash>]
+   ============================================================ */
+
+.app {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.app h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.app nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* RouterLink 渲染的 <a> 定义在 @actview/router（跨文件，不带本文件 hash），
+   必须用 :deep() 才能命中（:deep 使目标选择器不追加 [data-v-hash]） */
+.app nav :deep(a) {
+  padding: 6px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  text-decoration: none;
+  color: #0f172a;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+p {
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+}

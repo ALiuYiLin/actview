@@ -1,9 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import path from 'path'
 import { actviewPlugin } from '@actview/plugin'
+import { actviewScopedPlugin } from '@actview/plugin-scoped'
 
 export default defineConfig({
-  plugins: [actviewPlugin()],
+  plugins: [actviewPlugin(), ...actviewScopedPlugin()],
   optimizeDeps: {
     // workspace 包走源码 transform（含 Babel 插件），不做 esbuild 预构建
     exclude: ['@actview/router'],
