@@ -200,3 +200,63 @@ describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
     expect(out).toContain('return p.ok ? null : p.name')
   })
 })
+
+describe('defineComponentPlugin：自动 props 提取（TS 类型注解）', () => {
+  it('内联对象类型 → defineComponent({ props, setup })', () => {
+    const out = transform(
+      `function Child(props: { x1: string, x2?: number }) { return <div>{props.x1}</div> }`,
+    )
+    expect(out).toContain('props: ["x1", "x2"]')
+    expect(out).toContain('setup: function')
+  })
+
+  it('props: any → 函数形态回退（无白名单）', () => {
+    const out = transform(`function P(props: any) { return <div>{props.x}</div> }`)
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
+  })
+
+  it('类型别名引用（MyProps）→ 函数形态回退（Babel 无法静态解析）', () => {
+    const out = transform(`function R(props: MyProps) { return <div>r</div> }`)
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
+  })
+
+  it('无参数组件 → 函数形态', () => {
+    const out = transform(`function Q() { return <div>q</div> }`)
+    expect(out).toContain('defineComponent(function')
+  })
+
+  it('esbuild 先转（类型已剥离）：props 无注解 → 函数形态回退', () => {
+    // 模拟 rolldown 先转后的 JS（类型注解已剥离）
+    const out = transform(
+      `function C(props) { return _jsx('div', { children: props.x }) }`,
+    )
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
+  })
+
+  it('解构参数（无类型注解）：{ x1, x2 } → props 白名单', () => {
+    const out = transform(
+      `function App({ x1, x2 }) { return <div>{x1}{x2}</div> }`,
+    )
+    expect(out).toContain('props: ["x1", "x2"]')
+    expect(out).toContain('setup: function')
+  })
+
+  it('解构 + 类型注解：{ x1 }: { x1: string } → props 白名单', () => {
+    const out = transform(
+      `function App({ x1 }: { x1: string }) { return <div>{x1}</div> }`,
+    )
+    expect(out).toContain('props: ["x1"]')
+  })
+
+  it('解构带 rest（{ x1, ...rest }）：保守回退函数形态', () => {
+    // rest 需要运行时全量 props（白名单会截断 rest），回退保持 rest 语义
+    const out = transform(
+      `function App({ x1, ...rest }) { return <div>{x1}</div> }`,
+    )
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
+  })
+})

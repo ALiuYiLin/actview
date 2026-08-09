@@ -1,4 +1,3 @@
-import { defineComponent, type SetupContext } from "actview";
 import "./FallthroughPage.css?scoped";
 import { FallthroughChild } from "./FallthroughChild";
 
@@ -19,20 +18,18 @@ function Panel(props: any) {
   );
 }
 
-// --- 案例 2：options 形态 props 白名单分离 ---
-const Box = defineComponent({
-  props: ["label"],
-  setup(props: { label: string }, ctx: SetupContext) {
-    return () => (
-      <div class="box-demo" title={ctx.attrs.note}>
-        <b>props.label = {props.label}</b>
-        <span class="box-note">
-          （note 未声明 → 在 ctx.attrs → 透传为根元素 title）
-        </span>
-      </div>
-    );
-  },
-});
+// --- 案例 2：自动 props 提取（TS 类型注解 → Babel 自动生成 options 形态，
+//    无需手写 defineComponent；第二参 ctx（可选，读取 attrs）） ---
+function Box(props: { label: string }, ctx?: any) {
+  return (
+    <div class="box-demo" title={ctx.attrs.note}>
+      <b>props.label = {props.label}</b>
+      <span class="box-note">
+        （note 未声明 → 在 ctx.attrs → 透传为根元素 title）
+      </span>
+    </div>
+  );
+}
 
 export function FallthroughPage() {
   return (
