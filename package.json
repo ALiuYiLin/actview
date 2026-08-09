@@ -14,6 +14,8 @@
     "patch:jsx": "cd packages/jsx && npm version patch",
     "patch:core": "cd packages/core && npm version patch",
     "patch:plugin": "cd plugins/plugin && npm version patch",
+    "patch:plugin-vite": "cd plugins/plugin-vite && npm version patch",
+    "patch:babel-plugin-actview": "cd plugins/babel-plugin-actview && npm version patch",
     "patch:scoped": "cd plugins/plugin-scoped && npm version patch",
     "patch:router": "cd packages/router && npm version patch"
   },
@@ -21,6 +23,8 @@
     "@actview/core": "workspace:*",
     "@actview/jsx": "workspace:*",
     "@actview/plugin": "workspace:*",
+    "@actview/plugin-vite": "workspace:*",
+    "@actview/babel-plugin-actview": "workspace:*",
     "@actview/plugin-scoped": "workspace:*",
     "@actview/router": "workspace:*",
     "@types/node": "^26.0.1",

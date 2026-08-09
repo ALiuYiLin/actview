@@ -28,7 +28,7 @@ pnpm add -D @actview/plugin-scoped
 
 ```ts
 import { defineConfig } from 'vite'
-import { actviewPlugin } from '@actview/plugin'
+import { actviewPlugin } from '@actview/plugin-vite'
 import actviewScopedPlugin from '@actview/plugin-scoped'
 
 export default defineConfig({

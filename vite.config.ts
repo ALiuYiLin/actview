@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import path from 'path'
-import { actviewPlugin } from '@actview/plugin'
+import { actviewPlugin } from '@actview/plugin-vite'
 import { actviewScopedPlugin } from '@actview/plugin-scoped'
 
 export default defineConfig({

@@ -1,12 +1,15 @@
 {
   "name": "@actview/plugin",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
+  "description": "已废弃（deprecated）：请改用 @actview/plugin-vite 与 @actview/babel-plugin-actview",
+  "deprecated": "请改用 @actview/plugin-vite（Vite 插件）与 @actview/babel-plugin-actview（Babel 插件）；本包仅保留兼容 re-export",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@babel/core": "^8.0.1"
+    "@actview/babel-plugin-actview": "workspace:*",
+    "@actview/plugin-vite": "workspace:*"
   },
   "scripts": {
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",

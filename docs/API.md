@@ -145,12 +145,14 @@ const router = createRouter({
 
 ---
 
-## 五、工程化（@actview/plugin）
+## 五、工程化（@actview/plugin-vite + @actview/babel-plugin-actview）
 
 | 能力 | 说明 |
 |---|---|
-| `actviewPlugin()`（Vite 插件） | `.tsx` 先过 Babel 做 defineComponent 转换（含 JSX 已降级为 `_jsx()` 调用的兼容） |
-| `defineComponentPlugin`（Babel 插件） | 组件函数 → `defineComponent`；具名插槽 `<template slot>` 编译期提取 |
+| `actviewPlugin()`（Vite 插件，`@actview/plugin-vite`） | `.tsx` 先过 Babel 做 defineComponent 转换（含 JSX 已降级为 `_jsx()` 调用的兼容） |
+| `defineComponentPlugin`（Babel 插件，`@actview/babel-plugin-actview`） | 组件函数 → `defineComponent`；具名插槽 `<template slot>` 编译期提取 |
+
+> 旧包 `@actview/plugin` 已废弃（deprecated），仅保留兼容 re-export。
 
 ---
 

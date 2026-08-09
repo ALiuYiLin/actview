@@ -41,7 +41,7 @@ Vue 通过 **attribute fallthrough** 解决：组件未声明为 props 的属性
 | 文件 | 作用 |
 |---|---|
 | `packages/core/src/runtime/component.ts` | `defineComponent(setup)` — 仅函数形态，返回 `{ __setup }` |
-| `plugins/plugin/src/babel-plugin.ts` | `function App(props) {...}` → `defineComponent(function(props){...})` |
+| `plugins/babel-plugin-actview/src/babel-plugin.ts` | `function App(props) {...}` → `defineComponent(function(props){...})` |
 | `packages/core/src/runtime/mountComponent.ts` | `props = {...vnode.props}`；`instance.render = __setup(props)`；`update()` 里 render + patch |
 | `packages/core/src/runtime/renderer.ts` | `patchComponent` / `updateProps`（父组件增量更新 props + 手动 update） |
 

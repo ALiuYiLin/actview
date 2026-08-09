@@ -55,8 +55,9 @@ packages/core/src/          @local/core           运行时
   runtime/renderer.ts          patch / mount / unmount（DIFF 引擎）
   runtime/createApp.ts         createApp().mount('#app')
 
-plugins/plugin/src/         @actview/plugin        编译期
+plugins/babel-plugin-actview/src/   @actview/babel-plugin-actview  编译期
   babel-plugin.ts              function 组件 → defineComponent 转换
+plugins/plugin-vite/src/       @actview/plugin-vite            Vite 适配
   vite-plugin.ts               enforce:'pre' 的 transform，接入 Babel
 ```
 
@@ -269,7 +270,7 @@ const effect = runEffect(update)                  // 立即跑一次（首屏挂
 ## 10. 文件索引（按阅读顺序）
 
 1. `packages/jsx/src/jsxFactory.ts` — JSX → VNode
-2. `plugins/plugin/src/babel-plugin.ts` — 组件编译转换
+2. `plugins/babel-plugin-actview/src/babel-plugin.ts` — 组件编译转换
 3. `packages/core/src/reactivity/reactive.ts` — Proxy 响应式
 4. `packages/core/src/runtime/reactive-system.ts` — effect/track/trigger
 5. `packages/core/src/runtime/component.ts` — defineComponent

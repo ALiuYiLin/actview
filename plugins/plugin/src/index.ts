@@ -1,10 +1,10 @@
 // ============================================================
-// @actview/plugin — 导出入口
+// @actview/plugin — 兼容层（deprecated）
+// 请改用：
+//   - @actview/plugin-vite（Vite 插件 actviewPlugin）
+//   - @actview/babel-plugin-actview（Babel 插件 defineComponentPlugin）
 // ============================================================
 
-import { actviewPlugin } from './vite-plugin.ts'
-
-export { actviewPlugin }
-export { default as defineComponentPlugin } from './babel-plugin.ts'
-
-export default actviewPlugin
+export { actviewPlugin } from '@actview/plugin-vite'
+export { actviewPlugin as default } from '@actview/plugin-vite'
+export { defineComponentPlugin } from '@actview/babel-plugin-actview'

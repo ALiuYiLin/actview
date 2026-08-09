@@ -23,6 +23,8 @@
       "@actview/core": ["./packages/core/src/index.ts"],
       "@actview/core/*": ["./packages/core/src/*"],
       "@actview/plugin": ["./plugins/plugin/src/index.ts"],
+      "@actview/plugin-vite": ["./plugins/plugin-vite/src/index.ts"],
+      "@actview/babel-plugin-actview": ["./plugins/babel-plugin-actview/src/index.ts"],
       "@actview/plugin-scoped": ["./plugins/plugin-scoped/src/index.ts"],
       "@actview/plugin-scoped/*": ["./plugins/plugin-scoped/src/*"],
       "@actview/router": ["./packages/router/src/index.ts"],

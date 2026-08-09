@@ -16,6 +16,8 @@ import { join } from 'node:path'
 const PACKAGES = [
   { dir: 'packages/jsx', name: '@actview/jsx' },
   { dir: 'packages/core', name: '@actview/core' },
+  { dir: 'plugins/babel-plugin-actview', name: '@actview/babel-plugin-actview' },
+  { dir: 'plugins/plugin-vite', name: '@actview/plugin-vite' },
   { dir: 'plugins/plugin', name: '@actview/plugin' },
   { dir: 'packages/router', name: '@actview/router' },
   { dir: 'packages/actview', name: 'actview' },

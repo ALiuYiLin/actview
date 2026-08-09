@@ -1,10 +1,11 @@
 // ============================================================
 // Vite 插件
 // .tsx 文件在 esbuild 之前过一遍 Babel，做 defineComponent 转换
+// 编译核心（defineComponentPlugin）见 @actview/babel-plugin-actview
 // ============================================================
 
 import * as babel from '@babel/core'
-import defineComponentPlugin from './babel-plugin.ts'
+import { defineComponentPlugin } from '@actview/babel-plugin-actview'
 
 // 模块级只创建一次 ConfigItem（Babel 8 同步版本）
 const pluginItem = babel.createConfigItemSync(defineComponentPlugin, {
@@ -21,8 +22,8 @@ export function actviewPlugin() {
       // 进入 ActView 运行时（只认 { __setup } VNode）→ createElement('function ...')
       const cleanId = id.split('?')[0]
       // 也处理 .js：vitepress 的 dist/client 是 tsc 编译产物（.js，JSX 已降级为
-      // _jsx() 调用），浏览器加载的是这些 .js 而非源码 .tsx——若跳过会导致
-      // 函数组件以裸函数进入 ActView 运行时（createElement('function ...') 崩溃）
+      // _jsx() 调用，位于 node_modules 下），浏览器加载的是这些 .js 而非源码
+      // .tsx——不能按 node_modules 跳过，否则函数组件以裸函数进入运行时崩溃
       if (!cleanId.endsWith('.tsx') && !cleanId.endsWith('.js')) return null
 
       const result = babel.transformSync(code, {

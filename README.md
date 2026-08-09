@@ -8,7 +8,7 @@
 - 🧩 **JSX 编写组件**：类 React 的组件写法，搭配 Vue 风格的组合式 API
 - 🔄 **高效更新**：虚拟 DOM + keyed diff（LIS 最小移动）+ 调度批处理（`nextTick`）
 - 🛠 **完整组件能力**：生命周期钩子、插槽（默认/作用域/具名）、`KeepAlive`、动态组件、`ErrorBoundary`、`Suspense`、`Teleport`、`Transition`
-- 🌐 **路由与生态**：官方路由 `@actview/router`、Vite/Babel 插件 `@actview/plugin`、脚手架 `@actview/create-cli`
+- 🌐 **路由与生态**：官方路由 `@actview/router`、Vite/Babel 插件 `@actview/plugin-vite` + `@actview/babel-plugin-actview`、脚手架 `@actview/create-cli`
 - 📄 **构建期能力**：`renderToString`（VNode → HTML 静态序列化）
 
 ## 快速开始
@@ -27,7 +27,7 @@ npm run dev
 ### 方式二：手动引入
 
 ```bash
-npm install actview @actview/router @actview/jsx @actview/plugin
+npm install actview @actview/router @actview/jsx @actview/plugin-vite
 ```
 
 配置 Vite + TypeScript 后：
@@ -81,7 +81,7 @@ createApp(Counter).mount('#app')
 | `@actview/core` | 响应式 + 渲染器 + 组件运行时 |
 | `@actview/jsx` | JSX 工厂与类型定义 |
 | `@actview/router` | 路由 |
-| `@actview/plugin` | Vite + Babel 插件 |
+| `@actview/plugin-vite` | Vite 插件（defineComponent 转换接入） |
 
 ## 开发与贡献
 
