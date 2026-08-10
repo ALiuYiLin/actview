@@ -1,6 +1,6 @@
 {
   "name": "actview",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

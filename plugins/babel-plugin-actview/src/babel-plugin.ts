@@ -321,10 +321,8 @@ function extractPropsFromType(fn: any): string[] | null {
     const keys: string[] = []
     for (const member of typeAnno.members) {
       if (!t.isTSPropertySignature(member)) continue
-      const key = member.key
-      if (t.isIdentifier(key) || t.isStringLiteral(key)) {
-        keys.push(key.name ?? key.value)
-      }
+      const name = getKeyName(member.key)
+      if (name) keys.push(name)
     }
     if (keys.length) return keys
   }
@@ -338,14 +336,19 @@ function extractPropsFromType(fn: any): string[] | null {
     const keys: string[] = []
     for (const prop of firstParam.properties) {
       if (!t.isObjectProperty(prop)) continue
-      const key = prop.key
-      if (t.isIdentifier(key) || t.isStringLiteral(key)) {
-        keys.push(key.name ?? key.value)
-      }
+      const name = getKeyName(prop.key)
+      if (name) keys.push(name)
     }
     return keys.length ? keys : null
   }
 
+  return null
+}
+
+/** 从 JSX/TS 属性 key（Identifier 或 StringLiteral）取属性名；其他形态返回 null */
+function getKeyName(key: any): string | null {
+  if (t.isIdentifier(key)) return key.name
+  if (t.isStringLiteral(key)) return key.value
   return null
 }
 
