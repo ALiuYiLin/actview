@@ -2168,3 +2168,113 @@ describe('场景 31：同一对象自我 patch 短路（语言切换 title 不�
     expect(container.querySelectorAll('.x').length).toBe(1)
   })
 })
+
+// ------------------------------------------------------------
+// 场景 32：provide / inject（ctx.provide + ctx.injects）
+//   - 未使用 provide 的组件共享父注入引用（零拷贝）
+//   - 首次 provide 时 copy-on-write 拷贝，同名覆盖继承值
+// ------------------------------------------------------------
+describe('场景 32：provide / inject', () => {
+  it('父 provide → 孙组件经 ctx.injects 读取（跨中间组件）', () => {
+    function Provider(props: {}, ctx: any) {
+      ctx.provide('theme', 'dark')
+      return <Mid />
+    }
+    function Mid(props: {}, ctx: any) {
+      return <Leaf />
+    }
+    function Leaf(props: {}, ctx: any) {
+      return <div class="leaf">{ctx.injects.theme}</div>
+    }
+    const host = mount('#s32-1', Provider)
+    expect(host.querySelector('.leaf')!.textContent).toBe('dark')
+  })
+
+  it('未使用 provide 的组件共享父注入引用（零拷贝）', () => {
+    let parentTable: any
+    let midTable: any
+    let leafTable: any
+    function Provider(props: {}, ctx: any) {
+      ctx.provide('a', 1)
+      parentTable = ctx.injects
+      return <Mid />
+    }
+    function Mid(props: {}, ctx: any) {
+      midTable = ctx.injects
+      return <Leaf />
+    }
+    function Leaf(props: {}, ctx: any) {
+      leafTable = ctx.injects
+      return <div>leaf</div>
+    }
+    mount('#s32-2', Provider)
+    expect(parentTable).toBe(midTable) // 未 provide：同一引用，零拷贝
+    expect(midTable).toBe(leafTable)
+    expect(leafTable.a).toBe(1)
+  })
+
+  it('同名覆盖继承值 + copy-on-write 不污染父表', () => {
+    let parentTable: any
+    let childTable: any
+    function Provider(props: {}, ctx: any) {
+      ctx.provide('theme', 'dark')
+      parentTable = ctx.injects
+      return <Child />
+    }
+    function Child(props: {}, ctx: any) {
+      ctx.provide('theme', 'light') // 同名覆盖
+      childTable = ctx.injects
+      return <Leaf />
+    }
+    function Leaf(props: {}, ctx: any) {
+      return <div class="leaf">{ctx.injects.theme}</div>
+    }
+    const host = mount('#s32-3', Provider)
+    expect(host.querySelector('.leaf')!.textContent).toBe('light') // 深层看到覆盖值
+    expect(parentTable.theme).toBe('dark') // 父表未被污染
+    expect(childTable).not.toBe(parentTable) // 已拷贝隔离
+    expect(childTable.theme).toBe('light')
+  })
+
+  it('新增 key 保留继承的其他 key', () => {
+    function Provider(props: {}, ctx: any) {
+      ctx.provide('a', 1)
+      return <Child />
+    }
+    function Child(props: {}, ctx: any) {
+      ctx.provide('b', 2) // 新增 key
+      return <Leaf />
+    }
+    function Leaf(props: {}, ctx: any) {
+      return <div class="leaf">{ctx.injects.a}-{ctx.injects.b}</div>
+    }
+    const host = mount('#s32-4', Provider)
+    expect(host.querySelector('.leaf')!.textContent).toBe('1-2')
+  })
+
+  it('根组件（无父）injects 为空对象，provide 可用', () => {
+    function Root(props: {}, ctx: any) {
+      expect(Object.keys(ctx.injects).length).toBe(0)
+      ctx.provide('k', 'v')
+      return <div class="root">{ctx.injects.k}</div>
+    }
+    const host = mount('#s32-5', Root)
+    expect(host.querySelector('.root')!.textContent).toBe('v')
+  })
+
+  it('provide ref → 注入保持响应式，更新驱动 DOM', async () => {
+    const count = ref(0)
+    function Provider(props: {}, ctx: any) {
+      ctx.provide('count', count)
+      return <Leaf />
+    }
+    function Leaf(props: {}, ctx: any) {
+      return <p class="c">{ctx.injects.count.value}</p>
+    }
+    const host = mount('#s32-6', Provider)
+    expect(host.querySelector('.c')!.textContent).toBe('0')
+    count.value = 5
+    await nextTick()
+    expect(host.querySelector('.c')!.textContent).toBe('5')
+  })
+})

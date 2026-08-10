@@ -125,8 +125,13 @@ function serializeNode(node: any): string {
     let render: any
     try {
       // 阶段 2：options 形态 setup(props, ctx)——SSR 无 attrs fallthrough
-      // （与运行时 mergeAttrsToRoot 不同），传空 attrs 避免 ctx.attrs 崩溃
-      const ctx = { attrs: {} as Record<string, any> }
+      // （与运行时 mergeAttrsToRoot 不同），传空 attrs 避免 ctx.attrs 崩溃；
+      // injects/provide 静态生成无父子链（顶层递归无 parent），传空实现
+      const ctx = {
+        attrs: {} as Record<string, any>,
+        injects: {} as Record<string, any>,
+        provide: () => {}
+      }
       render =
         typeof setup === 'function'
           ? setup(props ?? {}, ctx)

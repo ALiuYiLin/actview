@@ -6,6 +6,15 @@
 /** options 形态的 setup 上下文：props 白名单外的属性（attrs） */
 export interface SetupContext {
   attrs: Record<string, any>
+  /** 注入表：继承自最近提供方（未使用 provide 的组件共享父引用，零拷贝） */
+  injects: Record<string, any>
+  /**
+   * 提供注入值：子组件通过 ctx.injects 读取。
+   * - 首次调用时浅拷贝继承表成自己的副本（copy-on-write，未调用时零开销）
+   * - 同名 key 覆盖继承值；新 key 添加
+   * 约定：仅在 setup 顶层同步调用（与生命周期钩子一致）
+   */
+  provide: (key: string, value: any) => void
 }
 
 /** options 形态的组件定义（对齐 Vue options API 的 props 分离语义） */

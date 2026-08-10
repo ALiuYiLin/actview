@@ -42,6 +42,10 @@ export interface ComponentInstance {
   props: any
   /** attrs：props 白名单外的属性（fallthrough 用），同样增量更新 */
   attrs: any
+  /** 父组件实例（provide/inject 链） */
+  parent: ComponentInstance | null
+  /** 注入表：未调用 provide 时共享父引用（零拷贝）；首次 provide 时 copy-on-write */
+  injects: Record<string, any>
   render: () => any
   subTree: any
   update: () => void
@@ -62,7 +66,11 @@ export interface ComponentInstance {
 }
 
 /** 挂载组件 VNode：实例化并建立响应式更新 effect */
-export function mountComponent(vnode: any, container: Element | null) {
+export function mountComponent(
+  vnode: any,
+  container: Element | null,
+  parentInstance?: ComponentInstance | null
+) {
   const options = vnode.type
   if (
     options == null ||
@@ -82,6 +90,8 @@ export function mountComponent(vnode: any, container: Element | null) {
     setup: options.__setup,
     props,
     attrs,
+    parent: parentInstance ?? null,
+    injects: parentInstance?.injects ?? {},
     render: null as unknown as () => any,
     subTree: null,
     update: () => {},
@@ -100,10 +110,30 @@ export function mountComponent(vnode: any, container: Element | null) {
   // 组件模板引用：ref 指向组件实例
   applyRef(vnode.props?.ref, instance)
 
+  // provide：copy-on-write 注入表。
+  //   - 本组件未提供过任何值 → 直接复用父注入表引用（零拷贝共享，性能最优）
+  //   - 首次 provide 时浅拷贝继承表成自己的副本，之后在副本上写
+  //   - 同名 key 覆盖继承值、新 key 添加（JS 对象属性语义，一次赋值完成）
+  // 约定：provide 仅在 setup 顶层同步调用（与生命周期钩子一致）。
+  const provide = (key: string, value: any) => {
+    if (instance.injects === instance.parent?.injects) {
+      instance.injects = { ...instance.injects }
+    }
+    instance.injects[key] = value
+  }
+
   // setup 执行期间挂载 currentInstance 上下文：
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount 注册到本实例
   setCurrentInstance(instance)
-  instance.render = options.__setup(props, { attrs })
+  instance.render = options.__setup(props, {
+    attrs,
+    // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
+    // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
+    get injects() {
+      return instance.injects
+    },
+    provide
+  })
   setCurrentInstance(null)
 
   // 更新函数：重新 render 并与旧子树 patch
@@ -118,7 +148,8 @@ export function mountComponent(vnode: any, container: Element | null) {
       }
       const oldSubTree = instance.subTree
       instance.subTree = newSubTree
-      patch(oldSubTree, newSubTree, container as Element)
+      // 子树 children 的父实例 = 本组件实例（子组件 provide/inject 继承来源）
+      patch(oldSubTree, newSubTree, container as Element, undefined, instance)
       // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
       vnode.el = instance.subTree ? instance.subTree.el : null
       // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated

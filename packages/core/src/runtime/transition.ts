@@ -41,14 +41,14 @@ function resolveTeleportTarget(
 }
 
 /** 挂载 Teleport：children 挂到目标容器，记录挂载节点以便卸载/迁移 */
-export function mountTeleport(vnode: any, container: Element | null) {
+export function mountTeleport(vnode: any, container: Element | null, parent?: any) {
   const target = resolveTeleportTarget(vnode.props?.to, container)
   vnode.el = null
   if (!target) {
     console.warn('[actview] Teleport: 目标容器不存在，跳过渲染')
     return null
   }
-  vnode.__avChildren = patchChildrenSafe(null, vnode.props?.children, target)
+  vnode.__avChildren = patchChildrenSafe(null, vnode.props?.children, target, undefined, parent)
   return null
 }
 
@@ -56,7 +56,8 @@ export function mountTeleport(vnode: any, container: Element | null) {
 export function patchTeleport(
   oldVnode: any,
   newVnode: any,
-  container: Element | null
+  container: Element | null,
+  parent?: any
 ) {
   const oldTarget = resolveTeleportTarget(oldVnode.props?.to, container)
   const newTarget = resolveTeleportTarget(newVnode.props?.to, container)
@@ -72,7 +73,8 @@ export function patchTeleport(
       oldVnode.props?.children,
       newVnode.props?.children,
       base,
-      oldVnode
+      oldVnode,
+      parent
     )
   }
 }
@@ -181,12 +183,12 @@ export function playLeave(
  * 挂载 Transition：挂载单子节点 + 进入动画
  * 返回被挂载的子 vnode（供后续 leave 拦截）
  */
-export function mountTransition(vnode: any, container: Element | null) {
+export function mountTransition(vnode: any, container: Element | null, parent?: any) {
   const children = normalizeSingle(vnode.props?.children)
   vnode.el = null
   if (!children) return null
   const child = toVNodeSafe(children)
-  patchChildrenSafe(null, [child], container)
+  patchChildrenSafe(null, [child], container, undefined, parent)
   const el = child?.el
   if (el) playEnter(el, vnode.props?.name, resolveDuration(vnode.props))
   vnode.__avChildren = [child]
@@ -201,7 +203,8 @@ export function mountTransition(vnode: any, container: Element | null) {
 export function patchTransition(
   oldVnode: any,
   newVnode: any,
-  container: Element | null
+  container: Element | null,
+  parent?: any
 ) {
   const name = newVnode.props?.name
   const oldChildren = oldVnode.__avChildren ?? []
@@ -221,7 +224,7 @@ export function patchTransition(
     return
   }
   const newChild = toVNodeSafe(newChildren)
-  patchChildrenSafe(null, [newChild], container)
+  patchChildrenSafe(null, [newChild], container, undefined, parent)
   const newEl = newChild?.el
   if (newEl) playEnter(newEl, name, resolveDuration(newVnode.props))
   newVnode.__avChildren = [newChild]
@@ -281,12 +284,13 @@ function patchChildrenSafe(
   oldChildren: any,
   newChildren: any,
   container: Element | null,
-  oldVnode?: any
+  oldVnode?: any,
+  parent?: any
 ): any[] {
   if (!container) return []
   if (!_patchChildren) {
     console.warn('[actview] Transition/Teleport: renderer 未注入 patchChildren')
     return []
   }
-  return _patchChildren(oldChildren, newChildren, container, oldVnode)
+  return _patchChildren(oldChildren, newChildren, container, oldVnode, parent)
 }

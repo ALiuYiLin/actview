@@ -71,15 +71,20 @@ function resolveDynamicVNode(vnode: any): any {
   return vnode
 }
 
+/**
+ * patch 入口。parent 为父组件实例（provide/inject 继承来源）；
+ * 由组件 update() 传入自身实例，沿挂载链传递到子组件 mountComponent。
+ */
 export function patch(
   oldVnode: any,
   newVnode: any,
   container: Element,
-  index?: number
+  index?: number,
+  parent?: any
 ) {
   newVnode = resolveDynamicVNode(newVnode)
   if (oldVnode == null) {
-    mountVNode(newVnode, container)
+    mountVNode(newVnode, container, parent)
     return
   }
   if (newVnode == null) {
@@ -92,14 +97,14 @@ export function patch(
   if (oldVnode === newVnode) return
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
-    patchVNode(oldVnode, newVnode, container, index)
+    patchVNode(oldVnode, newVnode, container, index, parent)
   } else if (newVnode.component?.isActive?.()) {
     // keep-alive 缓存命中：旧组件先卸载（走缓存分支，DOM 移入隐藏容器），
     // 再复用缓存实例更新；实例已失效（如 Suspense 的 fallback 替换后）则重建
     unmount(oldVnode, container, index)
-    patchComponent(oldVnode, newVnode, container)
+    patchComponent(oldVnode, newVnode, container, parent)
   } else {
-    replace(oldVnode, newVnode, container, index)
+    replace(oldVnode, newVnode, container, index, parent)
   }
 }
 
@@ -122,20 +127,20 @@ export function applyRef(ref: any, value: any) {
   else if (ref && typeof ref === 'object') ref.value = value
 }
 
-export function mountVNode(vnode: any, container: Element | null): any {
+export function mountVNode(vnode: any, container: Element | null, parent?: any): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
 
   // 内置组件（Teleport / Transition）：优先于普通组件分支
   // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
   if (vnode.type?.__builtin === 'teleport')
-    return mountTeleport(vnode, container)
+    return mountTeleport(vnode, container, parent)
   if (vnode.type?.__builtin === 'transition')
-    return mountTransition(vnode, container)
+    return mountTransition(vnode, container, parent)
 
   // 组件
   if (isComponentVNode(vnode)) {
-    mountComponent(vnode, container)
+    mountComponent(vnode, container, parent)
     return vnode.el
   }
   // Fragment：自身无 DOM，直接挂载 children
@@ -144,7 +149,9 @@ export function mountVNode(vnode: any, container: Element | null): any {
     vnode.__avChildren = patchChildren(
       null,
       vnode.props?.children,
-      container as Element
+      container as Element,
+      undefined,
+      parent
     )
     return null
   }
@@ -164,7 +171,7 @@ export function mountVNode(vnode: any, container: Element | null): any {
   const el = document.createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
-  vnode.__avChildren = patchChildren(null, vnode.props?.children, el)
+  vnode.__avChildren = patchChildren(null, vnode.props?.children, el, undefined, parent)
   container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
@@ -179,20 +186,21 @@ function patchVNode(
   oldVnode: any,
   newVnode: any,
   container: Element,
-  index?: number
+  index?: number,
+  parent?: any
 ) {
   // 内置组件（Teleport / Transition）
   if (newVnode.type?.__builtin === 'teleport') {
-    patchTeleport(oldVnode, newVnode, container)
+    patchTeleport(oldVnode, newVnode, container, parent)
     return
   }
   if (newVnode.type?.__builtin === 'transition') {
-    patchTransition(oldVnode, newVnode, container)
+    patchTransition(oldVnode, newVnode, container, parent)
     return
   }
   // 组件
   if (isComponentVNode(newVnode)) {
-    patchComponent(oldVnode, newVnode, container)
+    patchComponent(oldVnode, newVnode, container, parent)
     return
   }
   // 文本：每次 render 生成的文本 VNode 是新的（无 el），
@@ -229,7 +237,8 @@ function patchVNode(
       oldVnode.props?.children,
       newVnode.props?.children,
       container,
-      oldVnode
+      oldVnode,
+      parent
     )
     return
   }
@@ -240,20 +249,26 @@ function patchVNode(
     oldVnode.props?.children,
     newVnode.props?.children,
     el,
-    oldVnode
+    oldVnode,
+    parent
   )
 }
 
 /** 组件更新：props 未变则复用旧实例；变了则更新 props 并手动触发
  *  子组件 update()，完成精确更新（不再整组件卸载重挂）。
  *  props 用普通对象 + 显式调度，避免响应式 track/set 引发的 effect 递归重入 */
-function patchComponent(oldVnode: any, newVnode: any, container: Element) {
+function patchComponent(
+  oldVnode: any,
+  newVnode: any,
+  container: Element,
+  parent?: any
+) {
   // keep-alive 缓存复用：newVnode 已带自己的实例（缓存实例）→ 优先使用；
   // 普通组件更新：newVnode 无实例 → 沿用旧 vnode 的实例
   const instance = newVnode.component ?? oldVnode.component
   if (!instance) {
     // 异常情况：旧节点没有实例，直接重挂
-    mountComponent(newVnode, container)
+    mountComponent(newVnode, container, parent)
     return
   }
 
@@ -312,7 +327,8 @@ function patchChildren(
   oldChildren: any,
   newChildren: any,
   container: Element,
-  oldVnode?: any
+  oldVnode?: any,
+  parent?: any
 ): any[] {
   // 旧 vnode 列表：优先用上次 diff 缓存的 vnode（带 el，文本节点可精确定位），
   // 否则对旧 children 重新包装（首次/异常兜底）
@@ -322,13 +338,13 @@ function patchChildren(
 
   // 新列表中出现 key → 走 keyed diff；否则保持同索引 diff
   if (newList.some((v) => v && v.key != null)) {
-    patchKeyedChildren(oldList, newList, container)
+    patchKeyedChildren(oldList, newList, container, parent)
     return newList
   }
 
   const len = Math.max(oldList.length, newList.length)
   for (let i = 0; i < len; i++) {
-    patch(oldList[i] ?? null, newList[i] ?? null, container, i)
+    patch(oldList[i] ?? null, newList[i] ?? null, container, i, parent)
   }
   return newList
 }
@@ -346,7 +362,8 @@ function patchChildren(
 function patchKeyedChildren(
   oldList: any[],
   newList: any[],
-  container: Element
+  container: Element,
+  parent?: any
 ) {
   const oldKeyToIndex = new Map<any, number>()
   oldList.forEach((vnode, i) => {
@@ -363,7 +380,7 @@ function patchKeyedChildren(
     if (newVNode == null) continue
     if (newVNode.key != null && oldKeyToIndex.has(newVNode.key)) {
       const oldIndex = oldKeyToIndex.get(newVNode.key)!
-      patch(oldList[oldIndex], newVNode, container)
+      patch(oldList[oldIndex], newVNode, container, undefined, parent)
       source[i] = oldIndex + 1
     } else {
       // 无 key 或未命中：直接挂到真实容器（非 null！）
@@ -376,7 +393,7 @@ function patchKeyedChildren(
       // 对象），DOM 已挂载——若 mountVNode 会无条件重建覆盖 vnode.el =》 旧 DOM
       // 残留累积。跳过 mount，位置由第 5 步 insertBefore 调整。
       if (oldList.includes(newVNode)) continue
-      mountVNode(newVNode, container)
+      mountVNode(newVNode, container, parent)
     }
   }
 
@@ -613,25 +630,26 @@ function replace(
   oldVnode: any,
   newVnode: any,
   container: Element,
-  index?: number
+  index?: number,
+  parent?: any
 ) {
   const oldEl =
     oldVnode.el ?? (index != null ? container.childNodes[index] : null)
-  const parent = oldEl?.parentNode
+  const domParent = oldEl?.parentNode
   const anchor = oldEl?.nextSibling ?? null
   // 先卸载旧节点：keep-alive 缓存的组件走缓存分支（DOM 移入隐藏容器、实例保留），
   // 否则组件停止 effect 并触发 beforeUnmount、元素移除 DOM
   unmount(oldVnode, container, index)
   // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）
-  const newEl = mountVNode(newVnode, container)
+  const newEl = mountVNode(newVnode, container, parent)
   if (
-    parent &&
+    domParent &&
     newEl &&
-    newEl.parentNode === parent &&
+    newEl.parentNode === domParent &&
     anchor &&
-    anchor.parentNode === parent
+    anchor.parentNode === domParent
   ) {
-    parent.insertBefore(newEl, anchor)
+    domParent.insertBefore(newEl, anchor)
   }
 }
 
@@ -641,12 +659,6 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   // 重新激活时从缓存恢复
   const keepAlive = vnode.__keepAlive
   if (keepAlive) {
-    console.log(
-      '[unmount] 缓存分支 key=',
-      keepAlive.key,
-      'el=',
-      !!vnode.component?.subTree?.el
-    )
     const { cache, storage, key } = keepAlive
     const el = vnode.component?.subTree?.el ?? vnode.el
     if (el && el.parentNode) storage.appendChild(el)
