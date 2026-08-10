@@ -68,8 +68,11 @@ mergeAttrsToRoot(subTree, attrs)
 1. **仅单根生效**：`subTree.type === Fragment`（或嵌套 Fragment）→ 跳过（多根不自动 fallthrough，同 Vue）
 2. **排除内部字段**：`key` / `ref` / `children` / `slots`（具名插槽）不落根元素
 3. **根元素显式声明优先**：根元素 props 已有该属性（除 class/style）→ 不覆盖（`<button type="button">` 不被外部 `type="submit"` 覆盖）
-4. **class / style 合并**：class 拼接、style 浅合并 —— 保证 `.vp-doc` 前缀样式生效且不丢组件自带 class
-5. **事件（onXxx）**：根元素已有 → 跳过（显式优先）；没有 → 落到根元素自动绑定
+4. **class 合并**：拼接合并（组件自带 + 外部共存），`className` 统一归一化为 `class` —— 保证 `.vp-doc` 前缀样式生效且不丢组件自带 class
+5. **style 合并**：根元素已有 style 时浅合并（对象 `{...root, ...attrs}`）；根 style 为字符串 → 显式优先保留（外部对象不覆盖字符串）
+6. **事件（onXxx）**：根元素已有 → 跳过（显式优先）；没有 → 落到根元素自动绑定
+7. **值过滤**：`value == null || value === false` 的 attrs 不透传（对齐 setProp 的移除语义）；style 仅普通对象（数组排除）
+8. **内置组件根不透传**：`subTree.type?.__builtin`（Teleport / Transition 等，props 有特殊语义）跳过合并
 
 ### 阶段 2：options 形态 + props 白名单分离 + 全量透传（已实施）
 
@@ -126,27 +129,37 @@ const Box = defineComponent({
 | 更新路径 | `patchComponent`：`updateProps(instance.props, ...)` 增量写 + `collectAttrs` 重算 attrs 增量写 → `instance.update()` → render → 重新合并 |
 | 多根组件 | 不自动 fallthrough —— 文档标注「用 `{...attrs}` 显式绑定到目标元素」（JSX 展开） |
 | 条件渲染组件 | `return cond ? <Comp/> : null` 返回单根元素 → fallthrough 正常；`<>...</>`（Fragment 根）不透传，与 Vue 一致 |
+| 内置组件根 | 根是 Teleport / Transition（`__builtin`）→ 不透传（props 有特殊语义，避免污染目标容器/过渡类） |
 | 事件覆盖 | 显式优先（内部已有 onclick 时外部忽略）—— 与 Vue invoker 并存不同，可接受差异 |
+| className 归一化 | `class` / `className` 统一合并落到 `class`（删除 className） |
+| 空值过滤 | `null` / `undefined` / `false` 值的 attrs 不透传（setProp 同款移除语义）；style 数组/函数不透传 |
 | 多余属性 | 函数形态下 `<Button type="submit">` 若组件不在根元素用 type，type 落到根 div（HTML 无效属性但无害，同 Vue 无白名单语义） |
 | 值类型过滤 | 业务 props（对象/数组，如 `features={[...]}`）不透传，避免 `[object Object]` 污染根元素——与 Vue 的差异点（Vue 全落根） |
 | 函数形态 props | 保持全量（向后兼容），attrs 同全量；有类型注解/解构时 Babel 自动提取白名单（无需手写 options 形态） |
 
 ---
 
-## 6. 验证测试（已实施，scripts/verify.test.tsx 场景 27，15 用例）
+## 6. 验证测试（已实施，scripts/verify.test.tsx 场景 27，19 用例）
 
 1. `<Content class="vp-doc" />` → 根元素 class 含 `vp-doc`（背景场景）
 2. class 合并：内部 `class="a"` + 外部 `class="b"` → 根元素 `a b`
 3. 显式优先：内部 `id="x"` + 外部 `id="y"` → 根元素 `id="x"`；`type="button"` 不被外部覆盖
 4. 标量 attrs 全量透传：外部 `title`/`data-x` → 根元素有
-5. Fragment 多根：不 fallthrough
-6. 更新：外部 class 变化 → 根元素 class 更新（走 `updateProps` → `update()`）
-7. 事件透传：外部 `onclick` → 根元素可触发
-8. 排除：`key` / `ref` / `children` 不落根元素
-9. 业务 props（对象/数组）不透传：根元素无 `features` 属性
-10. options 形态 props 分离：声明内进 `setup(props)`、声明外（`id`/`data-k`）落根
-11. `inheritAttrs: false`：未显式绑定不透传；`{...ctx.attrs}` 显式绑定生效
-12. scoped 继承：`data-v-*` attrs 落子 root，多级嵌套逐级累积
+5. 业务 props（数组/对象）不透传：根元素无 `features` 属性
+6. style 对象合并：根 `{color}` + attrs `{fontSize}` → 两者都在
+7. Fragment 多根：不 fallthrough
+8. options 形态 props 分离：声明内进 `setup(props)`、声明外（`id`/`data-k`）落根
+9. `inheritAttrs: false`：未显式绑定不透传；`{...ctx.attrs}` 显式绑定生效
+10. scoped 继承：`data-v-*` attrs 落子 root，多级嵌套逐级累积
+11. attrs-only 更新：options 形态仅外部属性变化也重渲染（`propsChanged || attrsChanged`）
+12. `renderToString`：options 形态 setup 访问 `ctx.attrs` 不崩溃（SSR 传空 attrs）
+13. style 值类型过滤：数组/函数不透传，根无污染
+14. 根字符串 style 保留：外部 style 对象不覆盖字符串
+15. 条件渲染三元组件（Babel 转换产物形态）：单根时 class 透传
+16. 内置组件根（Teleport）不透传：`class`/`title` 不落到 Teleport 目标内容
+17. 更新：外部 class 变化 → 根元素 class 更新（走 `updateProps` → `update`），自带 class 保留
+18. 事件透传：外部 `onclick` → 根元素可触发
+19. 排除：`key` / `ref` / `children` / `slots` 不落根元素
 
 ---
 

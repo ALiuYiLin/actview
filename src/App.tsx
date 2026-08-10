@@ -6,7 +6,8 @@ import './index.css?scoped'
 // 样式已移至 index.css（scoped，见 .app / .app h1 / .app nav / :deep(a)）
 // ============================================================
 
-export function App() {
+export function App({x1}:{x1?:any}) {
+  console.log('x1: ', x1);
   return (
     <div class="app">
       <h1>
