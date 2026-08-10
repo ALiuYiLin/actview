@@ -73,8 +73,10 @@ export function actviewScopedPlugin(options: ScopedPluginOptions = {}) {
     ) {
       const clean = cleanId(id)
       if (!/\.(tsx|jsx|js)$/.test(clean)) return null
-      if (id.includes('node_modules')) return null
-      // 快速跳过：源码不含 ?scoped 时不解析（性能友好）
+      // 快速跳过：源码不含 ?scoped 时不解析（性能友好）。
+      // 注意：不按 node_modules 跳过——源码分发的主题/库包（如 actpress 主题）
+      // 发布在 node_modules 下也会合法 import '...css?scoped'，硬跳过会导致
+      // CSS 已 scoped 化但元素无属性。?scoped 检查对全部文件都安全。
       if (!code.includes('?scoped')) return null
 
       // 预解析 CSS import → 绝对路径（走 Vite resolver，alias/裸包路径正确，
