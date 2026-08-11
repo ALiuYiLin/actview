@@ -120,18 +120,17 @@ function serializeNode(node: any): string {
       beforeUnmount: [] as (() => void)[],
       unmounted: [] as (() => void)[],
       scope: null,
+      parent: null,
+      injects: {} as Record<string, any>,
     }
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
       // 阶段 2：options 形态 setup(props, ctx)——SSR 无 attrs fallthrough
       // （与运行时 mergeAttrsToRoot 不同），传空 attrs 避免 ctx.attrs 崩溃；
-      // injects/provide 静态生成无父子链（顶层递归无 parent），传空实现
-      const ctx = {
-        attrs: {} as Record<string, any>,
-        injects: {} as Record<string, any>,
-        provide: () => {}
-      }
+      // injects 静态生成无父子链（顶层递归无 parent），provide 落到 ssrInstance
+      // 自己的表（子孙串行化时不可见，已知限制）
+      const ctx = { attrs: {} as Record<string, any>, injects: ssrInstance.injects }
       render =
         typeof setup === 'function'
           ? setup(props ?? {}, ctx)

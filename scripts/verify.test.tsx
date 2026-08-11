@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
@@ -2170,40 +2170,40 @@ describe('场景 31：同一对象自我 patch 短路（语言切换 title 不�
 })
 
 // ------------------------------------------------------------
-// 场景 32：provide / inject（ctx.provide + ctx.injects）
-//   - 未使用 provide 的组件共享父注入引用（零拷贝）
+// 场景 32：provide / inject（顶层 provide API + ctx.injects）
+//   - 未调用 provide 的组件共享父注入引用（零拷贝）
 //   - 首次 provide 时 copy-on-write 拷贝，同名覆盖继承值
 // ------------------------------------------------------------
 describe('场景 32：provide / inject', () => {
   it('父 provide → 孙组件经 ctx.injects 读取（跨中间组件）', () => {
-    function Provider(props: {}, ctx: any) {
-      ctx.provide('theme', 'dark')
+    function Provider() {
+      provide('theme', 'dark')
       return <Mid />
     }
-    function Mid(props: {}, ctx: any) {
+    function Mid() {
       return <Leaf />
     }
-    function Leaf(props: {}, ctx: any) {
+    function Leaf(_props: any, ctx?: any) {
       return <div class="leaf">{ctx.injects.theme}</div>
     }
     const host = mount('#s32-1', Provider)
     expect(host.querySelector('.leaf')!.textContent).toBe('dark')
   })
 
-  it('未使用 provide 的组件共享父注入引用（零拷贝）', () => {
+  it('未调用 provide 的组件共享父注入引用（零拷贝）', () => {
     let parentTable: any
     let midTable: any
     let leafTable: any
-    function Provider(props: {}, ctx: any) {
-      ctx.provide('a', 1)
+    function Provider(_props: any, ctx?: any) {
+      provide('a', 1)
       parentTable = ctx.injects
       return <Mid />
     }
-    function Mid(props: {}, ctx: any) {
+    function Mid(_props: any, ctx?: any) {
       midTable = ctx.injects
       return <Leaf />
     }
-    function Leaf(props: {}, ctx: any) {
+    function Leaf(_props: any, ctx?: any) {
       leafTable = ctx.injects
       return <div>leaf</div>
     }
@@ -2216,17 +2216,17 @@ describe('场景 32：provide / inject', () => {
   it('同名覆盖继承值 + copy-on-write 不污染父表', () => {
     let parentTable: any
     let childTable: any
-    function Provider(props: {}, ctx: any) {
-      ctx.provide('theme', 'dark')
+    function Provider(_props: any, ctx?: any) {
+      provide('theme', 'dark')
       parentTable = ctx.injects
       return <Child />
     }
-    function Child(props: {}, ctx: any) {
-      ctx.provide('theme', 'light') // 同名覆盖
+    function Child(_props: any, ctx?: any) {
+      provide('theme', 'light') // 同名覆盖
       childTable = ctx.injects
       return <Leaf />
     }
-    function Leaf(props: {}, ctx: any) {
+    function Leaf(_props: any, ctx?: any) {
       return <div class="leaf">{ctx.injects.theme}</div>
     }
     const host = mount('#s32-3', Provider)
@@ -2237,15 +2237,15 @@ describe('场景 32：provide / inject', () => {
   })
 
   it('新增 key 保留继承的其他 key', () => {
-    function Provider(props: {}, ctx: any) {
-      ctx.provide('a', 1)
+    function Provider() {
+      provide('a', 1)
       return <Child />
     }
-    function Child(props: {}, ctx: any) {
-      ctx.provide('b', 2) // 新增 key
+    function Child() {
+      provide('b', 2) // 新增 key
       return <Leaf />
     }
-    function Leaf(props: {}, ctx: any) {
+    function Leaf(_props: any, ctx?: any) {
       return <div class="leaf">{ctx.injects.a}-{ctx.injects.b}</div>
     }
     const host = mount('#s32-4', Provider)
@@ -2253,9 +2253,9 @@ describe('场景 32：provide / inject', () => {
   })
 
   it('根组件（无父）injects 为空对象，provide 可用', () => {
-    function Root(props: {}, ctx: any) {
+    function Root(_props: any, ctx?: any) {
       expect(Object.keys(ctx.injects).length).toBe(0)
-      ctx.provide('k', 'v')
+      provide('k', 'v')
       return <div class="root">{ctx.injects.k}</div>
     }
     const host = mount('#s32-5', Root)
@@ -2264,11 +2264,11 @@ describe('场景 32：provide / inject', () => {
 
   it('provide ref → 注入保持响应式，更新驱动 DOM', async () => {
     const count = ref(0)
-    function Provider(props: {}, ctx: any) {
-      ctx.provide('count', count)
+    function Provider() {
+      provide('count', count)
       return <Leaf />
     }
-    function Leaf(props: {}, ctx: any) {
+    function Leaf(_props: any, ctx?: any) {
       return <p class="c">{ctx.injects.count.value}</p>
     }
     const host = mount('#s32-6', Provider)
@@ -2276,5 +2276,12 @@ describe('场景 32：provide / inject', () => {
     count.value = 5
     await nextTick()
     expect(host.querySelector('.c')!.textContent).toBe('5')
+  })
+
+  it('setup 外调用 provide 警告且不生效', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    provide('x', 1) // 无 currentInstance
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
   })
 })

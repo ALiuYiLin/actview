@@ -23,6 +23,7 @@ export {
   onUpdated,
   onBeforeUnmount,
   onUnmounted,
+  provide,
   renderToString,
   Teleport,
   Transition,

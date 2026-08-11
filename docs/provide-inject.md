@@ -16,26 +16,27 @@
 ## 2. API 形态
 
 ```tsx
+import { provide } from 'actview'
+
 // 提供方：setup 顶层同步调用（与生命周期钩子一致）
-function ThemeProvider(props: {}, ctx: any) {
-  ctx.provide('theme', 'dark')
+function ThemeProvider() {
+  provide('theme', 'dark')
   return <Child />
 }
 
 // 消费方：任意层级后代直接读取
-function Button(props: {}, ctx: any) {
+function Button(_props: any, ctx?: any) {
   return <button class={ctx.injects.theme === 'dark' ? 'btn-dark' : 'btn-light'}>go</button>
 }
 ```
 
-| 成员 | 说明 |
+| API | 说明 |
 |---|---|
-| `ctx.provide(key, value)` | 提供注入值；同名覆盖继承值、新 key 添加 |
-| `ctx.injects` | 注入表（只读约定）；继承自最近提供方 |
+| `provide(key, value)`（顶层导入） | 提供注入值；同名覆盖继承值、新 key 添加。**只能在组件 setup 中调用**（setup 外调用 warn 且不生效） |
+| `ctx.injects`（setup 第二参数） | 注入表（只读约定）；继承自最近提供方 |
 
 - 函数形态（`defineComponent(fn)`）与 options 形态（`defineComponent({ props, setup })`）都可用
-- 无需 import 任何 API，`ctx` 即 setup 第二参数
-- `props: {}` 空类型注解 → Babel 回退函数形态，`ctx` 照常可用
+- 消费方组件第二参 `ctx` 建议写**可选**（`ctx?: any`）——JSX 组件类型要求单参可调用
 
 ---
 
@@ -54,12 +55,14 @@ function Button(props: {}, ctx: any) {
 `injects` 本身是普通对象（不 track/trigger，性能优先）；要响应式就提供 `ref`，子组件读 `.value` 天然联动更新：
 
 ```tsx
-function Provider(props: {}, ctx: any) {
+import { provide, ref } from 'actview'
+
+function Provider() {
   const count = ref(0)
-  ctx.provide('count', count)     // 提供 ref
+  provide('count', count)     // 提供 ref
   return <Counter />
 }
-function Counter(props: {}, ctx: any) {
+function Counter(_props: any, ctx?: any) {
   return <p>{ctx.injects.count.value}</p>   // count 变化 → 自动重渲染
 }
 ```
@@ -103,10 +106,17 @@ mountComponent(vnode, container, parent)      // 挂载时显式传入父实例
 
 > 为什么不用「实例栈」：每次 `update()` push/pop 会有全局状态开销；方案 2 在低频的挂载路径传参，渲染（高频）路径零成本，且子组件显式知道父级是谁、不依赖全局。
 
-### 5.2 provide：copy-on-write 懒拷贝
+### 5.2 provide：顶层 API + copy-on-write 懒拷贝
+
+`provide` 复用生命周期钩子的 `currentInstance` 上下文机制（`getCurrentInstance`），在 setup 期间拿到组件实例：
 
 ```ts
-const provide = (key, value) => {
+export function provide(key, value) {
+  const instance = getCurrentInstance()
+  if (!instance) {
+    console.warn('[actview] provide 只能在组件 setup 中调用')
+    return
+  }
   if (instance.injects === instance.parent?.injects) {
     instance.injects = { ...instance.injects }   // 首次 provide 才拷贝（一次 O(链长)）
   }
@@ -123,8 +133,7 @@ const provide = (key, value) => {
 ```ts
 instance.render = options.__setup(props, {
   attrs,
-  get injects() { return instance.injects },   // 实时指向最新表
-  provide
+  get injects() { return instance.injects }   // 实时指向最新表
 })
 ```
 
@@ -144,14 +153,12 @@ instance.render = options.__setup(props, {
 
 | 项 | 说明 |
 |---|---|
-| provide 调用时机 | 仅在 setup 顶层**同步**调用（与生命周期钩子一致）；事件回调/异步中调用时机不可控，语义未定义 |
+| provide 调用时机 | 仅在组件 setup 顶层**同步**调用（与生命周期钩子一致，复用 currentInstance 上下文）；setup 外调用 warn 且不生效 |
 | injects 只读 | 直接写 `ctx.injects.x = ...` 会写进共享表（污染祖先/兄弟），约定只读；要修改应通过 provide |
 | 非响应式 | `injects` 是普通对象，不参与依赖收集；响应式需求用 `ref` 注入 |
 | 快照语义 | 组件边界拷贝后，祖先后续新增的 key 后代看不到（对齐 Vue 3 组件边界语义） |
 | KeepAlive 缓存 | 缓存实例跨卸载保留其注入表；因 KeepAlive 的父实例不变，语义与首挂一致 |
-| SSR / renderToString | 静态生成无父子链（顶层递归），setup 收到空 `injects` + 空 `provide`（不崩）；SSR 端 injects 仅同层可见的限制属已知差异 |
-
----
+| SSR / renderToString | 静态生成无父子链（顶层递归），provide 落到当前实例自己的表、子孙串行化时不可见（已知限制）；ctx.injects 为空表，不崩 |
 
 ## 7. 验证（verify 场景 32）
 
@@ -161,14 +168,13 @@ instance.render = options.__setup(props, {
 4. 新增 key 保留继承的其他 key
 5. 根组件（无父）injects 为空对象
 6. provide `ref` → 注入保持响应式，更新驱动 DOM
-
----
+7. setup 外调用 provide → warn 且不生效
 
 ## 8. 与 Vue 3 对照
 
 | 项 | Vue 3 | ActView |
 |---|---|---|
-| API | `provide(key, val)` / `inject(key, default)` | `ctx.provide(key, val)` / `ctx.injects`（仅运行时 ctx，无顶层 API） |
+| API | `provide(key, val)` / `inject(key, default)` | 顶层 `provide(key, val)` / `ctx.injects` |
 | 注入默认值 | `inject(key, default)` | 无（读不到为 `undefined`，可用 `??` 兜底） |
 | 响应式 | 默认非响应式（传 ref） | 同左 |
 | 组件边界快照 | 提供方重渲染时注入值保持 | 同左（惰性拷贝表） |

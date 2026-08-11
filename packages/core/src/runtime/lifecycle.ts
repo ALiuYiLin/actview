@@ -48,3 +48,21 @@ function registerHook(type: HookType, fn: () => void) {
   }
   ;(currentInstance[type] as (() => void)[]).push(fn)
 }
+
+/**
+ * 提供注入值（顶层 API，需在组件 setup 中调用——与生命周期钩子一致）。
+ * 子组件经 ctx.injects 读取；同名 key 覆盖继承值、新 key 添加。
+ * 性能：未调用 provide 的组件共享父注入表（零拷贝），首次调用时
+ * copy-on-write 浅拷贝成自己的副本，之后 O(1) 写入。
+ */
+export function provide(key: string, value: any) {
+  const instance = getCurrentInstance()
+  if (!instance) {
+    console.warn('[actview] provide 只能在组件 setup 中调用')
+    return
+  }
+  if (instance.injects === instance.parent?.injects) {
+    instance.injects = { ...instance.injects }
+  }
+  instance.injects[key] = value
+}

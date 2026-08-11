@@ -110,20 +110,8 @@ export function mountComponent(
   // 组件模板引用：ref 指向组件实例
   applyRef(vnode.props?.ref, instance)
 
-  // provide：copy-on-write 注入表。
-  //   - 本组件未提供过任何值 → 直接复用父注入表引用（零拷贝共享，性能最优）
-  //   - 首次 provide 时浅拷贝继承表成自己的副本，之后在副本上写
-  //   - 同名 key 覆盖继承值、新 key 添加（JS 对象属性语义，一次赋值完成）
-  // 约定：provide 仅在 setup 顶层同步调用（与生命周期钩子一致）。
-  const provide = (key: string, value: any) => {
-    if (instance.injects === instance.parent?.injects) {
-      instance.injects = { ...instance.injects }
-    }
-    instance.injects[key] = value
-  }
-
   // setup 执行期间挂载 currentInstance 上下文：
-  // 组件内调用 onMounted / onUpdated / onBeforeUnmount 注册到本实例
+  // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
   setCurrentInstance(instance)
   instance.render = options.__setup(props, {
     attrs,
@@ -131,8 +119,7 @@ export function mountComponent(
     // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
     get injects() {
       return instance.injects
-    },
-    provide
+    }
   })
   setCurrentInstance(null)
 
