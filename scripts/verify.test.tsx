@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, useAttrs, useInjects, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
@@ -2283,5 +2283,59 @@ describe('场景 32：provide / inject', () => {
     provide('x', 1) // 无 currentInstance
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
+  })
+
+  it('useInjects(key) 与 useInjects()（顶层 API）', () => {
+    function Provider() {
+      provide('theme', 'dark')
+      provide('count', 3)
+      return <Leaf />
+    }
+    function Leaf() {
+      const theme = useInjects('theme')
+      const count = useInjects('count')
+      const all = useInjects()
+      return (
+        <div class="leaf">
+          {theme}-{count}-{Object.keys(all).length}
+        </div>
+      )
+    }
+    const host = mount('#s32-7', Provider)
+    expect(host.querySelector('.leaf')!.textContent).toBe('dark-3-2')
+  })
+
+  it('useInjects(key) 未提供返回 undefined；useAttrs(key) 读取外部属性', () => {
+    function Panel(_props: any, ctx?: any) {
+      const missing = useInjects('nope')
+      const title = useAttrs('title')
+      const all = useAttrs()
+      return (
+        <div class="panel" title={title}>
+          {missing ?? 'none'}-{typeof all.title}-{ctx.attrs?.id}
+        </div>
+      )
+    }
+    function App() {
+      return <Panel title="hello" id="p1" />
+    }
+    const host = mount('#s32-8', App)
+    const el = host.querySelector('.panel')!
+    expect(el.getAttribute('title')).toBe('hello')
+    expect(el.textContent).toBe('none-string-p1')
+  })
+
+  it('useAttrs() 无 key 返回整个 attrs（函数形态全量）', () => {
+    let attrsRef: any
+    function Box() {
+      attrsRef = useAttrs()
+      return <div class="box">box</div>
+    }
+    function App() {
+      return <Box title="t" data-x="dx" />
+    }
+    mount('#s32-9', App)
+    expect(attrsRef.title).toBe('t')
+    expect(attrsRef['data-x']).toBe('dx')
   })
 })

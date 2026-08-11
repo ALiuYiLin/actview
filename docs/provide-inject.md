@@ -25,8 +25,12 @@ function ThemeProvider() {
 }
 
 // 消费方：任意层级后代直接读取
-function Button(_props: any, ctx?: any) {
-  return <button class={ctx.injects.theme === 'dark' ? 'btn-dark' : 'btn-light'}>go</button>
+import { useInjects } from 'actview'
+
+function Button() {
+  const theme = useInjects('theme')          // 单个注入值
+  // 或 const all = useInjects()             // 整个注入表
+  return <button class={theme === 'dark' ? 'btn-dark' : 'btn-light'}>go</button>
 }
 ```
 
@@ -34,6 +38,7 @@ function Button(_props: any, ctx?: any) {
 |---|---|
 | `provide(key, value)`（顶层导入） | 提供注入值；同名覆盖继承值、新 key 添加。**只能在组件 setup 中调用**（setup 外调用 warn 且不生效） |
 | `ctx.injects`（setup 第二参数） | 注入表（只读约定）；继承自最近提供方 |
+| `useInjects(key?)`（顶层导入） | 组合式读取：`useInjects('theme')` 取单个注入值（未提供返回 `undefined`）；`useInjects()` 取整个注入表。**只能在组件 setup 中调用** |
 
 - 函数形态（`defineComponent(fn)`）与 options 形态（`defineComponent({ props, setup })`）都可用
 - 消费方组件第二参 `ctx` 建议写**可选**（`ctx?: any`）——JSX 组件类型要求单参可调用

@@ -117,6 +117,7 @@ const Box = defineComponent({
 配套类型（jsx/global.ts）：
 - `JSX.LibraryManagedAttributes<C, P> = P & Record<string, any>`：组件元素 JSX 属性允许 props 白名单外的 attrs（class、style、data-*、on*），声明内属性仍做必填/类型检查
 - 裸函数组件的 `ctx` 第二参建议写**可选**（`ctx?: any`）——JSX 组件类型要求单参可调用
+- 读取 attrs 也可用顶层组合式 API：`useAttrs()` 取整个 attrs、`useAttrs('title')` 取单个属性（仅在组件 setup 中调用）
 7. **scoped 集成**：`data-v-*`（scoped hash）在 attrs 中 → 全量透传落子组件根元素，实现「子 root 继承父 scopeId」；多级嵌套经组件 props 链逐级累积（对齐 Vue）
 
 ---
