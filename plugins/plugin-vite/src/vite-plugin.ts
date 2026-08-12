@@ -1,16 +1,14 @@
 // ============================================================
 // Vite 插件
 // .tsx 文件在 esbuild 之前过一遍 Babel，做 defineComponent 转换
-// 编译核心（defineComponentPlugin）见 @actview/babel-plugin-actview
+// 编译核心（defineComponentPlugin）与宿主壳（createBabelTransform）
+// 均见 @actview/babel-plugin-actview
 // ============================================================
 
-import * as babel from '@babel/core'
-import { defineComponentPlugin } from '@actview/babel-plugin-actview'
+import { createBabelTransform, defineComponentPlugin } from '@actview/babel-plugin-actview'
 
-// 模块级只创建一次 ConfigItem（Babel 8 同步版本）
-const pluginItem = babel.createConfigItemSync(defineComponentPlugin, {
-  type: 'plugin',
-})
+// 模块级只创建一次 Babel 转换器（内部缓存 ConfigItem，Babel 8 同步版本）
+const transform = createBabelTransform(defineComponentPlugin)
 
 export function actviewPlugin() {
   return {
@@ -26,19 +24,10 @@ export function actviewPlugin() {
       // .tsx——不能按 node_modules 跳过，否则函数组件以裸函数进入运行时崩溃
       if (!cleanId.endsWith('.tsx') && !cleanId.endsWith('.js')) return null
 
-      const result = babel.transformSync(code, {
-        filename: id,
-        plugins: [pluginItem],
-        parserOpts: {
-          plugins: ['jsx', 'typescript'],
-        },
-        retainLines: true,
-        sourceMaps: true,
-      })
-
+      const result = transform(code, id)
       if (!result) return null
       return {
-        code: result.code || code,
+        code: result.code,
         map: result.map as any,
       }
     },

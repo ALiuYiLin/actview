@@ -5,3 +5,11 @@
 
 export { default as defineComponentPlugin } from './babel-plugin.ts'
 export { default } from './babel-plugin.ts'
+
+// 共享 Babel 宿主壳（Vite 插件复用：plugin-vite / plugin-scoped）
+export {
+  createBabelTransform,
+  createBabelItem,
+  transformWithBabel,
+} from './babel-host.ts'
+export type { BabelHostResult } from './babel-host.ts'

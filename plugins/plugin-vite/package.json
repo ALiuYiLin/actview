@@ -10,6 +10,17 @@
     "@actview/babel-plugin-actview": "workspace:*",
     "@babel/core": "^8.0.1"
   },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1"
+  },
   "scripts": {
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
     "release": "pnpm build && cd dist && npm publish"

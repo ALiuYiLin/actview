@@ -64,6 +64,7 @@ function rewriteDeps(deps) {
 
 const distPkg = { ...pkg }
 delete distPkg.private
+delete distPkg.devDependencies
 distPkg.main = './index.js'
 distPkg.module = './index.js'
 distPkg.types = './index.d.ts'

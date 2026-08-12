@@ -5,8 +5,8 @@
 //   jsx：.tsx/.jsx/.js 中检测带 ?scoped 的 CSS import，Babel 注入 data-v-hash
 // ============================================================
 
-import * as babel from '@babel/core'
 import path from 'node:path'
+import { createBabelItem, transformWithBabel } from '@actview/babel-plugin-actview'
 import { transformScopedCSS, getHash } from './css.ts'
 import { scopedBabelPlugin } from './babel.ts'
 import type { ScopedPluginOptions } from './types.d.ts'
@@ -100,25 +100,16 @@ export function actviewScopedPlugin(options: ScopedPluginOptions = {}) {
         cssImportMap.set(src, abs ?? resolveCssPath(src, id))
       }
 
-      const pluginItem = babel.createConfigItemSync(
+      const pluginItem = createBabelItem(
         scopedBabelPlugin({
           resolveCssPath: (importSource) =>
             cssImportMap.get(importSource) ?? resolveCssPath(importSource, id),
           attrPrefix,
         }),
-        { type: 'plugin' },
       )
-      const result = babel.transformSync(code, {
-        filename: id,
-        plugins: [pluginItem],
-        parserOpts: { plugins: ['jsx', 'typescript'] },
-        retainLines: true,
-        sourceMaps: true,
-        babelrc: false,
-        configFile: false,
-      })
+      const result = transformWithBabel(code, id, pluginItem)
       if (!result) return null
-      const out = result.code || code
+      const out = result.code
       // 无实际转换（有 ?scoped import 但无 JSX 元素）时原样返回，避免多余 transform
       const hasChanged = out.includes(`${attrPrefix}-`)
       if (!hasChanged) return null
