@@ -11,6 +11,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // workspace 包 exports 已指向 src（dev 免构建）；jsx 子路径别名是历史保留
       '@actview/jsx': path.resolve(__dirname, 'packages/jsx/src'),
     },
   },

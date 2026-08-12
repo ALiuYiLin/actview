@@ -10,7 +10,21 @@
     "@actview/jsx": "workspace:*"
   },
   "scripts": {
-    "build": "tsup && node ../../scripts/rewrite-package.mjs .",
-    "release": "pnpm build && cd dist && npm publish"
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   }
 }
