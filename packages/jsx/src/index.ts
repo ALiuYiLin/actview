@@ -17,14 +17,6 @@ export {
   REACT_FRAGMENT_TYPE
 } from './jsxFactory.js'
 
-export type {
-  VNode,
-  VNodeTypes,
-  VNodeKey,
-  VNodeChild,
-  VNodeChildren,
-  LazyVNode,
-  HtmlProps,
-  InputProps,
-  FormEvent
-} from './types.js'
+// types.ts 全部为类型定义——用 export *（tsup 多 entry 的 dts 构建
+// 对具名类型再导出 `export type {...} from` 解析失败，见 release 修复记录）
+export * from './types.js'

@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-scoped",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Vue-like scoped CSS for ActView — compile-time CSS isolation (import './x.css?scoped' 自动开启)",
   "exports": {
