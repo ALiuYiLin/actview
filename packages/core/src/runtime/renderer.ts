@@ -5,7 +5,6 @@
 // ============================================================
 
 import { mountComponent, collectAttrs } from './mountComponent'
-import { getChildren } from '../vnode'
 import {
   mountTeleport,
   patchTeleport,
@@ -48,7 +47,9 @@ function toVNode(child: any): any {
     return createTextVNode(String(child))
   }
   return child
-}function normalizeChildren(children: any): any[] {
+}
+
+function normalizeChildren(children: any): any[] {
   if (children == null || children === false || children === true) return []
   // 扁平化嵌套数组：JSX children 可以是 `[el, arr.map(...)]`（数组含数组），
   // 不扁平化会把子数组当成单个 child → mountVNode(数组) → createElement(数组)
@@ -93,9 +94,7 @@ export function patch(
   // 同一对象短路：组件未重渲染时缓存 subTree 被当 newVnode 继续 patch（自我
   // patch）。若不短路，keyed diff 会对同一 vnode 执行 mount+unmount，
   // mountVNode 无条件重建覆盖 vnode.el =》 旧 DOM 残留累积（语言切换 .title +1）
-  // 注意：hoisted 静态子树可能被 attrs fallthrough 原地改 props（mergeAttrsToRoot）
-  // → props 引用变化时必须继续 patch，否则外部属性更新被吞
-  if (oldVnode === newVnode && oldVnode.props === newVnode.props) return
+  if (oldVnode === newVnode) return
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
     patchVNode(oldVnode, newVnode, container, index, parent)
@@ -132,12 +131,6 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
 
-  // hoisted 静态子树跨组件实例共享：已被其他实例挂载过（vnode.el 存在）→
-  // 浅克隆一份，避免多实例共用同一 VNode 的 el 槽位互相覆盖
-  if (vnode.el != null) {
-    vnode = { ...vnode }
-  }
-
   // 内置组件（Teleport / Transition）：优先于普通组件分支
   // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
   if (vnode.type?.__builtin === 'teleport')
@@ -156,7 +149,7 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
     vnode.el = null
     vnode.__avChildren = patchChildren(
       null,
-      getChildren(vnode),
+      vnode.props?.children,
       container as Element,
       undefined,
       parent
@@ -179,7 +172,7 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   const el = document.createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
-  vnode.__avChildren = patchChildren(null, getChildren(vnode), el, undefined, parent)
+  vnode.__avChildren = patchChildren(null, vnode.props?.children, el, undefined, parent)
   container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
@@ -189,11 +182,6 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
 // ------------------------------------------------------------
 // 更新
 // ------------------------------------------------------------
-
-// 编译期 PatchFlag（与 @actview/babel-plugin-actview 的 PATCH_* 保持一致）
-// 1 = 动态文本 children（更新只写 textContent）；2 = props 含动态属性（__propsKeys）
-const PATCH_TEXT = 1
-const PATCH_PROPS = 2
 
 /** v-memo deps 比较：长度一致 + 逐项 Object.is（值比较，非引用比较） */
 function sameMemoDeps(a: any, b: any): boolean {
@@ -212,9 +200,8 @@ function patchVNode(
   index?: number,
   parent?: any
 ) {
-  // v-memo（编译期标记在元素/组件 VNode 上）：deps 与上次相同 → 整棵子树短路，
-  // 不 render 子树 / 不 diff / 不碰 DOM。DOM 归属（el/__avChildren）从旧 vnode 继承。
-  // deps 在 VNode 创建时（render 内）已求值存 __memoValue（见 jsxFactory）。
+  // v-memo（esbuild 产物经 jsxFactory 提取）：deps 与上次相同 → 整棵子树短路，
+  // 不 diff / 不碰 DOM。DOM 归属（el/__avChildren）从旧 vnode 继承。
   if (newVnode.__memoDeps) {
     if (
       oldVnode &&
@@ -223,7 +210,6 @@ function patchVNode(
     ) {
       newVnode.el = oldVnode.el
       newVnode.__avChildren = oldVnode.__avChildren
-      newVnode.__dynamicChildren = oldVnode.__dynamicChildren
       return
     }
   }
@@ -273,8 +259,8 @@ function patchVNode(
   if (newVnode.type === Fragment) {
     newVnode.el = oldVnode.el
     newVnode.__avChildren = patchChildren(
-      getChildren(oldVnode),
-      getChildren(newVnode),
+      oldVnode.props?.children,
+      newVnode.props?.children,
       container,
       oldVnode,
       parent
@@ -283,49 +269,13 @@ function patchVNode(
   }
   // 原生元素：更新 props 与 children
   const el = (newVnode.el = oldVnode.el as Element)
-  const flag = newVnode.__patchFlag
-  if (flag === undefined) {
-    // 未编译（手写 _jsx / 已降级产物）：老路径——props 引用相同才跳过
-    if (oldVnode.props !== newVnode.props) {
-      patchProps(oldVnode.props, newVnode.props, el)
-    }
-  } else {
-    // 编译期标记：动态文本 children 只写 textContent（跳过 children diff）；
-    // 非标量（数组/对象，编译期保守分析兜底）回退正常 diff。
-    // 注意：TEXT 与 PROPS 可能组合（如 <a onClick={..}>{x}</a>）——
-    // 跳过 children diff 但动态 props 仍需 patch
-    let textOnly = false
-    if (flag & PATCH_TEXT) {
-      const c = getChildren(newVnode)
-      if (typeof c === 'string' || typeof c === 'number') {
-        const str = String(c)
-        if (el.textContent !== str) el.textContent = str
-        textOnly = true
-      }
-    }
-    // 静态 props（无 PATCH_PROPS）→ 跳过属性 patch；有 → 只 patch 动态 keys
-    if (flag & PATCH_PROPS) {
-      patchPropsKeyed(oldVnode.props, newVnode.props, el, newVnode.__propsKeys)
-    }
-    if (textOnly) return
-  }
-
-  // block（v-memo 行，C 方案）：只 patch 收集的动态节点（按索引配对），
-  // 跳过静态骨架的树 diff。动态节点在创建时按源码顺序收集进 __dynamicChildren，
-  // v-memo 短路失效时新旧行同 key 同位 → 顺序一致，索引配对安全。
-  if (newVnode.__dynamicChildren) {
-    const oldDyn = oldVnode?.__dynamicChildren || []
-    const newDyn = newVnode.__dynamicChildren
-    for (let i = 0; i < newDyn.length; i++) {
-      patchVNode(oldDyn[i] ?? null, newDyn[i], el, i, parent)
-    }
-    // children 的 DOM 结构未变（只 patch 了动态节点）→ 沿用旧的 __avChildren
-    newVnode.__avChildren = oldVnode?.__avChildren
-    return
+  // props 引用相同（编译期 hoist 的静态 props）→ 整体跳过属性 patch
+  if (oldVnode.props !== newVnode.props) {
+    patchProps(oldVnode.props, newVnode.props, el)
   }
   newVnode.__avChildren = patchChildren(
-    getChildren(oldVnode),
-    getChildren(newVnode),
+    oldVnode.props?.children,
+    newVnode.props?.children,
     el,
     oldVnode,
     parent
@@ -350,25 +300,14 @@ function patchComponent(
     return
   }
 
-  // children（插槽）独立存 __children（babel 编译产物）：props 相同但 children
-  // 引用变化（如 <KeepAlive><component is/> 切换）也必须重渲染
-  if (
-    !isSameProps(oldVnode.props, newVnode.props) ||
-    getChildren(oldVnode) !== getChildren(newVnode)
-  ) {
+  if (!isSameProps(oldVnode.props, newVnode.props)) {
     // 增量更新 props 与 attrs，任一有变化都触发子组件更新：
     // attrs-only 变化（options 形态下仅外部属性变化，如 <Box id="a"> → id="b"）
     // 也必须重渲染，否则 mergeAttrsToRoot 不重跑、根 DOM 属性陈旧
     const options = oldVnode.type
     const declared = options?.__props
-    // children 独立存 __children：增量更新 props 时合并进去（否则实例 props 的
-    // children 被无 children 的新 props 覆盖丢失，KeepAlive 等读 props.children 的组件失效）
-    const mergedNewProps =
-      newVnode.__children !== undefined
-        ? { ...newVnode.props, children: newVnode.__children }
-        : newVnode.props
-    const propsChanged = updateProps(instance.props, mergedNewProps)
-    const newAttrs = collectAttrs(declared, mergedNewProps)
+    const propsChanged = updateProps(instance.props, newVnode.props)
+    const newAttrs = collectAttrs(declared, newVnode.props)
     const attrsChanged = updateProps(instance.attrs, newAttrs)
     if (propsChanged || attrsChanged) {
       instance.update()
@@ -377,21 +316,6 @@ function patchComponent(
 
   newVnode.component = instance
   newVnode.el = instance.subTree ? instance.subTree.el : oldVnode.el
-}
-
-/** 编译期 PROPS 标记：只 patch 动态属性（key 列表由编译期固定，值变才 setProp） */
-function patchPropsKeyed(
-  oldProps: any,
-  newProps: any,
-  el: Element,
-  keys?: readonly string[],
-) {
-  if (!keys || !keys.length) return
-  for (const key of keys) {
-    const nv = newProps?.[key]
-    if (Object.is(oldProps?.[key], nv)) continue
-    setProp(el, key, nv)
-  }
 }
 
 /** 把新 props 增量写入旧 props，返回是否有变化 */

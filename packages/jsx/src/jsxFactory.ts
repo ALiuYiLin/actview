@@ -6,65 +6,17 @@
 export const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 export const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment')
 
-// ============================================================
-// block tree（C 方案）：openBlock/setupBlock 收集动态节点
-// babel 把 v-memo 元素编译为 (openBlock(), setupBlock(_jsx(...)))：
-//   openBlock 压栈 → children 求值（动态节点创建时 push 进当前 block）→
-//   _jsx 创建元素 → setupBlock 把收集数组挂到元素.__dynamicChildren
-// patch 时只遍历 __dynamicChildren（跳过静态骨架的树 diff），对齐 Vue。
-// ============================================================
-const blockStack: any[][] = []
-let currentBlock: any[] | null = null
-
-export function openBlock(): void {
-  blockStack.push([])
-  currentBlock = blockStack[blockStack.length - 1]
-}
-
-export function setupBlock(vnode: any): any {
-  const dyn = blockStack.pop()
-  currentBlock = blockStack.length ? blockStack[blockStack.length - 1] : null
-  if (dyn && dyn.length) vnode.__dynamicChildren = dyn
-  return vnode
-}
-
 import type { VNode, VNodeChildren, ComponentType } from './types.js'
 
-/** 创建 VNode；patchFlag 为编译期动态性标记（见 @actview/babel-plugin-actview 的 JSX 编译）。
- * children（第 6 参）独立存 __children 字段——不塞进 props：
- * 静态 props 可提升为模块级常量共享，动态 children 不与共享对象混在一起。
- * memoDeps（第 7 参）：v-memo 指令的 deps 工厂（() => any[]），patch 时比较短路。 */
-function createVNode(
-  type: any,
-  key: any,
-  props: any,
-  patchFlag?: number,
-  propsKeys?: readonly string[],
-  children?: any,
-  memoDeps?: () => any[],
-) {
-  const vnode: any = {
+/** 创建 VNode（返回 any：运行时附加字段 __patchFlag/__memoValue 等由编译产物/扩展写入） */
+function createVNode(type: any, key: any, props: any): any {
+  return {
     $$typeof: REACT_ELEMENT_TYPE,
     type,
     key,
     ref: null,
     props
   }
-  if (patchFlag !== undefined) vnode.__patchFlag = patchFlag
-  if (propsKeys) vnode.__propsKeys = propsKeys
-  if (children !== undefined) vnode.__children = children
-  if (memoDeps) {
-    // render 时立即求值（工厂在 render effect 内执行 → 响应式追踪 deps 里的变量，
-    // 如 v-memo={[label, id === selected]} 中的 selected）——patch 短路直接用 __memoValue
-    vnode.__memoDeps = memoDeps
-    vnode.__memoValue = memoDeps()
-  }
-  // block 收集：动态节点（flag ≠ 0）push 进当前 openBlock；v-memo 节点自己是
-  // block 根（babel 用 setupBlock 包裹），不 push 自身（避免收集到自己）
-  if (currentBlock && patchFlag !== undefined && patchFlag !== 0 && !memoDeps) {
-    currentBlock.push(vnode)
-  }
-  return vnode
 }
 
 // 类型签名（JSX 检查）：
@@ -87,21 +39,8 @@ function jsxImpl(
   maybeKey?: any
 ): VNode
 
-/** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode。
- * patchFlag：编译期动态性标记（1=TEXT 动态文本 children；2=PROPS 动态属性；
- * 0=props 全静态）。propsKeys：PROPS 标记下的动态属性名列表。
- * children（第 6 参）：babel 编译产物把动态 children 与静态 props 分离——
- * 静态 props 提升为模块级常量（共享、引用稳定），children 独立存 __children。
- */
-function jsxImpl(
-  type: any,
-  config: any,
-  maybeKey?: any,
-  patchFlag?: number,
-  propsKeys?: readonly string[],
-  children?: any,
-  memoDeps?: () => any[],
-) {
+/** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode */
+function jsxImpl(type: any, config: any, maybeKey?: any) {
   let key: any = null
 
   if (maybeKey !== undefined) {
@@ -120,7 +59,20 @@ function jsxImpl(
     props = config || {}
   }
 
-  return createVNode(type, key, props, patchFlag, propsKeys, children, memoDeps)
+  // v-memo 特殊键：esbuild automatic 产物中 v-memo 是 props 键（render 时已求值，
+  // 响应式追踪 ✓）→ 提取为 __memoValue（不进 props、不透传），patch 时短路整棵子树
+  let memoValue: any
+  if (props && props['v-memo'] !== undefined) {
+    memoValue = props['v-memo']
+    delete props['v-memo']
+  }
+
+  const vnode = createVNode(type, key, props)
+  if (memoValue !== undefined) {
+    vnode.__memoDeps = () => memoValue // 短路判断标记（值已求值）
+    vnode.__memoValue = memoValue
+  }
+  return vnode
 }
 
 // 自动 JSX 转换目标

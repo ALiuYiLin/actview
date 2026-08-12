@@ -23,7 +23,7 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
   it('简写裸函数：function X() { return <JSX/> } → defineComponent', () => {
     const out = transform(`function A() { return <div>hi</div> }`)
     expect(out).toContain('const A = defineComponent(function () {')
-    expect(out).toContain('return () => _hoisted1') // 全静态子树提升为常量
+    expect(out).toContain('return () => <div>hi</div>')
     expect(out).toMatch(/import \{ defineComponent \} from "@actview\/core"/)
   })
 
@@ -35,7 +35,7 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     )
     expect(out).toContain('function B(props)')
     expect(out).toContain('return function () {')
-    expect(out).toContain('_jsx("div"') // JSX 已编译为 _jsx 调用
+    expect(out).toContain('return <div>{n}</div>')
     // 未转换：无 defineComponent
     expect(out).not.toContain('defineComponent')
   })
@@ -43,13 +43,13 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
   it('缺陷 2：函数表达式组件 const X = function(props) {...} → defineComponent', () => {
     const out = transform(`const C = function (props) { return <p>{props.a}</p> }`)
     expect(out).toContain('const C = defineComponent(function (props) {')
-    expect(out).toContain('return () => _jsx("p"')
+    expect(out).toContain('return () => <p>{props.a}</p>')
   })
 
   it('缺陷 2：箭头函数 expression body：const X = () => <JSX/> → defineComponent', () => {
     const out = transform(`const D = () => <span>d</span>`)
     expect(out).toContain('const D = defineComponent(() => {')
-    expect(out).toContain('return () => _hoisted1')
+    expect(out).toContain('return () => <span>d</span>')
   })
 
   it('废弃方案文档化：箭头函数 block body + setup 风格也不转换', () => {
@@ -58,7 +58,7 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     )
     expect(out).toContain('const E = () => {')
     expect(out).toContain('return function () {')
-    expect(out).toContain('_jsx("i"')
+    expect(out).toContain('return <i>{x}</i>')
     expect(out).not.toContain('defineComponent')
   })
 
@@ -66,14 +66,14 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     const out = transform(
       `function F(props) { if (props.show) return <div>y</div>; return null }`,
     )
-    expect(out).toContain('return () => _hoisted1')
+    expect(out).toContain('return () => <div>y</div>')
     expect(out).toContain('return () => null')
   })
 
   it('default 导出箭头组件：export default () => <JSX/>', () => {
     const out = transform(`export default () => <div>def</div>`)
     expect(out).toContain('export default defineComponent(() => {')
-    expect(out).toContain('return () => _hoisted1')
+    expect(out).toContain('return () => <div>def</div>')
   })
 
   it('不误转：小写函数、非 JSX 返回、手动 defineComponent、非函数 init', () => {
@@ -89,7 +89,7 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     const defs = out.match(/const \w+ = defineComponent/g) ?? []
     expect(defs.length).toBe(1) // 仅手动 G 一个定义（import 不计）
     expect(out).toContain('function helper()')
-    expect(out).toMatch(/const small = \(\) => _hoisted\d+/)
+    expect(out).toMatch(/const small = \(\) => <div \/>/)
     expect(out).toContain('function data()')
   })
 
@@ -100,7 +100,7 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toContain('const App = defineComponent')
     expect(out).toContain('const Child = defineComponent')
     // Child 的 return 仍被 Child 自己转换，App 的 return <Child/> 包成 render
-    expect(out).toMatch(/return \(\) => _jsx\(Child/)
+    expect(out).toMatch(/return \(\) => <Child \/>/)
   })
 
   it('具名插槽在箭头 expression body 组件中也提取', () => {
@@ -119,7 +119,7 @@ describe('defineComponentPlugin：补充场景', () => {
   it('export default function() {...}（匿名函数声明）也转换', () => {
     const out = transform(`export default function () { return <div>anon</div> }`)
     expect(out).toContain('export default defineComponent(function () {')
-    expect(out).toContain('return () => _hoisted1')
+    expect(out).toContain('return () => <div>anon</div>')
   })
 
   it('isJsxCall（JSX 已降级为 _jsx 调用）仍转换', () => {
@@ -138,28 +138,28 @@ describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
       `function Child(props) { return props.condition ? <Comp /> : null }`,
     )
     expect(out).toContain('const Child = defineComponent(function (props) {')
-    expect(out).toContain('props.condition ? _jsx(Comp')
+    expect(out).toContain('return () => props.condition ? <Comp /> : null')
   })
 
   it('结尾三元双 JSX 分支 `? <A/> : <B/>`', () => {
     const out = transform(
       `function P(props) { return props.ok ? <A /> : <B /> }`,
     )
-    expect(out).toContain('props.ok ? _jsx(A')
+    expect(out).toContain('return () => props.ok ? <A /> : <B />')
   })
 
   it('逻辑与 `return cond && <Comp/>`', () => {
     const out = transform(
       `function Child(props) { return props.condition && <Comp /> }`,
     )
-    expect(out).toContain('props.condition && _jsx(Comp')
+    expect(out).toContain('return () => props.condition && <Comp />')
   })
 
   it('早退三元：if 内 return cond ? <A/> : <B/>', () => {
     const out = transform(
       `function F(p) { if (p.a) return p.b ? <A/> : <B/>; return null }`,
     )
-    expect(out).toContain('p.b ? _jsx(A')
+    expect(out).toContain('return () => p.b ? <A /> : <B />')
     expect(out).toContain('return () => null')
   })
 
@@ -167,13 +167,13 @@ describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
     const out = transform(
       `function G(p) { return p.a ? (p.b ? <A/> : <B/>) : null }`,
     )
-    expect(out).toContain('p.a ? p.b ? _jsx(A')
+    expect(out).toContain('return () => p.a ? p.b ? <A /> : <B /> : null')
   })
 
   it('箭头 expression body 三元', () => {
     const out = transform(`const C = (p) => (p.a ? <A/> : null)`)
     expect(out).toContain('const C = defineComponent(p => {')
-    expect(out).toContain('p.a ? _jsx(A')
+    expect(out).toContain('return () => p.a ? <A /> : null')
   })
 
   it('纯数值三元不转换（保持裸函数）', () => {
@@ -258,46 +258,5 @@ describe('defineComponentPlugin：自动 props 提取（TS 类型注解）', () 
     )
     expect(out).toContain('defineComponent(function')
     expect(out).not.toContain('props: [')
-  })
-})
-
-describe('defineComponentPlugin：v-memo 指令编译', () => {
-  it('v-memo={[deps]} → 第 7 参 deps 工厂，不进 props', () => {
-    const out = transform(`function Row() { return <tr v-memo={[a, b]}>x</tr> }`)
-    expect(out).toContain('() => [a, b]') // deps 工厂（闭包捕获 render 变量）
-    expect(out).not.toContain('"v-memo"') // 不进 props
-    expect(out).not.toContain('_hoisted1') // 有 v-memo → 不整体提升（元素每次重建）
-  })
-
-  it('v-memo 元素 props 静态时 props 仍提升，但元素本身每次调用', () => {
-    const out = transform(
-      `function Row() { return <tr id="x" v-memo={[n]}>y</tr> }`,
-    )
-    // props（id）提升为 _hoistedProps1，元素每次 _jsx 调用并携带 deps 工厂
-    expect(out).toContain('_hoistedProps1')
-    expect(out).toContain('() => [n]')
-  })
-
-  it('v-memo 与动态 props 共存：flag 正常标记', () => {
-    const out = transform(
-      `function Row() { return <tr v-memo={[n]} class={c}>y</tr> }`,
-    )
-    expect(out).toContain('() => [n]')
-    expect(out).toContain('"class"') // 动态 props key 记录
-  })
-})
-
-describe('defineComponentPlugin：block tree 编译（v-memo 元素 = block）', () => {
-  it('v-memo 元素 → openBlock()/setupBlock() 包装 + import', () => {
-    const out = transform(`function Row() { return <tr v-memo={[a]}>x</tr> }`)
-    expect(out).toContain('(openBlock(), setupBlock(_jsx(')
-    expect(out).toContain('openBlock, setupBlock } from "@actview/jsx/jsx-runtime"')
-    expect(out).toContain('() => [a]')
-  })
-
-  it('无 v-memo 不注入 openBlock/setupBlock', () => {
-    const out = transform(`function A() { return <div>x</div> }`)
-    expect(out).not.toContain('openBlock')
-    expect(out).not.toContain('setupBlock')
   })
 })

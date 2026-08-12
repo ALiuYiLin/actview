@@ -84,13 +84,6 @@ function isVNode(node: any): node is VNode {
   return !!node && typeof node === 'object' && typeof node.$$typeof === 'symbol'
 }
 
-/** 读取 VNode children：优先 __children（babel 编译产物），否则 props.children */
-function getChildren(vnode: any): any {
-  return vnode && vnode.__children !== undefined
-    ? vnode.__children
-    : vnode?.props?.children
-}
-
 /** 递归序列化单个节点 */
 function serializeNode(node: any): string {
   if (node == null || typeof node === 'boolean') return ''
@@ -104,7 +97,7 @@ function serializeNode(node: any): string {
 
   // Fragment：拼接子节点
   if (type === Fragment) {
-    return toChildrenArray(getChildren(node)).map(serializeNode).join('')
+    return toChildrenArray(props?.children).map(serializeNode).join('')
   }
 
   // 组件：__setup(props) 拿 render =》 render() 递归（构建期静态，无响应式上下文）
@@ -156,7 +149,7 @@ function serializeNode(node: any): string {
   if (typeof type !== 'string') return ''
   const tag = type as string
   const attrs = serializeAttrs(props)
-  const children = toChildrenArray(getChildren(node)).map(serializeNode).join('')
+  const children = toChildrenArray(props?.children).map(serializeNode).join('')
   if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}>`
   return `<${tag}${attrs}>${children}</${tag}>`
 }

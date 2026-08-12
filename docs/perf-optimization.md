@@ -224,3 +224,27 @@ C 方案（block tree：编译期收集 dynamicChildren，patch 只遍历动态�
 | B 行组件化 | 引用短路（需不可变） | 局部/交换/删除 ↑，高亮 ↓ | 全局状态无法引用短路，弃 |
 | A v-memo | 显式 deps 值比较短路 | 全部 ↑（高亮 -34%） | **落地，主收益** |
 | C block tree | 收集动态节点，patch 只遍历 | 无净收益（全动态页） | 保留为静态页能力 |
+
+## 十、代码回到 P0 + 只保留 v-memo（独立贡献验证）
+
+> 背景：把框架代码手动回到 P0 状态（git 历史不动），去掉 P1（babel hoist/PatchFlags/children 分离）与 C（block tree），**只保留 v-memo 优化**，验证其独立贡献。
+>
+> **P0 + v-memo 的实现形态**（最简）：JSX 由 esbuild automatic 转换（v-memo 成为 props 键）→ `jsxFactory` 从 props 提取 `v-memo` 为 `__memoValue`（render 时已求值，响应式追踪 ✓）→ `patchVNode` 开头 `sameMemoDeps` 短路整棵子树。**babel 插件零改动**（P0 版只做 defineComponent 包装）。
+
+### 实测结果（count=3，同环境）
+
+| 基准 | P2 基线 | **P0+v-memo** | A（P1+P2+v-memo） |
+|---|---|---|---|
+| 01 创建 | 54.9 | 54.2 | 55.5 |
+| 02 替换 | – | 56.3 | 57.7 |
+| 03 局部更新 | 43.0 | **36.2**（-15.8%） | 35.2 |
+| 04 选中高亮 | 27.4 | **22.8**（-16.8%） | **18.0** |
+| 05 交换 | 46.6 | **36.7**（-21.2%） | 31.5 |
+| 06 删除 | 30.0 | 28.9 | 28.0 |
+
+### 结论
+
+1. **v-memo 单独就带来主要收益**：仅靠 `jsxFactory` 提取 + `patchVNode` 短路（约 30 行代码），高亮 -16.8%、局部更新 -15.8%、交换 -21.2%——**v-memo 是数据页优化的核心，与 P1/P2 无关**。
+2. **P1/P2 的额外贡献**：高亮 22.8→18.0（-4.8ms，选中行 patch 因 flag 分支更轻）、交换 36.7→31.5。属于锦上添花。
+3. **当前代码状态**：框架 = P0 版本（renderer 三处运行时短路：patchProps 值比较 / props 引用短路 / children 引用短路）+ v-memo；babel 插件 = P0 版（仅 defineComponent 包装）；block tree 已移除。223 测试全绿（P0 版 babel 测试 + v-memo 3 用例）。
+4. benchmark 实现保持原生 tr + v-memo + 原地改（公平，无定制）。
