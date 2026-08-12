@@ -122,6 +122,13 @@ import './x.css?scoped'   ──►   Babel 注入 data-v-xxxx   ──►   <di
 | `scopedBabelPlugin({ resolveCssPath, attrPrefix? })` | Babel 插件（可脱离 Vite 单独使用） |
 | `ScopedPluginOptions`（类型） | 插件选项类型 |
 
+## 依赖关系
+
+- `@actview/babel-plugin-actview`（复用共享 Babel 宿主壳 `createBabelItem` / `transformWithBabel`）
+- `@babel/core`（^8，`scopedBabelPlugin` 的 AST 工具）
+- `postcss`（^8.5）、`postcss-selector-parser`（^7，CSS 侧变换）
+- `peerDependencies`：`vite ^6.0.0 || ^7.0.0 || ^8.0.0`（必需）
+
 ## 已知限制
 
 - **文件级语义**：同文件内所有组件都会带 hash（包括想保持全局的组件）；跨文件组件不受影响。若需细分作用域，请拆分为独立文件。
