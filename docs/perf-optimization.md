@@ -102,3 +102,46 @@ cd frameworks/keyed/actview && npm ci && npm run build-prod
 cd ../.. && node webdriver-ts/dist/benchmarkRunner.js keyed/actview
 cd webdriver-ts && npm run results   # 结果表：http://localhost:8080/webdriver-ts-results/dist/index.html
 ```
+
+## 七、B 方案实测：行组件化（benchmark 实现定制）
+
+> 时间线：P0/P1/P2 已完成（见 `docs/p1-optimization.md`）。本阶段验证"行组件化 + 不可变更新"路径。
+
+### 背景
+
+benchmark 的 update 是**原地改**（`_rows[i].label += '!!!'`），行对象引用不变 → `patchComponent` 的 `isSameProps` 引用比较会误判"未变"（正确性 bug）。B 方案把 benchmark 实现改为：
+
+- **行组件化**：`rows.map(row => <Row key={row.id} row={row} selected={...} onSelect={...} onRemove={...} />)`，`Row` 是 `defineComponent({ props: [...] })`
+- **不可变更新**：`rows.splice(0, rows.length, ...rows.map((r,i) => i%10===0 ? {...r, label: r.label+'!!!'} : r))` —— 变化的行创建新对象，未变行返回原引用
+
+依赖 ActView **现成**的 `patchComponent` 短路机制（`renderer.ts:298`），框架零改动。
+
+### 实测结果（count=3，本地同环境，P2 后基线）
+
+| 基准 | P2 基线 | B 方案 | 变化 |
+|---|---|---|---|
+| 01 创建 1000 行 | 54.9 | 54.9 | 0% |
+| 03 局部更新 x16 | 43.0 | **36.3** | **-15.6%** ✅ |
+| 04 选中高亮 | 27.4 | **35.5** | **+29.6% 退化** ❌ |
+| 05 交换 | 46.6 | **33.9** | **-27.3%** ✅ |
+| 06 删除 1 行 | 30.0 | **22.4** | **-25.2%** ✅ |
+
+### 结论
+
+1. **数据行变化的场景全部显著提升**：`isSameProps` 引用短路生效，未变行跳过 update/render/patch。交换/删除同理（其他 998/999 行短路）。
+2. **选中高亮退化**：`selected` 作 props 传 1000 行 → select 时全行 props 变 → 全量更新。**这正是 Vue 用 `v-memo` 而非行组件的原因** —— 引用短路无法处理"全局状态"变化。
+3. 创建持平：1000 个组件实例的开销与短路机制抵消。
+
+### 与 Vue 对比
+
+| | 局部更新 | 高亮 |
+|---|---|---|
+| Vue（v-memo） | 23.9 | 8.6 |
+| ActView B 方案 | 36.3 | 35.5 |
+
+行组件化只能吃下一半收益（数据行变化）；**高亮需 v-memo 式显式依赖（A 方案）才能追平**。A 方案（`v-memo` 指令：JSX 属性 → babel 编译期提取 deps → 运行时行级缓存）为后续优先方向。
+
+### 备注
+
+- benchmark 实现当前保留 B 方案状态（`frameworks/keyed/actview/src/App.tsx`，未提交到 benchmark 仓库）
+- 测试过程：`npm run build-prod` 后 `node webdriver-ts/dist/benchmarkRunner.js --framework keyed/actview --count 3 --benchmark 01_run1k 03_update10th1k_x16 04_select1k 05_swap1k 06_remove-one-1k`
