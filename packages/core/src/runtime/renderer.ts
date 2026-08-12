@@ -245,7 +245,10 @@ function patchVNode(
   }
   // 原生元素：更新 props 与 children
   const el = (newVnode.el = oldVnode.el as Element)
-  patchProps(oldVnode.props, newVnode.props, el)
+  // props 引用相同（编译期 hoist 的静态 props）→ 整体跳过属性 patch
+  if (oldVnode.props !== newVnode.props) {
+    patchProps(oldVnode.props, newVnode.props, el)
+  }
   newVnode.__avChildren = patchChildren(
     oldVnode.props?.children,
     newVnode.props?.children,
@@ -335,6 +338,13 @@ function patchChildren(
   // 否则对旧 children 重新包装（首次/异常兜底）
   const oldList =
     oldVnode?.__avChildren ?? normalizeChildren(oldChildren).map(toVNode)
+
+  // 引用相同短路：children 数组未重建（编译期 hoist 的静态 children），
+  // 子树结构必然未变 → 跳过整个 diff，直接复用上次缓存的 vnode 列表
+  if (oldChildren === newChildren && oldVnode?.__avChildren) {
+    return oldVnode.__avChildren
+  }
+
   const newList = normalizeChildren(newChildren).map(toVNode)
 
   // 新列表中出现 key → 走 keyed diff；否则保持同索引 diff
@@ -500,9 +510,11 @@ function patchProps(oldProps: any, newProps: any, el: Element) {
       setProp(el, key, undefined)
     }
   }
-  // 设置/更新新 props
+  // 设置/更新新 props：值未变（Object.is）直接跳过，避免无条件写 DOM
+  // （选中行高亮等场景：1000 行 props 每次重渲染都相同，只重写真正变化的行）
   for (const key in newProps) {
     if (key === 'children' || key === 'ref') continue
+    if (Object.is(oldProps[key], newProps[key])) continue
     setProp(el, key, newProps[key])
   }
 }
