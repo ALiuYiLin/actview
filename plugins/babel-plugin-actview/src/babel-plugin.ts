@@ -138,6 +138,7 @@ interface JsxState {
   usedJsx: boolean // 用到 _jsx
   usedJsxs: boolean // 用到 _jsxs
   usedFragment: boolean // 用到 _Fragment
+  usedMemo: boolean // 用到 v-memo（需要 openBlock/setupBlock）
   injected: boolean // import 已注入（防重复）
 }
 
@@ -149,6 +150,7 @@ function createJsxState(): JsxState {
     usedJsx: false,
     usedJsxs: false,
     usedFragment: false,
+    usedMemo: false,
     injected: false,
   }
 }
@@ -324,7 +326,7 @@ function compileJsxElement(el: any, state: JsxState): any {
   }
   if (isDynamicText) flag |= PATCH_TEXT
   // 非全静态元素：props 无动态 attr → 静态 props 提升为模块级常量（children 走第 6 参）
-  return buildJsxCall(
+  const call = buildJsxCall(
     typeExpr,
     propEntries,
     childrenExpr,
@@ -335,6 +337,16 @@ function compileJsxElement(el: any, state: JsxState): any {
     !hasDynamicAttr,
     memoDepsExpr,
   )
+  // v-memo 元素是 block：openBlock() 先于 children 求值收集动态子孙，
+  // setupBlock() 把收集数组挂到元素.__dynamicChildren（patch 时跳过静态骨架树 diff）
+  if (memoDepsExpr) {
+    state.usedMemo = true
+    return t.sequenceExpression([
+      t.callExpression(t.identifier('openBlock'), []),
+      t.callExpression(t.identifier('setupBlock'), [call]),
+    ])
+  }
+  return call
 }
 
 /** 生成 _jsx/_jsxs(type, props, key?, flag?, propsKeys?, children?, memoDeps?) 调用。
@@ -429,6 +441,10 @@ function injectJsxImport(path: any, state: JsxState) {
   if (state.usedJsx) specs.push(t.importSpecifier(t.identifier('_jsx'), t.identifier('jsx')))
   if (state.usedJsxs) specs.push(t.importSpecifier(t.identifier('_jsxs'), t.identifier('jsxs')))
   if (state.usedFragment) specs.push(t.importSpecifier(t.identifier('_Fragment'), t.identifier('Fragment')))
+  if (state.usedMemo) {
+    specs.push(t.importSpecifier(t.identifier('openBlock'), t.identifier('openBlock')))
+    specs.push(t.importSpecifier(t.identifier('setupBlock'), t.identifier('setupBlock')))
+  }
   if (!specs.length) return
 
   const hasImport = body.some(

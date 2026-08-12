@@ -6,6 +6,28 @@
 export const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 export const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment')
 
+// ============================================================
+// block tree（C 方案）：openBlock/setupBlock 收集动态节点
+// babel 把 v-memo 元素编译为 (openBlock(), setupBlock(_jsx(...)))：
+//   openBlock 压栈 → children 求值（动态节点创建时 push 进当前 block）→
+//   _jsx 创建元素 → setupBlock 把收集数组挂到元素.__dynamicChildren
+// patch 时只遍历 __dynamicChildren（跳过静态骨架的树 diff），对齐 Vue。
+// ============================================================
+const blockStack: any[][] = []
+let currentBlock: any[] | null = null
+
+export function openBlock(): void {
+  blockStack.push([])
+  currentBlock = blockStack[blockStack.length - 1]
+}
+
+export function setupBlock(vnode: any): any {
+  const dyn = blockStack.pop()
+  currentBlock = blockStack.length ? blockStack[blockStack.length - 1] : null
+  if (dyn && dyn.length) vnode.__dynamicChildren = dyn
+  return vnode
+}
+
 import type { VNode, VNodeChildren, ComponentType } from './types.js'
 
 /** 创建 VNode；patchFlag 为编译期动态性标记（见 @actview/babel-plugin-actview 的 JSX 编译）。
@@ -36,6 +58,11 @@ function createVNode(
     // 如 v-memo={[label, id === selected]} 中的 selected）——patch 短路直接用 __memoValue
     vnode.__memoDeps = memoDeps
     vnode.__memoValue = memoDeps()
+  }
+  // block 收集：动态节点（flag ≠ 0）push 进当前 openBlock；v-memo 节点自己是
+  // block 根（babel 用 setupBlock 包裹），不 push 自身（避免收集到自己）
+  if (currentBlock && patchFlag !== undefined && patchFlag !== 0 && !memoDeps) {
+    currentBlock.push(vnode)
   }
   return vnode
 }

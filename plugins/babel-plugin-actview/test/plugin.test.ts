@@ -286,3 +286,18 @@ describe('defineComponentPlugin：v-memo 指令编译', () => {
     expect(out).toContain('"class"') // 动态 props key 记录
   })
 })
+
+describe('defineComponentPlugin：block tree 编译（v-memo 元素 = block）', () => {
+  it('v-memo 元素 → openBlock()/setupBlock() 包装 + import', () => {
+    const out = transform(`function Row() { return <tr v-memo={[a]}>x</tr> }`)
+    expect(out).toContain('(openBlock(), setupBlock(_jsx(')
+    expect(out).toContain('openBlock, setupBlock } from "@actview/jsx/jsx-runtime"')
+    expect(out).toContain('() => [a]')
+  })
+
+  it('无 v-memo 不注入 openBlock/setupBlock', () => {
+    const out = transform(`function A() { return <div>x</div> }`)
+    expect(out).not.toContain('openBlock')
+    expect(out).not.toContain('setupBlock')
+  })
+})

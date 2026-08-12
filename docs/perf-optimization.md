@@ -188,3 +188,39 @@ benchmark 的 update 是**原地改**（`_rows[i].label += '!!!'`），行对象
 ### 后续
 
 C 方案（block tree：编译期收集 dynamicChildren，patch 只遍历动态节点）可进一步追平 Vue 的选中行 patch 开销；同时对"大量静态骨架"页面（表单/文档）有独立收益。
+
+## 九、C 方案实测：block tree（v-memo 行 = block，收集 dynamicChildren）
+
+> 时间线：A 方案（v-memo）已落地。本阶段实现 block tree——v-memo 元素作为 block，收集其内部动态节点，patch 时只遍历动态节点（跳过静态骨架树 diff）。
+
+### 实现
+
+- **jsxFactory**：`openBlock()`/`setupBlock()`（栈式）——babel 把 v-memo 元素编译为 `(openBlock(), setupBlock(_jsx(...)))`；动态节点（`patchFlag ≠ 0` 且非 v-memo 根）创建时 push 进当前 block；`setupBlock` 把收集数组挂到元素 `__dynamicChildren`
+- **renderer**：`patchElement` 遇 `__dynamicChildren` 只按索引配对 patch 动态节点（跳过静态骨架树 diff）；**v-memo 短路时同步继承 `__dynamicChildren`**（否则短路轮的新动态节点无 `el`，下一轮 patch 崩溃——实现期的关键 bug）
+- babel 插件：v-memo 元素 openBlock/setupBlock 包装 + 自动注入 import
+
+### 实测结果（count=3，同环境对比 A 方案）
+
+| 基准 | A (v-memo) | C (v-memo+block) |
+|---|---|---|
+| 01 创建 | 55.5 | 53.5 |
+| 02 替换 | 57.7 | 60.3 |
+| 03 局部更新 | 35.2 | 37.1 |
+| 04 选中高亮 | 18.0 | 21.5 |
+| 05 交换 | 31.5 | 33.8 |
+| 06 删除 | 28.0 | 26.4 |
+
+### 结论
+
+1. **数据页（每行都动态）无净收益**：block 收集 push 全量（1000 行 × 2-3 个动态节点/渲染）的 render 开销 ≈ patch 省下的收益，且 stddev 较大（04 高亮 18.3–30.5），差异在噪声内。
+2. **block tree 的价值在"静态为主"页面**（表单/文档：大量静态骨架 + 少量动态点——收集便宜、patch 省的多）。benchmark 数据页无法体现。
+3. **v-memo 才是数据页的主要收益来源**（高亮 27.4→18.0 来自 v-memo 短路，不是 block）。
+4. 实现保留（通用能力，无回归）：测试 232 全绿（jsxFactory 收集 4 用例 + 运行时静态骨架零变更 + babel 编译 2 用例）。
+
+### 三条优化路径最终结论
+
+| 方案 | 机制 | 数据页收益 | 结论 |
+|---|---|---|---|
+| B 行组件化 | 引用短路（需不可变） | 局部/交换/删除 ↑，高亮 ↓ | 全局状态无法引用短路，弃 |
+| A v-memo | 显式 deps 值比较短路 | 全部 ↑（高亮 -34%） | **落地，主收益** |
+| C block tree | 收集动态节点，patch 只遍历 | 无净收益（全动态页） | 保留为静态页能力 |

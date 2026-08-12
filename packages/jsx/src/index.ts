@@ -13,6 +13,8 @@ export {
   createElement,
   isValidElement,
   Fragment,
+  openBlock,
+  setupBlock,
   REACT_ELEMENT_TYPE,
   REACT_FRAGMENT_TYPE
 } from './jsxFactory.js'

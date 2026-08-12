@@ -223,6 +223,7 @@ function patchVNode(
     ) {
       newVnode.el = oldVnode.el
       newVnode.__avChildren = oldVnode.__avChildren
+      newVnode.__dynamicChildren = oldVnode.__dynamicChildren
       return
     }
   }
@@ -307,6 +308,20 @@ function patchVNode(
       patchPropsKeyed(oldVnode.props, newVnode.props, el, newVnode.__propsKeys)
     }
     if (textOnly) return
+  }
+
+  // block（v-memo 行，C 方案）：只 patch 收集的动态节点（按索引配对），
+  // 跳过静态骨架的树 diff。动态节点在创建时按源码顺序收集进 __dynamicChildren，
+  // v-memo 短路失效时新旧行同 key 同位 → 顺序一致，索引配对安全。
+  if (newVnode.__dynamicChildren) {
+    const oldDyn = oldVnode?.__dynamicChildren || []
+    const newDyn = newVnode.__dynamicChildren
+    for (let i = 0; i < newDyn.length; i++) {
+      patchVNode(oldDyn[i] ?? null, newDyn[i], el, i, parent)
+    }
+    // children 的 DOM 结构未变（只 patch 了动态节点）→ 沿用旧的 __avChildren
+    newVnode.__avChildren = oldVnode?.__avChildren
+    return
   }
   newVnode.__avChildren = patchChildren(
     getChildren(oldVnode),
