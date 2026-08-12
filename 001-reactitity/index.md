@@ -185,7 +185,7 @@ function componentRender() {
 runEffect(componentRender);
 
 // 4. 数据变更：自动触发重新渲染
-setTimeout(() => {
+setInterval(() => {
   state.count++; 
   // 控制台会再次打印渲染日志，页面内容自动更新
 }, 1000);
