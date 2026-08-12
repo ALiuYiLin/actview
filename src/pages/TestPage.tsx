@@ -6,7 +6,7 @@ export function TestPage() {
   return <div class="demo-card">test<Child vp={'aaaa'}></Child></div>;
 }
 
-function Child(props:{},ctx?: any){
+function Child(_props: {}, ctx?: any) {
   console.log('ctx: ', ctx);
   return <div>child</div>
 } 

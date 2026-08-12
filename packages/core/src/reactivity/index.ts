@@ -4,3 +4,6 @@ export type { ComputedRef, WritableComputedRef, ComputedOptions } from './comput
 export { ref, isRef, unref, toRef, toRefs } from './ref'
 export type { Ref } from './ref'
 export { watch, watchEffect } from './watch'
+
+export * from './reactive-system'
+export * from './effectScope'

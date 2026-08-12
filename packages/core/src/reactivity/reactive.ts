@@ -3,7 +3,7 @@ import {
   trigger,
   pauseTracking,
   resetTracking
-} from '../runtime/reactive-system'
+} from './reactive-system'
 
 // ============================================================
 // 数组方法 instrumentation

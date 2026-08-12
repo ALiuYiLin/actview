@@ -1,4 +1,4 @@
-import { ReactiveEffect, track, trigger } from '../runtime/reactive-system'
+import { ReactiveEffect, track, trigger } from './reactive-system'
 import type { Ref } from './ref'
 
 /** computed 的公开类型：带 __v_isRef 标记的只读 Ref（与运行时实现一致） */

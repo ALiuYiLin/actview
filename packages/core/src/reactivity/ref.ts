@@ -1,5 +1,5 @@
 import { reactive } from './reactive'
-import { track, trigger } from '../runtime/reactive-system'
+import { track, trigger } from './reactive-system'
 
 // ============================================================
 // ref — 值包装的响应式引用

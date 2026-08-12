@@ -12,11 +12,11 @@ import {
   queueJob,
   pauseTracking,
   resetTracking
-} from './reactive-system'
+} from '../reactivity/reactive-system'
 import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
-import { EffectScope } from './effectScope'
+import { EffectScope } from '../reactivity/effectScope'
 
 /**
  * 触发生命周期钩子：暂停依赖收集。

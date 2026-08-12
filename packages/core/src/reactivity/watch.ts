@@ -1,4 +1,4 @@
-import { ReactiveEffect } from '../runtime/reactive-system'
+import { ReactiveEffect } from './reactive-system'
 import { isRef } from './ref'
 import type { Ref } from './ref'
 
