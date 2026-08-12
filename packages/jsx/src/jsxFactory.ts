@@ -8,15 +8,18 @@ export const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment')
 
 import type { VNode, VNodeChildren, ComponentType } from './types.js'
 
-/** 创建 VNode */
-function createVNode(type: any, key: any, props: any) {
-  return {
+/** 创建 VNode；patchFlag 为编译期动态性标记（见 @actview/babel-plugin-actview 的 JSX 编译） */
+function createVNode(type: any, key: any, props: any, patchFlag?: number, propsKeys?: readonly string[]) {
+  const vnode: any = {
     $$typeof: REACT_ELEMENT_TYPE,
     type,
     key,
     ref: null,
     props
   }
+  if (patchFlag !== undefined) vnode.__patchFlag = patchFlag
+  if (propsKeys) vnode.__propsKeys = propsKeys
+  return vnode
 }
 
 // 类型签名（JSX 检查）：
@@ -39,8 +42,11 @@ function jsxImpl(
   maybeKey?: any
 ): VNode
 
-/** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode */
-function jsxImpl(type: any, config: any, maybeKey?: any) {
+/** jsx / jsxs / jsxDEV 统一逻辑：分离 key，生成 VNode。
+ * patchFlag：编译期动态性标记（1=TEXT 动态文本 children；2=PROPS 动态属性；
+ * 0=props 全静态）。propsKeys：PROPS 标记下的动态属性名列表。
+ */
+function jsxImpl(type: any, config: any, maybeKey?: any, patchFlag?: number, propsKeys?: readonly string[]) {
   let key: any = null
 
   if (maybeKey !== undefined) {
@@ -59,7 +65,7 @@ function jsxImpl(type: any, config: any, maybeKey?: any) {
     props = config || {}
   }
 
-  return createVNode(type, key, props)
+  return createVNode(type, key, props, patchFlag, propsKeys)
 }
 
 // 自动 JSX 转换目标

@@ -145,12 +145,13 @@ export function mountComponent(
   // 更新函数：重新 render 并与旧子树 patch
   const update = () => {
     try {
-      const newSubTree = instance.render()
+      const newSubTree0 = instance.render()
+      let newSubTree: any = newSubTree0
       // attribute fallthrough：外部传入的 attrs（非 props 声明属性）合并到单根元素
       // 的 props（class 拼接、其余根元素显式声明优先；Fragment 多根不透传）。
       // inheritAttrs: false 时跳过自动合并（attrs 仍在 ctx.attrs 供显式绑定）
       if (options.__inheritAttrs !== false) {
-        mergeAttrsToRoot(newSubTree, attrs)
+        newSubTree = mergeAttrsToRoot(newSubTree, attrs)
       }
       const oldSubTree = instance.subTree
       instance.subTree = newSubTree
@@ -316,12 +317,34 @@ function splitProps(
  * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
  */
 export function mergeAttrsToRoot(subTree: any, attrs: any) {
-  if (subTree == null) return
+  if (subTree == null) return subTree
   // Fragment 多根：不自动 fallthrough（Vue 同款，需显式 {...attrs} 绑定）
-  if (subTree.type === FragmentTag) return
+  if (subTree.type === FragmentTag) return subTree
   // 内置组件（Teleport/Transition）：props 有特殊语义，不透传
-  if (subTree.type?.__builtin) return
-  if (!attrs) return
+  if (subTree.type?.__builtin) return subTree
+  if (!attrs) return subTree
+
+  // 快速判断：无实际可透传的 attrs（全内部 key / 非透传值 / 空对象）→ 不 merge，
+  // 保持 hoisted 静态子树的编译期优化
+  let hasPassable = false
+  for (const key of Object.keys(attrs)) {
+    if (isInternalAttrKey(key)) continue
+    const value = attrs[key]
+    if (!isPassThroughValue(key, value)) continue
+    if (value == null || value === false) continue
+    hasPassable = true
+    break
+  }
+  if (!hasPassable) return subTree
+
+  // hoisted/静态子树（__patchFlag !== undefined）是模块级共享对象：
+  // 1) clone 后再 merge，避免污染共享对象（跨实例/下次渲染复用）
+  // 2) 记录首次的源码 props（__baseProps），每次从源码态合并——否则 class 等
+  //    attrs 会在被污染的基础上累积（'body a' + 'b' → 'body a b' 而非 'body b'）
+  if (subTree.__patchFlag !== undefined) {
+    subTree.__baseProps ??= { ...(subTree.props || {}) }
+    subTree = { ...subTree, props: { ...subTree.__baseProps } }
+  }
 
   const rootProps = { ...(subTree.props || {}) }
   for (const key of Object.keys(attrs)) {
@@ -356,5 +379,9 @@ export function mergeAttrsToRoot(subTree: any, attrs: any) {
     if (!(key in rootProps)) rootProps[key] = value
   }
   subTree.props = rootProps
+  // attrs 是运行时合并进根元素 props 的（编译期静态标记不可预见）：
+  // 清除 __patchFlag 降级老路径，避免"静态 props 跳过 patch"吞掉 attrs 更新
+  subTree.__patchFlag = undefined
+  return subTree
 }
 

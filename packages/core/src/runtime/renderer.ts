@@ -94,7 +94,9 @@ export function patch(
   // 同一对象短路：组件未重渲染时缓存 subTree 被当 newVnode 继续 patch（自我
   // patch）。若不短路，keyed diff 会对同一 vnode 执行 mount+unmount，
   // mountVNode 无条件重建覆盖 vnode.el =》 旧 DOM 残留累积（语言切换 .title +1）
-  if (oldVnode === newVnode) return
+  // 注意：hoisted 静态子树可能被 attrs fallthrough 原地改 props（mergeAttrsToRoot）
+  // → props 引用变化时必须继续 patch，否则外部属性更新被吞
+  if (oldVnode === newVnode && oldVnode.props === newVnode.props) return
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
     patchVNode(oldVnode, newVnode, container, index, parent)
@@ -130,6 +132,12 @@ export function applyRef(ref: any, value: any) {
 export function mountVNode(vnode: any, container: Element | null, parent?: any): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
+
+  // hoisted 静态子树跨组件实例共享：已被其他实例挂载过（vnode.el 存在）→
+  // 浅克隆一份，避免多实例共用同一 VNode 的 el 槽位互相覆盖
+  if (vnode.el != null) {
+    vnode = { ...vnode }
+  }
 
   // 内置组件（Teleport / Transition）：优先于普通组件分支
   // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
@@ -182,6 +190,11 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
 // ------------------------------------------------------------
 // 更新
 // ------------------------------------------------------------
+
+// 编译期 PatchFlag（与 @actview/babel-plugin-actview 的 PATCH_* 保持一致）
+// 1 = 动态文本 children（更新只写 textContent）；2 = props 含动态属性（__propsKeys）
+const PATCH_TEXT = 1
+const PATCH_PROPS = 2
 
 function patchVNode(
   oldVnode: any,
@@ -245,9 +258,31 @@ function patchVNode(
   }
   // 原生元素：更新 props 与 children
   const el = (newVnode.el = oldVnode.el as Element)
-  // props 引用相同（编译期 hoist 的静态 props）→ 整体跳过属性 patch
-  if (oldVnode.props !== newVnode.props) {
-    patchProps(oldVnode.props, newVnode.props, el)
+  const flag = newVnode.__patchFlag
+  if (flag === undefined) {
+    // 未编译（手写 _jsx / 已降级产物）：老路径——props 引用相同才跳过
+    if (oldVnode.props !== newVnode.props) {
+      patchProps(oldVnode.props, newVnode.props, el)
+    }
+  } else {
+    // 编译期标记：动态文本 children 只写 textContent（跳过 children diff）；
+    // 非标量（数组/对象，编译期保守分析兜底）回退正常 diff。
+    // 注意：TEXT 与 PROPS 可能组合（如 <a onClick={..}>{x}</a>）——
+    // 跳过 children diff 但动态 props 仍需 patch
+    let textOnly = false
+    if (flag & PATCH_TEXT) {
+      const c = newVnode.props?.children
+      if (typeof c === 'string' || typeof c === 'number') {
+        const str = String(c)
+        if (el.textContent !== str) el.textContent = str
+        textOnly = true
+      }
+    }
+    // 静态 props（无 PATCH_PROPS）→ 跳过属性 patch；有 → 只 patch 动态 keys
+    if (flag & PATCH_PROPS) {
+      patchPropsKeyed(oldVnode.props, newVnode.props, el, newVnode.__propsKeys)
+    }
+    if (textOnly) return
   }
   newVnode.__avChildren = patchChildren(
     oldVnode.props?.children,
@@ -292,6 +327,21 @@ function patchComponent(
 
   newVnode.component = instance
   newVnode.el = instance.subTree ? instance.subTree.el : oldVnode.el
+}
+
+/** 编译期 PROPS 标记：只 patch 动态属性（key 列表由编译期固定，值变才 setProp） */
+function patchPropsKeyed(
+  oldProps: any,
+  newProps: any,
+  el: Element,
+  keys?: readonly string[],
+) {
+  if (!keys || !keys.length) return
+  for (const key of keys) {
+    const nv = newProps?.[key]
+    if (Object.is(oldProps?.[key], nv)) continue
+    setProp(el, key, nv)
+  }
 }
 
 /** 把新 props 增量写入旧 props，返回是否有变化 */
