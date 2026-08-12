@@ -5,9 +5,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
-    "@actview/jsx": "workspace:*"
-  },
+  "dependencies": {},
   "scripts": {
     "build": "tsup && node ../../scripts/rewrite-package.mjs .",
     "release": "pnpm build && cd dist && npm publish"

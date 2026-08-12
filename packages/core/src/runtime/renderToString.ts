@@ -1,4 +1,4 @@
-import type { VNode } from '@actview/jsx'
+import type { VNode, VNodeChild } from '../vnode'
 import { setCurrentInstance } from './lifecycle'
 
 // ============================================================
@@ -180,6 +180,6 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
 }
 
 /** VNode 树 → HTML 字符串 */
-export function renderToString(vnode: any): string {
+export function renderToString(vnode: VNode | VNodeChild): string {
   return serializeNode(vnode)
 }

@@ -1,0 +1,44 @@
+// ============================================================
+// vnode.ts — core 自持的 VNode 类型体系
+// 与 @actview/jsx 的 VNode 定义结构兼容（TS 结构类型互认）：
+// 消费方用 @actview/jsx 工厂产生的元素可直接用于 core 的类型签名。
+// 目的：断开 core → @actview/jsx 的类型依赖（jsx 保持零依赖底座）。
+// 注意：与 packages/jsx/src/types.ts 保持形状一致，改动需同步。
+// ============================================================
+
+/** VNode 的 type 字段允许的类型 */
+export type VNodeTypes = string | symbol | ((props: any) => any)
+
+/** VNode key */
+export type VNodeKey = string | number | null
+
+/** VNode 描述对象（与 @actview/jsx 的 VNode 形状一致） */
+export interface VNode<Type = VNodeTypes> {
+  $$typeof: symbol
+  type: Type
+  key: VNodeKey
+  ref: any
+  props: Record<string, any> | null
+  /** 指向真实 DOM（渲染后挂载） */
+  el?: Node | null
+}
+
+/** 组件类型：defineComponent 产物（{ __setup } + call signature），props 泛型化 */
+export type ComponentType<P = any> = {
+  __setup: (props: P, ctx?: any) => any
+  __props?: readonly string[]
+  __inheritAttrs?: boolean
+} & ((props: P) => any)
+
+/** 从组件类型推导 props：取 __setup 的第一个参数 */
+export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
+  ? P
+  : T extends (props: infer P) => any
+    ? P
+    : {}
+
+export type VNodeChild = VNode | string | number | boolean | null | undefined
+export type VNodeChildren = VNodeChild | VNodeChild[]
+
+/** 组件 setup 返回的 render 函数类型 */
+export type LazyVNode = () => VNode

@@ -13,10 +13,28 @@ import {
   pauseTracking,
   resetTracking
 } from '../reactivity/reactive-system'
-import { patch, applyRef } from './renderer'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
 import { EffectScope } from '../reactivity/effectScope'
+import type { VNode } from '../vnode'
+
+/**
+ * renderer 注入的渲染依赖（消除 renderer ↔ mountComponent 循环依赖）：
+ * mountComponent 不 import './renderer'，改由 renderer 挂载组件时传入自身
+ * 的 patch / applyRef。ESM 环 → 单向依赖（renderer → mountComponent）。
+ */
+export interface RendererDeps {
+  /** 子树 patch（组件 update 时与旧子树 diff） */
+  patch: (
+    oldVnode: any,
+    newVnode: any,
+    container: Element,
+    index?: number,
+    parent?: any
+  ) => void
+  /** 模板引用回调（ref 指向组件实例） */
+  applyRef: (ref: any, value: any) => void
+}
 
 /**
  * 触发生命周期钩子：暂停依赖收集。
@@ -46,8 +64,8 @@ export interface ComponentInstance {
   parent: ComponentInstance | null
   /** 注入表：未调用 provide 时共享父引用（零拷贝）；首次 provide 时 copy-on-write */
   injects: Record<string, any>
-  render: () => any
-  subTree: any
+  render: () => VNode
+  subTree: VNode | null
   update: () => void
   unmount: () => void
   /** 是否已完成首次挂载（区分 mounted / updated） */
@@ -65,11 +83,12 @@ export interface ComponentInstance {
   unmounted: (() => void)[]
 }
 
-/** 挂载组件 VNode：实例化并建立响应式更新 effect */
+/** 挂载组件 VNode：实例化并建立响应式更新 effect（deps 由 renderer 注入） */
 export function mountComponent(
   vnode: any,
   container: Element | null,
-  parentInstance?: ComponentInstance | null
+  parentInstance: ComponentInstance | null | undefined,
+  deps: RendererDeps
 ) {
   const options = vnode.type
   if (
@@ -92,7 +111,7 @@ export function mountComponent(
     attrs,
     parent: parentInstance ?? null,
     injects: parentInstance?.injects ?? {},
-    render: null as unknown as () => any,
+    render: null as unknown as () => VNode,
     subTree: null,
     update: () => {},
     unmount: () => {},
@@ -108,7 +127,7 @@ export function mountComponent(
   vnode.component = instance
 
   // 组件模板引用：ref 指向组件实例
-  applyRef(vnode.props?.ref, instance)
+  deps.applyRef(vnode.props?.ref, instance)
 
   // setup 执行期间挂载 currentInstance 上下文：
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
@@ -136,7 +155,7 @@ export function mountComponent(
       const oldSubTree = instance.subTree
       instance.subTree = newSubTree
       // 子树 children 的父实例 = 本组件实例（子组件 provide/inject 继承来源）
-      patch(oldSubTree, newSubTree, container as Element, undefined, instance)
+      deps.patch(oldSubTree, newSubTree, container as Element, undefined, instance)
       // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
       vnode.el = instance.subTree ? instance.subTree.el : null
       // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated

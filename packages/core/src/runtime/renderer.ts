@@ -140,7 +140,8 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
 
   // 组件
   if (isComponentVNode(vnode)) {
-    mountComponent(vnode, container, parent)
+    // 注入渲染依赖（patch/applyRef）→ 组件挂载不反向 import 本模块
+    mountComponent(vnode, container, parent, { patch, applyRef })
     return vnode.el
   }
   // Fragment：自身无 DOM，直接挂载 children
@@ -268,7 +269,7 @@ function patchComponent(
   const instance = newVnode.component ?? oldVnode.component
   if (!instance) {
     // 异常情况：旧节点没有实例，直接重挂
-    mountComponent(newVnode, container, parent)
+    mountComponent(newVnode, container, parent, { patch, applyRef })
     return
   }
 
