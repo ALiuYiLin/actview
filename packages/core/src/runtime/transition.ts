@@ -12,6 +12,8 @@
 //   注入 patchChildren，挂载/更新 children 时经注入函数调用
 // ============================================================
 
+import { getChildren } from '../vnode'
+
 /** renderer 注入的 patchChildren（挂载/更新 children 的核心） */
 let _patchChildren: ((...args: any[]) => any[]) | null = null
 
@@ -48,7 +50,7 @@ export function mountTeleport(vnode: any, container: Element | null, parent?: an
     console.warn('[actview] Teleport: 目标容器不存在，跳过渲染')
     return null
   }
-  vnode.__avChildren = patchChildrenSafe(null, vnode.props?.children, target, undefined, parent)
+  vnode.__avChildren = patchChildrenSafe(null, getChildren(vnode), target, undefined, parent)
   return null
 }
 
@@ -70,8 +72,8 @@ export function patchTeleport(
   const base = newTarget ?? oldTarget ?? container
   if (base) {
     newVnode.__avChildren = patchChildrenSafe(
-      oldVnode.props?.children,
-      newVnode.props?.children,
+      getChildren(oldVnode),
+      getChildren(newVnode),
       base,
       oldVnode,
       parent
@@ -184,7 +186,7 @@ export function playLeave(
  * 返回被挂载的子 vnode（供后续 leave 拦截）
  */
 export function mountTransition(vnode: any, container: Element | null, parent?: any) {
-  const children = normalizeSingle(vnode.props?.children)
+  const children = normalizeSingle(getChildren(vnode))
   vnode.el = null
   if (!children) return null
   const child = toVNodeSafe(children)
@@ -208,7 +210,7 @@ export function patchTransition(
 ) {
   const name = newVnode.props?.name
   const oldChildren = oldVnode.__avChildren ?? []
-  const newChildren = normalizeSingle(newVnode.props?.children)
+  const newChildren = normalizeSingle(getChildren(newVnode))
   newVnode.el = null
   newVnode.__avChildren = []
   if (newChildren == null) {

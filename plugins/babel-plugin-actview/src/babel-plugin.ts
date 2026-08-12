@@ -133,6 +133,7 @@ export const PATCH_PROPS = 2
 /** JSX 编译会话状态（每次 Program 重置） */
 interface JsxState {
   hoistedNodes: t.CallExpression[] // _hoisted_N = 全静态子树
+  hoistedProps: t.ObjectExpression[] // _hoistedProps_N = 静态 props 对象（children 动态时提升）
   hoistedKeys: t.ArrayExpression[] // _propsKeys_N = 动态 props 列表（编译期固定，提升为常量避免每次分配）
   usedJsx: boolean // 用到 _jsx
   usedJsxs: boolean // 用到 _jsxs
@@ -141,7 +142,15 @@ interface JsxState {
 }
 
 function createJsxState(): JsxState {
-  return { hoistedNodes: [], hoistedKeys: [], usedJsx: false, usedJsxs: false, usedFragment: false, injected: false }
+  return {
+    hoistedNodes: [],
+    hoistedProps: [],
+    hoistedKeys: [],
+    usedJsx: false,
+    usedJsxs: false,
+    usedFragment: false,
+    injected: false,
+  }
 }
 
 /** 表达式是否静态（字面量 / 已 hoist 的引用） */
@@ -298,10 +307,23 @@ function compileJsxElement(el: any, state: JsxState): any {
     if (dynamicKeys.length) propsKeys = dynamicKeys
   }
   if (isDynamicText) flag |= PATCH_TEXT
-  return buildJsxCall(typeExpr, propEntries, childrenExpr, keyExpr, flag, state, propsKeys)
+  // 非全静态元素：props 无动态 attr → 静态 props 提升为模块级常量（children 走第 6 参）
+  return buildJsxCall(
+    typeExpr,
+    propEntries,
+    childrenExpr,
+    keyExpr,
+    flag,
+    state,
+    propsKeys,
+    !hasDynamicAttr,
+  )
 }
 
-/** 生成 _jsx/_jsxs(type, props, key?, flag?, propsKeys?) 调用 */
+/** 生成 _jsx/_jsxs(type, props, key?, flag?, propsKeys?, children?) 调用。
+ * children 作为第 6 参（与静态 props 分离）：props 全静态时提升为模块级
+ * _hoistedProps_N 常量——render 不再每次分配 props 对象，且 props 引用稳定
+ * （patch 时引用短路 / 静态 props 不重设）。 */
 function buildJsxCall(
   typeExpr: any,
   propEntries: any[],
@@ -310,23 +332,18 @@ function buildJsxCall(
   flag: number,
   state: JsxState,
   propsKeys?: string[] | null,
+  staticProps = false,
 ): t.CallExpression {
-  const propsObj = t.objectExpression([...propEntries])
-  if (childrenExpr !== null) {
-    // children 单值（_jsx 语义）或数组（_jsxs 语义）都进 props.children
-    if (t.isArrayExpression(childrenExpr)) {
-      state.usedJsxs = true
-    } else {
-      state.usedJsx = true
-    }
-    propsObj.properties.push(
-      t.objectProperty(t.identifier('children'), childrenExpr),
-    )
+  // props 只含 attrs（children 走第 6 参）；全静态 → 提升为常量
+  let propsArg: any
+  if (staticProps) {
+    state.hoistedProps.push(t.objectExpression(propEntries))
+    propsArg = t.identifier(`_hoistedProps${state.hoistedProps.length}`)
   } else {
-    state.usedJsx = true
+    propsArg = t.objectExpression(propEntries)
   }
 
-  const args: any[] = [typeExpr, propsObj]
+  const args: any[] = [typeExpr, propsArg]
   // key 位：无 key 时也显式补 undefined 占位（否则 flag 会错位到第 3 参）
   args.push(keyExpr ?? t.identifier('undefined'))
   // 有编译期信息才传 flag（0 也传：运行时据此跳过静态 props）
@@ -335,12 +352,19 @@ function buildJsxCall(
     // 动态 props 列表编译期固定：提升为模块级常量，避免每次 render 分配数组
     state.hoistedKeys.push(t.arrayExpression(propsKeys.map((k) => t.stringLiteral(k))))
     args.push(t.identifier(`_propsKeys${state.hoistedKeys.length}`))
+  } else {
+    // propsKeys 占位（否则 children 会错位到第 5 参）
+    args.push(t.identifier('undefined'))
+  }
+  if (childrenExpr !== null) {
+    args.push(childrenExpr) // 第 6 参：动态 children 与静态 props 分离
   }
 
-  const callee = t.isArrayExpression(childrenExpr)
-    ? t.identifier('_jsxs')
-    : t.identifier('_jsx')
-  return t.callExpression(callee, args)
+  const multi = t.isArrayExpression(childrenExpr)
+  state.usedJsxs = state.usedJsxs || multi
+  state.usedJsx = state.usedJsx || !multi
+  const callee = multi ? '_jsxs' : '_jsx'
+  return t.callExpression(t.identifier(callee), args)
 }
 
 /** JSXMemberExpression（<a.b.C />）→ MemberExpression */
@@ -413,13 +437,25 @@ export default function defineComponentPlugin() {
         exit(path: any) {
           // JSX runtime import（若用到 _jsx/_jsxs/_Fragment）
           injectJsxImport(path, jsxState)
-          // hoisted 静态子树 / 动态 props 列表常量：插到文件末尾（所有声明之后，避免引用组件标识符的 TDZ）
-          if (jsxState.hoistedNodes.length || jsxState.hoistedKeys.length) {
+          // hoisted 静态子树 / 静态 props / 动态 props 列表常量：插到文件末尾
+          // （所有声明之后，避免引用组件标识符的 TDZ）
+          if (
+            jsxState.hoistedNodes.length ||
+            jsxState.hoistedProps.length ||
+            jsxState.hoistedKeys.length
+          ) {
             const decls = jsxState.hoistedNodes.map((call, i) =>
               t.variableDeclaration('const', [
                 t.variableDeclarator(t.identifier(`_hoisted${i + 1}`), call),
               ]),
             )
+            jsxState.hoistedProps.forEach((obj, i) => {
+              decls.push(
+                t.variableDeclaration('const', [
+                  t.variableDeclarator(t.identifier(`_hoistedProps${i + 1}`), obj),
+                ]),
+              )
+            })
             jsxState.hoistedKeys.forEach((arr, i) => {
               decls.push(
                 t.variableDeclaration('const', [

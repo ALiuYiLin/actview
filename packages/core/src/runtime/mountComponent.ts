@@ -103,7 +103,14 @@ export function mountComponent(
   // 阶段 2：按组件声明的 __props 白名单拆分为 setup props 与 attrs
   //   - 有声明：声明内 → setup(props)，声明外（class/data-*/on* 等）→ ctx.attrs
   //   - 无声明（函数形态）：props 全量（兼容现有 setup 读取），attrs 同全量（fallthrough 用）
-  const { props, attrs } = splitProps(options.__props, vnode.props)
+  const { props, attrs } = splitProps(
+    options.__props,
+    // children 独立存 __children（babel 编译产物）：组件读 props.children（插槽）
+    // 需合并；静态 props 是共享常量，合并时浅拷贝不污染
+    vnode.__children !== undefined
+      ? { ...vnode.props, children: vnode.__children }
+      : vnode.props,
+  )
 
   const instance: ComponentInstance = {
     setup: options.__setup,

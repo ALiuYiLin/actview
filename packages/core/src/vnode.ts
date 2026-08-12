@@ -42,3 +42,13 @@ export type VNodeChildren = VNodeChild | VNodeChild[]
 
 /** 组件 setup 返回的 render 函数类型 */
 export type LazyVNode = () => VNode
+
+/** 读取 VNode children：优先 __children（babel 编译产物，children 与静态 props 分离），
+ * 否则回退 props.children（手写 _jsx / esbuild 产物 / 运行时包装）。
+ * renderer 与内置组件（KeepAlive/Teleport/Transition/Suspense）共用，
+ * 放本文件避免 renderer ↔ transition 循环依赖。 */
+export function getChildren(vnode: any): any {
+  return vnode && vnode.__children !== undefined
+    ? vnode.__children
+    : vnode?.props?.children
+}

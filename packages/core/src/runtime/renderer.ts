@@ -5,6 +5,7 @@
 // ============================================================
 
 import { mountComponent, collectAttrs } from './mountComponent'
+import { getChildren } from '../vnode'
 import {
   mountTeleport,
   patchTeleport,
@@ -47,9 +48,7 @@ function toVNode(child: any): any {
     return createTextVNode(String(child))
   }
   return child
-}
-
-function normalizeChildren(children: any): any[] {
+}function normalizeChildren(children: any): any[] {
   if (children == null || children === false || children === true) return []
   // 扁平化嵌套数组：JSX children 可以是 `[el, arr.map(...)]`（数组含数组），
   // 不扁平化会把子数组当成单个 child → mountVNode(数组) → createElement(数组)
@@ -157,7 +156,7 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
     vnode.el = null
     vnode.__avChildren = patchChildren(
       null,
-      vnode.props?.children,
+      getChildren(vnode),
       container as Element,
       undefined,
       parent
@@ -180,7 +179,7 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   const el = document.createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
-  vnode.__avChildren = patchChildren(null, vnode.props?.children, el, undefined, parent)
+  vnode.__avChildren = patchChildren(null, getChildren(vnode), el, undefined, parent)
   container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
@@ -248,8 +247,8 @@ function patchVNode(
   if (newVnode.type === Fragment) {
     newVnode.el = oldVnode.el
     newVnode.__avChildren = patchChildren(
-      oldVnode.props?.children,
-      newVnode.props?.children,
+      getChildren(oldVnode),
+      getChildren(newVnode),
       container,
       oldVnode,
       parent
@@ -271,7 +270,7 @@ function patchVNode(
     // 跳过 children diff 但动态 props 仍需 patch
     let textOnly = false
     if (flag & PATCH_TEXT) {
-      const c = newVnode.props?.children
+      const c = getChildren(newVnode)
       if (typeof c === 'string' || typeof c === 'number') {
         const str = String(c)
         if (el.textContent !== str) el.textContent = str
@@ -285,8 +284,8 @@ function patchVNode(
     if (textOnly) return
   }
   newVnode.__avChildren = patchChildren(
-    oldVnode.props?.children,
-    newVnode.props?.children,
+    getChildren(oldVnode),
+    getChildren(newVnode),
     el,
     oldVnode,
     parent
@@ -311,14 +310,25 @@ function patchComponent(
     return
   }
 
-  if (!isSameProps(oldVnode.props, newVnode.props)) {
+  // children（插槽）独立存 __children（babel 编译产物）：props 相同但 children
+  // 引用变化（如 <KeepAlive><component is/> 切换）也必须重渲染
+  if (
+    !isSameProps(oldVnode.props, newVnode.props) ||
+    getChildren(oldVnode) !== getChildren(newVnode)
+  ) {
     // 增量更新 props 与 attrs，任一有变化都触发子组件更新：
     // attrs-only 变化（options 形态下仅外部属性变化，如 <Box id="a"> → id="b"）
     // 也必须重渲染，否则 mergeAttrsToRoot 不重跑、根 DOM 属性陈旧
     const options = oldVnode.type
     const declared = options?.__props
-    const propsChanged = updateProps(instance.props, newVnode.props)
-    const newAttrs = collectAttrs(declared, newVnode.props)
+    // children 独立存 __children：增量更新 props 时合并进去（否则实例 props 的
+    // children 被无 children 的新 props 覆盖丢失，KeepAlive 等读 props.children 的组件失效）
+    const mergedNewProps =
+      newVnode.__children !== undefined
+        ? { ...newVnode.props, children: newVnode.__children }
+        : newVnode.props
+    const propsChanged = updateProps(instance.props, mergedNewProps)
+    const newAttrs = collectAttrs(declared, mergedNewProps)
     const attrsChanged = updateProps(instance.attrs, newAttrs)
     if (propsChanged || attrsChanged) {
       instance.update()
