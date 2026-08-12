@@ -260,3 +260,29 @@ describe('defineComponentPlugin：自动 props 提取（TS 类型注解）', () 
     expect(out).not.toContain('props: [')
   })
 })
+
+describe('defineComponentPlugin：v-memo 指令编译', () => {
+  it('v-memo={[deps]} → 第 7 参 deps 工厂，不进 props', () => {
+    const out = transform(`function Row() { return <tr v-memo={[a, b]}>x</tr> }`)
+    expect(out).toContain('() => [a, b]') // deps 工厂（闭包捕获 render 变量）
+    expect(out).not.toContain('"v-memo"') // 不进 props
+    expect(out).not.toContain('_hoisted1') // 有 v-memo → 不整体提升（元素每次重建）
+  })
+
+  it('v-memo 元素 props 静态时 props 仍提升，但元素本身每次调用', () => {
+    const out = transform(
+      `function Row() { return <tr id="x" v-memo={[n]}>y</tr> }`,
+    )
+    // props（id）提升为 _hoistedProps1，元素每次 _jsx 调用并携带 deps 工厂
+    expect(out).toContain('_hoistedProps1')
+    expect(out).toContain('() => [n]')
+  })
+
+  it('v-memo 与动态 props 共存：flag 正常标记', () => {
+    const out = transform(
+      `function Row() { return <tr v-memo={[n]} class={c}>y</tr> }`,
+    )
+    expect(out).toContain('() => [n]')
+    expect(out).toContain('"class"') // 动态 props key 记录
+  })
+})

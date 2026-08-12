@@ -10,7 +10,8 @@ import type { VNode, VNodeChildren, ComponentType } from './types.js'
 
 /** 创建 VNode；patchFlag 为编译期动态性标记（见 @actview/babel-plugin-actview 的 JSX 编译）。
  * children（第 6 参）独立存 __children 字段——不塞进 props：
- * 静态 props 可提升为模块级常量共享，动态 children 不与共享对象混在一起。 */
+ * 静态 props 可提升为模块级常量共享，动态 children 不与共享对象混在一起。
+ * memoDeps（第 7 参）：v-memo 指令的 deps 工厂（() => any[]），patch 时比较短路。 */
 function createVNode(
   type: any,
   key: any,
@@ -18,6 +19,7 @@ function createVNode(
   patchFlag?: number,
   propsKeys?: readonly string[],
   children?: any,
+  memoDeps?: () => any[],
 ) {
   const vnode: any = {
     $$typeof: REACT_ELEMENT_TYPE,
@@ -29,6 +31,12 @@ function createVNode(
   if (patchFlag !== undefined) vnode.__patchFlag = patchFlag
   if (propsKeys) vnode.__propsKeys = propsKeys
   if (children !== undefined) vnode.__children = children
+  if (memoDeps) {
+    // render 时立即求值（工厂在 render effect 内执行 → 响应式追踪 deps 里的变量，
+    // 如 v-memo={[label, id === selected]} 中的 selected）——patch 短路直接用 __memoValue
+    vnode.__memoDeps = memoDeps
+    vnode.__memoValue = memoDeps()
+  }
   return vnode
 }
 
@@ -65,6 +73,7 @@ function jsxImpl(
   patchFlag?: number,
   propsKeys?: readonly string[],
   children?: any,
+  memoDeps?: () => any[],
 ) {
   let key: any = null
 
@@ -84,7 +93,7 @@ function jsxImpl(
     props = config || {}
   }
 
-  return createVNode(type, key, props, patchFlag, propsKeys, children)
+  return createVNode(type, key, props, patchFlag, propsKeys, children, memoDeps)
 }
 
 // 自动 JSX 转换目标

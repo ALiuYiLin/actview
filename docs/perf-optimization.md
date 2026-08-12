@@ -145,3 +145,46 @@ benchmark 的 update 是**原地改**（`_rows[i].label += '!!!'`），行对象
 
 - benchmark 实现当前保留 B 方案状态（`frameworks/keyed/actview/src/App.tsx`，未提交到 benchmark 仓库）
 - 测试过程：`npm run build-prod` 后 `node webdriver-ts/dist/benchmarkRunner.js --framework keyed/actview --count 3 --benchmark 01_run1k 03_update10th1k_x16 04_select1k 05_swap1k 06_remove-one-1k`
+
+## 八、A 方案实测：v-memo 指令（框架内实现）
+
+> 时间线：B 方案（行组件化）结论已记录于第七章。本阶段在框架内实现 `v-memo` 指令。
+
+### 实现（ActView 框架侧）
+
+- **babel 插件**（`babel-plugin-actview`）：识别 JSX 属性 `v-memo={[...]}` → 编译为 `_jsx` 调用的第 7 参（deps 工厂 `() => [...]`），不进 props、元素不整体 hoist
+- **jsxFactory**（`createVNode` 第 7 参 `memoDeps`）：**render 时立即求值**存 `__memoValue` —— 工厂在 render effect 内执行，保证 deps 里的响应式变量（如 `selected`）被追踪（这是早期实现的关键修正：若推迟到 patch 阶段求值，selected 变化不会触发重渲染）
+- **renderer**（`patchVNode` 开头）：`sameMemoDeps`（逐项 `Object.is` 值比较）相同 → 继承 `el/__avChildren` 后直接返回，整棵子树短路（不 diff / 不碰 DOM）
+- **update 原地改即可**：值比较不要求不可变更新（对比 B 方案的前提）
+
+### benchmark 用法
+
+```tsx
+<tr
+  key={row.id}
+  class={row.id === selected.value ? "danger" : ""}
+  v-memo={[row.label, row.id === selected.value]}
+>
+```
+
+### 实测结果（count=3，本地同环境）
+
+| 基准 | P2 基线 | B 方案 | A 方案 (v-memo) | vs P2 |
+|---|---|---|---|---|
+| 01 创建 | 54.9 | 54.9 | 55.5 | ≈ |
+| 02 替换 | – | – | 57.7 | – |
+| 03 局部更新 | 43.0 | 36.3 | **35.2** | **-18.1%** |
+| 04 选中高亮 | 27.4 | 35.5（退化） | **18.0** | **-34.3%** |
+| 05 交换 | 46.6 | 33.9 | **31.5** | **-32.4%** |
+| 06 删除 | 30.0 | 22.4 | 28.0 | -6.7% |
+
+### 结论
+
+1. **v-memo 解决了 B 方案的痛点**：选中高亮 27.4 → 18.0（-34.3%），selected 变化只 patch 受影响行（v-memo 短路），不再全量。
+2. **局部更新/交换同样受益**（短路对数据行变化也生效），且 update 可保持原地改（无需 benchmark 定制不可变更新，公平性优于 B）。
+3. **仍与 Vue 有差距**（高亮 18.0 vs 8.6，局部更新 35.2 vs 23.9）：v-memo 短路后**选中行自身的 patch 仍是全量子树 diff**（td/文本/事件全比较）——Vue 是 block tree（`dynamicChildren`），patch 时只处理行内动态节点。**剩余差距对应 C 方案（block tree）**。
+4. 测试：babel 编译 3 用例 + 运行时 3 用例（MutationObserver 验证未变行零 DOM 变更）全绿，全套 226 测试通过。
+
+### 后续
+
+C 方案（block tree：编译期收集 dynamicChildren，patch 只遍历动态节点）可进一步追平 Vue 的选中行 patch 开销；同时对"大量静态骨架"页面（表单/文档）有独立收益。

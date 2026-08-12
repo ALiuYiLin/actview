@@ -235,11 +235,24 @@ function compileJsxElement(el: any, state: JsxState): any {
     (a: any) => !(t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'key' })),
   )
 
+  // v-memo：编译期提取 deps 工厂（不进 props），patch 时 deps 相同短路整个子树
+  let memoDepsExpr: any = null
+  const memoAttr = normAttrs.find(
+    (a: any) => t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'v-memo' }),
+  )
+  const attrsNoMemo = normAttrs.filter(
+    (a: any) => !(t.isJSXAttribute(a) && t.isJSXIdentifier(a.name, { name: 'v-memo' })),
+  )
+  if (memoAttr && memoAttr.value && t.isJSXExpressionContainer(memoAttr.value)) {
+    // 惰性求值：闭包捕获 render 作用域变量（deps 必须在每次 render 时重新计算）
+    memoDepsExpr = t.arrowFunctionExpression([], (memoAttr.value as any).expression)
+  }
+
   // props（attr 们）+ 动态性分析
   const propEntries: any[] = []
   const dynamicKeys: string[] = []
   let hasDynamicAttr = false
-  for (const a of normAttrs) {
+  for (const a of attrsNoMemo) {
     if (t.isJSXSpreadAttribute(a)) {
       propEntries.push(t.spreadElement(a.argument))
       hasDynamicAttr = true
@@ -290,7 +303,10 @@ function compileJsxElement(el: any, state: JsxState): any {
   // 全静态子树才可提升为模块级常量：type 必须是原生元素（字符串标签）——
   // 组件标识符引用无法提升（作用域可能不是模块级，且多实例共享有风险）
   const isWholeStatic =
-    !hasDynamicAttr && t.isStringLiteral(typeExpr) && areStaticChildren(realChildren)
+    !hasDynamicAttr &&
+    !memoDepsExpr &&
+    t.isStringLiteral(typeExpr) &&
+    areStaticChildren(realChildren)
   if (isWholeStatic) {
     // 全静态子树 → 模块级 _hoisted_N 常量，引用短路跳过整个 diff
     const call = buildJsxCall(typeExpr, propEntries, childrenExpr, keyExpr, 0, state)
@@ -317,13 +333,15 @@ function compileJsxElement(el: any, state: JsxState): any {
     state,
     propsKeys,
     !hasDynamicAttr,
+    memoDepsExpr,
   )
 }
 
-/** 生成 _jsx/_jsxs(type, props, key?, flag?, propsKeys?, children?) 调用。
+/** 生成 _jsx/_jsxs(type, props, key?, flag?, propsKeys?, children?, memoDeps?) 调用。
  * children 作为第 6 参（与静态 props 分离）：props 全静态时提升为模块级
  * _hoistedProps_N 常量——render 不再每次分配 props 对象，且 props 引用稳定
- * （patch 时引用短路 / 静态 props 不重设）。 */
+ * （patch 时引用短路 / 静态 props 不重设）。
+ * memoDeps（第 7 参）：v-memo 指令的 deps 工厂，运行时比较短路。 */
 function buildJsxCall(
   typeExpr: any,
   propEntries: any[],
@@ -333,6 +351,7 @@ function buildJsxCall(
   state: JsxState,
   propsKeys?: string[] | null,
   staticProps = false,
+  memoDepsExpr?: any,
 ): t.CallExpression {
   // props 只含 attrs（children 走第 6 参）；全静态 → 提升为常量
   let propsArg: any
@@ -358,6 +377,9 @@ function buildJsxCall(
   }
   if (childrenExpr !== null) {
     args.push(childrenExpr) // 第 6 参：动态 children 与静态 props 分离
+  }
+  if (memoDepsExpr) {
+    args.push(memoDepsExpr) // 第 7 参：v-memo deps 工厂
   }
 
   const multi = t.isArrayExpression(childrenExpr)

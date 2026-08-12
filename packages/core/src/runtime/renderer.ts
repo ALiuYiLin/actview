@@ -195,6 +195,16 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
 const PATCH_TEXT = 1
 const PATCH_PROPS = 2
 
+/** v-memo deps 比较：长度一致 + 逐项 Object.is（值比较，非引用比较） */
+function sameMemoDeps(a: any, b: any): boolean {
+  if (a === b) return true
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (!Object.is(a[i], b[i])) return false
+  }
+  return true
+}
+
 function patchVNode(
   oldVnode: any,
   newVnode: any,
@@ -202,6 +212,21 @@ function patchVNode(
   index?: number,
   parent?: any
 ) {
+  // v-memo（编译期标记在元素/组件 VNode 上）：deps 与上次相同 → 整棵子树短路，
+  // 不 render 子树 / 不 diff / 不碰 DOM。DOM 归属（el/__avChildren）从旧 vnode 继承。
+  // deps 在 VNode 创建时（render 内）已求值存 __memoValue（见 jsxFactory）。
+  if (newVnode.__memoDeps) {
+    if (
+      oldVnode &&
+      oldVnode.__memoValue !== undefined &&
+      sameMemoDeps(newVnode.__memoValue, oldVnode.__memoValue)
+    ) {
+      newVnode.el = oldVnode.el
+      newVnode.__avChildren = oldVnode.__avChildren
+      return
+    }
+  }
+
   // 内置组件（Teleport / Transition）
   if (newVnode.type?.__builtin === 'teleport') {
     patchTeleport(oldVnode, newVnode, container, parent)
