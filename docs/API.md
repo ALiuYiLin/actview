@@ -152,7 +152,7 @@ const router = createRouter({
 | `actviewPlugin()`（Vite 插件，`@actview/plugin-vite`） | `.tsx` 先过 Babel 做 defineComponent 转换（含 JSX 已降级为 `_jsx()` 调用的兼容） |
 | `defineComponentPlugin`（Babel 插件，`@actview/babel-plugin-actview`） | 组件函数 → `defineComponent`；具名插槽 `<template slot>` 编译期提取 |
 
-> 旧包 `@actview/plugin` 已废弃（deprecated），仅保留兼容 re-export。
+> 旧包 `@actview/plugin` 已废弃并移除（v1.0.13 后不再发布），请改用上述两个包。
 
 ---
 
