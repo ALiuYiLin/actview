@@ -110,3 +110,53 @@ else {
   - **行模板缓存 / 组件化行**：对 benchmark 的 map 列表，识别稳定行结构
   - **`createStaticVNode` 批量块**：纯静态大块一次性 innerHTML
 - **回归保障**：220 测试全绿、tsc/vite build 通过；babel 插件测试断言已更新为新输出形态。
+
+---
+
+## 七、P2 实录（静态属性提升 + `__children` 独立字段，commit `8b4f0e4`）
+
+### 目标
+
+P1 复盘结论：数据页主成本是**全量 render**（VNode 重建）。P2 尝试砍掉 render 中"静态 props 对象每次分配"：`<td class="col-md-1">{row.id}</td>` 的 props 提升为模块级常量。
+
+### 实现
+
+1. **babel 编译**：`buildJsxCall` 重构——children 作为 `_jsx` 的**第 6 参**（与静态 props 分离）；props 全静态（无动态 attr）→ 提升为 `_hoistedProps_N` 常量：
+   ```jsx
+   <td class="col-md-1">{row.id}</td>
+   // ↓
+   _jsx("td", _hoistedProps1, undefined, 1, undefined, row.id)
+   ```
+2. **jsx-runtime**：`createVNode` 新增 `__children` 字段——children **不再塞进 props**（第一版尝试塞 props 导致共享的 `_hoistedProps1` 被动态 children 原地修改、跨行互相污染）。
+3. **统一读取**：`getChildren(vnode)`（优先 `__children` 回退 `props.children`）下沉到 `vnode.ts`（transition 不 import renderer 避免循环依赖）；renderer/mountComponent/transition/renderToString 全部 children 读取点适配。
+4. **patchComponent 修复**：① props 相同但 children 引用变化（`<KeepAlive><component is/>` 切换）也要重渲染；② 增量更新 props 时合并 `__children`（否则实例 `props.children` 被无 children 的新 props 覆盖丢失，KeepAlive 读不到插槽）。
+
+### 修复的 Bug（3 个）
+
+| Bug | 根因 | 修复 |
+|---|---|---|
+| 多行 children 互相覆盖（首版） | children 被塞进共享 `_hoistedProps1`（原地修改共享对象） | children 独立存 `__children`，props 保持纯静态共享 |
+| keep-alive 切换不更新 | props 相同（静态空对象）+ children 变化不在 `isSameProps` 判断内 | `isSameProps \|\| getChildren 引用变化` 才触发 update |
+| keep-alive 切换后 props.children 丢失 | `updateProps(instance.props, newVnode.props)` 用无 children 的新 props 覆盖 | 增量更新前合并 `{...props, children: __children}` |
+
+### Benchmark 复测（count=3）
+
+| 基准 | P0 | P1 | P2 | vue |
+|---|---|---|---|---|
+| 03_update10th 局部更新 | 43.0 | 46.1 | 47.9 | 23.9 |
+| 04_select1k 选中高亮 | 27.4 | 30.7 | 30.1 | 8.6 |
+| 06_remove-one-1k 删除 | 30.0 | 30.8 | **29.5** | 23.2 |
+
+### 复盘（P1+P2 为什么数据页无净收益）
+
+- **props 对象分配不是 render 主成本**：VNode 对象本身（`createVNode`）+ children 数组 + keyed diff 遍历才是。省掉 props 分配只影响极小部分。
+- **数据页无全静态子树**：hoist 无处发力（唯一能省 VNode 创建的手段），td/tr 全含动态内容。
+- babel 编译产物比 esbuild 大（main.js 21.14 vs 19.85kB），解析成本略增。
+- **真正追平 Vue 的方向**（超出编译期优化范畴）：
+  - **行组件化**（benchmark 实现层面）：`<Row row={r}/>` 后靠 patchComponent 的 props 短路，局部更新只动变化行——Vue 数据页快的本质
+  - **v-memo 式运行时缓存**：map 列表按依赖判断是否重建 VNode 树（需编译期标记 deps，babel 无法自动提取 `row` 参数依赖）
+  - Solid/Svelte 式细粒度更新（框架级大改）
+
+### 结论
+
+P1+P2 的价值：**正确性**（修复 9 个真实 bug：共享污染、KeepAlive children 丢失、参数错位、空白规则、hoist 作用域等）+ **静态内容场景收益**（hoist/TEXT）+ **编译期标记体系**（`__patchFlag`/`__propsKeys`/`__children`/hoist 全部就位）。性能上数据页净收益不明显（06 略好、04 持平、03 略差），实测数据如上，供后续决策。
