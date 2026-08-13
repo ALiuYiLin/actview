@@ -19,7 +19,9 @@
 pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
 ```
 
-当前共 **231 个用例 / 13 个测试文件**，全部通过时退出码为 0（`pnpm test`）。构成：verify 自研场景 + actview 迁移用例 + babel 插件编译用例（33）+ scoped 用例 + vite-plugin 用例 + `vmemo`（3）+ `solid`（6）。
+当前共 **295 个用例 / 19 个测试文件**，全部通过时退出码为 0（`pnpm test`）。构成：verify 自研场景 + actview 迁移用例 + 插件编译用例（babel/scoped/vite-plugin）+ 性能机制（`vmemo`/`solid`）+ P0 补齐（`p0`）+ 路由（`router`）+ 组件运行时增强（`runtime-enhance`）+ 生态（`store`/`testing`/`devtools`）。
+
+> 注：用例数随功能迭代持续变化，以 `pnpm test` 实际输出为准。
 
 ---
 

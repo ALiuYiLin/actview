@@ -137,7 +137,6 @@ export function provide(key, value) {
 
 ```ts
 instance.render = options.__setup(props, {
-  attrs,
   get injects() { return instance.injects }   // 实时指向最新表
 })
 ```

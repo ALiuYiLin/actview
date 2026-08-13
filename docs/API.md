@@ -1,6 +1,6 @@
 # ActView 能力与 API 清单
 
-> 框架 = 响应式系统 + JSX 渲染器 + 组件运行时 + 路由/插件生态。
+> 框架 = 响应式系统 + JSX 渲染器 + 组件运行时 + 路由/生态。
 > 统一入口：`import { ... } from 'actview'`（聚合 `@actview/core` 的公开 API）。
 
 ---
@@ -11,124 +11,120 @@
 
 | API | 说明 |
 |---|---|
-| `reactive(obj)` | 深度响应式代理（对象/数组；`for...in`、`'in'`、数组方法均响应） |
+| `reactive(obj)` | 深度响应式代理（对象/数组/`Map`/`Set`/`WeakMap`/`WeakSet`；`for...in`、数组方法均响应） |
 | `shallowReactive(obj)` | 浅层响应式（仅第一层） |
-| `readonly(obj)` | 只读代理（赋值 console.warn） |
-| `markRaw(obj)` | 标记跳过代理（`reactive(raw) === raw`） |
-| `ref(value)` | 单个值响应式（`.value` 访问） |
-| `isRef(v)` / `unref(v)` | ref 判断 / 自动解包 |
-| `toRef(obj, key)` / `toRefs(obj)` | 对象属性/整体转 ref（可解构） |
+| `readonly(obj)` | 只读代理（赋值 warn） |
+| `shallowReadonly(obj)` | 浅只读（第一层只读，嵌套可写） |
+| `markRaw(obj)` | 标记跳过代理 |
+| `ref(value)` | 单值响应式（`.value`） |
+| `shallowRef(value)` | 浅层 ref（对象值不包装） |
+| `triggerRef(ref)` | 手动触发 shallowRef 依赖 |
+| `isRef(v)` / `unref(v)` | ref 判断 / 解包 |
+| `toValue(v)` | 取值统一（值/ref/getter） |
+| `toRef(obj, key)` / `toRefs(obj)` | 对象属性/整体转 ref |
+
+### 判型工具
+
+| API | 说明 |
+|---|---|
+| `toRaw(v)` | 递归取原始对象 |
+| `isReactive(v)` / `isReadonly(v)` / `isProxy(v)` / `isShallow(v)` | 代理身份判断 |
 
 ### 派生与侦听
 
 | API | 说明 |
 |---|---|
-| `computed(getter)` / `computed({ get, set })` | 惰性缓存派生值（脏标记）；选项形态支持 **setter**（可写 computed），只读 computed 赋值 warn |
-| `watch(source, cb, opts?)` | 侦听（支持 ref/函数/数组/对象深度；`immediate`；`onCleanup`；返回 stop） |
-| `watchEffect(fn)` | 立即执行并自动追踪依赖（异步批处理触发；返回 stop） |
+| `computed(getter)` / `computed({ get, set })` | 惰性缓存派生值（脏标记）；选项形态支持 setter |
+| `watch(source, cb, opts?)` | 侦听（ref/函数/数组/对象；`deep`/`flush`/`once`/`immediate`；`onCleanup`；返回 stop） |
+| `watchEffect(fn, opts?)` | 立即执行并自动追踪依赖 |
+| `onWatcherCleanup(fn)` | 回调内注册清理 |
 
-### 底层（进阶/内部）
+### 作用域
 
 | API | 说明 |
 |---|---|
-| `runEffect(fn, { scheduler })` | 创建 ReactiveEffect 并立即执行 |
-| `track` / `trigger` | 手动依赖收集 / 派发（`ITERATE_KEY` 等） |
-| `pauseTracking` / `resetTracking` | 暂停/恢复依赖收集（钩子执行、数组方法内部用） |
-| `EffectScope` / `getCurrentScope()` | effect 作用域（组件卸载自动 stop watch/computed/render effect） |
-| `ReactiveEffect` | effect 类（`scheduler` / `active` / `stop()` / `run()`） |
+| `effectScope(detached?)` | 创建作用域 |
+| `onScopeDispose(fn)` | 注册清理（stop 时执行） |
+| `getCurrentScope()` | 当前作用域 |
+
+### 调度
+
+| API | 说明 |
+|---|---|
+| `nextTick(cb?)` | 本轮 flush 后回调 |
+| `runEffect(fn, { scheduler, instance })` | 创建 ReactiveEffect 并立即执行 |
+| `track` / `trigger` / `pauseTracking` / `resetTracking` | 手动依赖收集/派发（底层） |
 
 ---
 
-## 二、组件（组件能力）
+## 二、组件
 
 ### 创建与挂载
 
 | API | 说明 |
 |---|---|
 | `createApp(Component).mount('#app')` | 创建并挂载应用 |
-| `defineComponent(setup)` | 组件包装（Babel 插件把 `function App()` 自动转成它） |
+| `defineComponent(setup, name?)` | 组件包装（Babel 插件自动转换 + 组件名） |
+| `defineComponent({ setup, name? })` | options 形态 |
 
-组件写法（JSX + 组合式）：
-
-```tsx
-function App(props) {
-  const state = reactive({ n: 0 })   // setup 体：执行一次
-  onMounted(() => console.log('mounted'))
-  return () => <div>{state.n}</div>   // 或直接 return JSX（插件自动包 render）
-}
-```
-
-### 生命周期钩子
+### 生命周期钩子（全套）
 
 | API | 触发时机 |
 |---|---|
-| `onMounted(fn)` | 首次渲染 DOM 挂载后（子先父后） |
-| `onUpdated(fn)` | 每次重渲染后（钩子内暂停依赖收集，防自触发循环） |
+| `onBeforeMount(fn)` | 首次 render 前 |
+| `onMounted(fn)` | DOM 挂载后（子先父后） |
+| `onUpdated(fn)` | 每次重渲染后 |
 | `onBeforeUnmount(fn)` | 卸载前 |
-| `onUnmounted(fn)` | 卸载完成后（effect 停止之后） |
+| `onUnmounted(fn)` | 卸载完成后 |
+| `onActivated(fn)` | KeepAlive 缓存恢复 |
+| `onDeactivated(fn)` | KeepAlive 移入缓存 |
+| `onErrorCaptured(fn)` | 捕获子组件错误（返回 false 停止传播） |
+| `onServerPrefetch(fn)` | renderToString 阶段 |
+| `onRenderTracked(fn)` | 依赖收集（调试） |
+| `onRenderTriggered(fn)` | 依赖触发（调试） |
+| `getCurrentInstance()` | 当前组件实例 |
 
 ### 内置组件
 
 | 组件 | 说明 |
 |---|---|
-| `<KeepAlive>` | 缓存组件实例/DOM（隐藏容器），切换不销毁、状态保留 |
-| `<ErrorBoundary fallback={...}>` | 捕获子树渲染错误，显示 fallback |
-| `<Suspense fallback={...}>` | 异步组件加载期间显示 fallback |
-| `<Teleport to="#target">` | children 渲染到指定容器（支持 `to` 切换迁移） |
-| `<Transition name="fade" duration={300}>` | 单子节点进入/离开过渡类（`v-enter/leave-*`） |
+| `<KeepAlive include/exclude/max>` | 缓存实例/DOM（组件名过滤 + LRU 上限） |
+| `<ErrorBoundary fallback={...}>` | 捕获渲染错误 |
+| `<Suspense fallback={...}>` | 异步 setup / lazy 加载期间显示 fallback |
+| `<Teleport to="#target">` | 传送门 |
+| `<Transition name mode appear onEnter/onLeave...>` | 单子节点过渡（mode out-in + JS 钩子） |
+| `<TransitionGroup name>` | 列表增删过渡 |
 | `<component is={Comp}>` | 动态组件 |
+| `lazy(() => import(...))` | 异步组件 |
 
 ### 组件特性
 
 | 能力 | 说明 |
 |---|---|
-| 插槽 | 默认（children 透传）/ 作用域（函数 children）/ 具名（`<template slot="name">`） |
-| 动态组件 | `<component is>` + `resolveDynamicVNode` |
-| 异步组件 | `lazy(() => import(...))`（配合 Suspense） |
-| 模板引用 | `props.ref`（函数或 `{value}`）指向 DOM/组件实例，卸载置 null |
-| attribute fallthrough | 白名单 attrs（class/className/style/id/on* 事件）自动落到单根元素，class/style 合并 |
-| props 泛型推导 | `ComponentType<P>` / `PropsOf<T>`，JSX 组件 props 类型检查 |
+| Props | 全量进 setup（`key`/`ref` 除外），TS 类型保证形状；显式 `{...props}` 透传 |
+| 插槽 | 默认（children）/ 作用域（函数 children）/ 具名（`<template slot="name">`） |
+| 模板引用 | `props.ref`（函数或 `{value}`）指向 DOM/组件实例 |
+| 依赖注入 | `provide(key, value)` / `useInjects(key?)` |
+| 组件名 | `defineComponent(fn, name)` / Babel 从变量名传递（KeepAlive/DevTools 用） |
 
 ---
 
 ## 三、渲染与更新（renderer）
 
-### JSX
-
-| API | 说明 |
-|---|---|
-| `jsx` / `jsxs` / `jsxDEV` | JSX 工厂（tsconfig `jsxImportSource: "@actview/jsx"`） |
-| `Fragment` / `<>...</>` | 片段（多根） |
-| `createElement(type, props, ...children)` | 经典写法 |
-| `isValidElement(v)` | VNode 校验 |
-| 事件 | `onClick` / `onclick` / `onXxxCapture`（invoker 缓存，更新不重绑） |
-
-### DIFF 与更新
-
 | 能力 | 说明 |
 |---|---|
-| keyed diff | 带 key 列表走 LIS 最小移动（`getSequence`），支持 Fragment 根组件 |
-| 同索引 diff | 无 key 列表逐位 patch（含文本节点 el 持久化定位） |
-| props 细粒度更新 | `patchProps` / `setProp`（class/style/value/checked/事件/属性） |
-| 受控 input 光标保位 | 更新 value 前后记录/恢复 `selectionStart/End` |
-| 调度批处理 | `queueJob` 微任务去重 + `nextTick(cb?)` |
-| 运行时短路 | `patchProps` 值比较跳过 / `patchVNode` props 引用短路 / `patchChildren` children 引用短路 |
-| `v-memo` | 行级显式依赖短路：deps 未变整棵子树复用（JSX `v-memo={[deps]}`，编译期提取） |
-
-### 双模细粒度（`<solid>` 运行时）
-
-| API | 说明 |
-|---|---|
-| `createEffect(fn)` | 细粒度 effect：响应式依赖变化时重跑 fn，直接写 DOM（`<solid>` 块内动态点编译产物） |
-| `mapArray(list, parent, mapFn)` | 项级 keyed 复用渲染：公共前后缀跳过 + Map 索引 + LIS 最小移动 + 顺序未变零移动；消失项清理订阅 |
-| `solidGet(holder, factory)` | `<solid>` 块占位 vnode 工厂缓存：首次执行建 DOM + 注册 effect，render 重跑复用 |
-| `createSolidVNode` | `<solid>` 块编译产物 vnode 构造（renderer 以黑盒子 DOM 子树挂载/卸载） |
-
-### 构建期 / SSR
-
-| API | 说明 |
-|---|---|
-| `renderToString(vnode)` | VNode → HTML 静态序列化（Node 端可用；组件走 `__setup` + render，钩子不执行） |
+| keyed diff | LIS 最小移动（`getSequence`） |
+| 同索引 diff | 无 key 列表逐位 patch |
+| props 细粒度更新 | `patchProps`/`setProp`（class/style/value/checked/事件/属性） |
+| SVG 命名空间 | `createElementNS` |
+| `dangerouslySetInnerHTML` | HTML 字符串插入 |
+| 事件 | `onClick`/`onclick`/`onXxxCapture`/`onXxxPassive`（invoker 缓存） |
+| 受控 input 光标保位 | 更新 value 前后恢复 selection |
+| 调度批处理 | `queueJob` 微任务去重 + `nextTick` |
+| 运行时短路 | props 值/引用短路、children 引用短路 |
+| `v-memo` | 行级显式依赖短路 |
+| `<solid>` 双模 | `createEffect`/`mapArray`/`solidGet` |
+| `renderToString` | VNode → HTML 静态序列化 |
 
 ---
 
@@ -136,49 +132,30 @@ function App(props) {
 
 | API | 说明 |
 |---|---|
-| `createRouter({ history, routes })` | 创建路由实例（`router.push(path)`） |
+| `createRouter({ history, routes })` | 创建路由 |
 | `createWebHistory(base?)` / `createMemoryHistory()` | history 模式 |
-| `<RouterLink to="...">` / `<RouterView />` | 链接 / 路由出口 |
+| `<RouterLink to>` / `<RouterView />` | 链接 / 出口（嵌套） |
+| `router.push/replace/back/forward/go` | 导航 |
+| `router.beforeEach(guard)` / `router.afterEach(hook)` | 全局守卫 |
+| `RouteRecord.beforeEnter` / `redirect` / `meta` / `children` | 路由级守卫/重定向/元信息/嵌套 |
 | `currentRouter` | 当前路由实例 |
-| 类型 | `Router` / `RouteLocation` / `RouteRecord` / `RouteLocationRaw` / `MatchedRoute` |
-
-```tsx
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    { path: '/', component: HomePage },
-    { path: '/about', component: AboutPage },
-  ],
-})
-```
-
-> 现阶段：路由切换 =》 组件切换（无守卫/懒加载等能力，见 PLAN.md）。
 
 ---
 
-## 五、工程化（@actview/plugin-vite + @actview/babel-plugin-actview）
+## 五、生态
+
+| 包 | API |
+|---|---|
+| `@actview/store` | `defineStore`/`applyPlugin`/`resetStore`/`resetAllStores`/`getActiveStoreIds`/`getStore` |
+| `@actview/testing` | `render`/`fireEvent`/`waitFor`/`screen`/`cleanup` |
+| `@actview/devtools` | `initDevTools`/`mountPanel` |
+
+---
+
+## 六、工程化（@actview/plugin-vite + @actview/babel-plugin-actview）
 
 | 能力 | 说明 |
 |---|---|
-| `actviewPlugin()`（Vite 插件，`@actview/plugin-vite`） | `.tsx` 先过 Babel 做 defineComponent 转换（含 JSX 已降级为 `_jsx()` 调用的兼容） |
-| `defineComponentPlugin`（Babel 插件，`@actview/babel-plugin-actview`） | 组件函数 → `defineComponent`；具名插槽 `<template slot>` 编译期提取 |
-
-> 旧包 `@actview/plugin` 已废弃并移除（v1.0.13 后不再发布），请改用上述两个包。
-
----
-
-## 六、能力对照速查（Vue 3 风格）
-
-| 能力 | 状态 |
-|---|---|
-| reactive / ref / computed / watch / watchEffect | ✅ |
-| 数组响应 / for-in 响应 / markRaw / readonly / shallowReactive | ✅ |
-| 生命周期四件套 + EffectScope 自动停止 | ✅ |
-| keyed diff / props 更新 / 批处理 / nextTick | ✅ |
-| 插槽（默认/作用域/具名）/ 动态组件 / KeepAlive | ✅ |
-| ErrorBoundary / Suspense / lazy / ref 模板引用 | ✅ |
-| Teleport / Transition / renderToString | ✅ |
-| attribute fallthrough（白名单透传） | ✅（阶段 1） |
-| 路由（组件切换） | ✅（守卫/懒加载待规划） |
-| defineComponent options 形态 `{ props, setup(props, ctx) }` / `$attrs` / `inheritAttrs` | 📋 待办（PLAN.md 阶段三 12） |
-| SVG 命名空间渲染 / `dangerouslySetInnerHTML` | 📋 待办 |
+| `actviewPlugin()`（Vite） | `.tsx` 过 Babel 做 defineComponent 转换 |
+| `defineComponentPlugin`（Babel） | 组件函数 → `defineComponent`；具名插槽；组件名传递 |
+| `@actview/plugin-scoped` | scoped CSS（`data-v` 哈希 + `:deep`/`:slotted`/`:global`） |

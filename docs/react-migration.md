@@ -72,18 +72,11 @@ onUnmounted(() => cleanup())
 ### 定义组件
 
 ```tsx
-// ✅ 函数组件（裸函数，插件自动转 defineComponent）
-function Hello(props: { name: string }) {
+// ✅ 函数组件（裸函数，插件自动转 defineComponent，props 类型用 TS 声明）
+export type HelloProps = { name: string }
+function Hello(props: HelloProps) {
   return <div>hi {props.name}</div>
 }
-
-// ✅ options 形态（需要 props 白名单 / inheritAttrs / 完整控制）
-const Hello = defineComponent({
-  props: ['name'],
-  setup(props) {
-    return () => <div>hi {props.name}</div>
-  },
-})
 ```
 
 > ⚠️ **唯一合法形态是「最后 return JSX」**。`return function() {...}`（React 常见的高阶组件/渲染函数写法）**不允许**，会报 `InvalidCharacterError`。
@@ -237,11 +230,10 @@ const theme = useInjects('theme')
 | API | 说明 |
 |---|---|
 | `createApp(Component).mount('#app')` | 应用入口 |
-| `defineComponent` | 函数形态 / options 形态（props 白名单 + inheritAttrs） |
-| `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` | 生命周期（子先父后） |
+| `defineComponent` | 函数形态（+ 组件名） |
+| `onBeforeMount`/`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted`/`onActivated`/`onDeactivated`/`onErrorCaptured`/`onServerPrefetch`/`onRenderTracked`/`onRenderTriggered` | 生命周期全套（子先父后） |
 | `getCurrentInstance()` | 当前组件实例 |
 | `provide(k, v)` / `useInjects(k?)` | 依赖注入 |
-| `useAttrs(k?)` | 读取白名单外的 attrs |
 
 ### 渲染与更新
 

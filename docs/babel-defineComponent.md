@@ -11,9 +11,9 @@
 function A() {
   return <div>hi</div>
 }
-// 编译后：
+// 编译后（第二参数 "A" 为组件名，供 KeepAlive include/exclude / DevTools 使用）：
 
-const A = defineComponent(function () { return () => <div>hi</div> })
+const A = defineComponent(function () { return () => <div>hi</div> }, "A")
 
 > ⚠️ **设计约束（2026-08）**：只支持简写组件（最后 `return JSX` / `_jsx()` / `null` /
 > 三元逻辑渲染表达式）。
@@ -25,19 +25,6 @@ const A = defineComponent(function () { return () => <div>hi</div> })
 > function X(props) { setup...; return <JSX/> }   // setup 阶段逻辑 + 最后 return JSX
 > // =》 const X = defineComponent(function (props) { setup...; return () => <JSX/> })
 > ```
-
-```tsx
-// 形态 2：options 形态（自动 props 白名单）——第一个参数带 TS 类型注解 / 解构
-function B(props: { title: string, count?: number }) {
-  return <div>{props.title}</div>
-}
-// 编译后（props 声明内进 setup.props、声明外进 ctx.attrs）：
-
-const B = defineComponent({
-  props: ["title", "count"],
-  setup: function (props) { return () => <div>{props.title}</div> },
-})
-```
 
 ## 会被自动转换的代码（所有场景）
 
@@ -189,26 +176,7 @@ const List = defineComponent(() => { return () => <ListWrap slots={{ item: item 
 > `&&`/三元/箭头函数/数组/对象/调用参数中嵌套的 JSX 均会提取；仅字符串字面量
 > `slot="name"` 触发。
 
-### 14. 自动 props 白名单（TS 类型注解 / 解构参数）
-
-```tsx
-// A. 第一个参数的内联 TS 对象类型字面量（成员名即白名单，可选 `?` 同样提取）
-function Child(props: { x1: string, x2?: number }) { return <div>{props.x1}</div> }
-// B. 解构参数（无类型注解，属性名即白名单）
-function App({ x1, x2 }) { return <div>{x1}{x2}</div> }
-// C. 解构 + 类型注解
-function App2({ x1 }: { x1: string }) { return <div>{x1}</div> }
-```
-```js
-const Child = defineComponent({ props: ["x1", "x2"], setup: function (props) { return () => <div>{props.x1}</div> } })
-```
-
-> 提取成功 → options 形态（`defineComponent({ props, setup })`）：声明内进 `setup.props`、
-> 声明外进 `ctx.attrs`（对齐 Vue props 白名单分离）。**回退函数形态**（props 全量）的场景：
-> - 无类型注解且非解构 / `props: any` / 类型别名引用（如 `MyProps`，Babel 无类型检查器无法跨文件解析）
-> - 解构带 rest（`{ x1, ...rest }`）：白名单会截断 rest，保守回退保持 rest 语义
-> - esbuild/rolldown 先转后类型与解构已剥离（拿到的是降级 JS）→ 自动回退（best-effort）
-> - 无参数组件
+> 方案 3 之后：组件统一函数形态 `defineComponent(fn, name)`，**不再有 props 白名单**（props 全量进 setup，TS 类型在编译期保证形状）。
 
 ## 不会被转换的代码
 
@@ -221,7 +189,6 @@ const Child = defineComponent({ props: ["x1", "x2"], setup: function (props) { r
 | 非函数声明 | `const obj = {...}` / `class X {}` | init 不是函数 |
 | 纯数值三元 | `function H(p) { return p.a ? 1 : 2 }` | 分支无渲染内容 |
 | 空值合并 / 裸 null 分支 | `p.v ?? null` / `a && null` / `p.ok ? null : p.name` | null 分支不单独触发渲染判定 |
-| 解构带 rest | `function App({ x1, ...rest }) {...}` | 白名单会截断 rest 语义，保守回退 |
 
 ## 判定逻辑（wrapComponentFn 摘要）
 
@@ -236,9 +203,8 @@ const Child = defineComponent({ props: ["x1", "x2"], setup: function (props) { r
 函数体任意位置的早退 return（JSX / _jsx / null / 渲染表达式）同样包成 render 函数
   （wrapEarlyReturns：仅处理函数体自身的 return，排除嵌套函数——子组件由各自 visitor 转换）
 
-包装后自动提取 props 白名单（extractPropsFromType）：
-  第一个参数内联 TS 对象类型 / 解构参数（无 rest）→ options 形态 defineComponent({ props, setup })
-  其余情况                                       → 函数形态 defineComponent(setup)
+包装后统一生成 defineComponent(fn, name)：
+  name 从变量名传递（function 声明 / 变量声明）；export default 匿名组件无 name
 文件末尾：有转换发生且无 defineComponent 导入时，自动注入 import { defineComponent } from '@actview/core'
 ```
 
