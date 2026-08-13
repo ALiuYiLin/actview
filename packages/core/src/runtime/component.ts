@@ -29,25 +29,30 @@ type ComponentOptionsResult<Props> = {
  * 让产物能通过 JSX 类型检查，运行时仍是普通对象（as 断言无运行时代码）。
  */
 export function defineComponent<Props = Record<string, any>>(
-  options: ComponentOptions<Props>
+  options: ComponentOptions<Props>,
+  name?: string
 ): ComponentOptionsResult<Props>
 
 /**
  * defineComponent(setup)：函数形态。产物 { __setup }。
  */
 export function defineComponent<Setup extends (...args: any[]) => any>(
-  setup: Setup
+  setup: Setup,
+  name?: string
 ): {
   __setup: Setup
+  name?: string
 } & ((...args: Parameters<Setup>) => ReturnType<Setup>)
 
-export function defineComponent(opt: any) {
+export function defineComponent(opt: any, name?: string) {
   if (typeof opt === 'function') {
     const out: any = { __setup: opt }
-    if (opt.name) out.name = opt.name
+    if (name) out.name = name
+    else if (opt.name) out.name = opt.name
     return out
   }
   const out: any = { __setup: opt.setup }
-  if (opt.name) out.name = opt.name
+  if (name) out.name = name
+  else if (opt.name) out.name = opt.name
   return out
 }

@@ -22,7 +22,8 @@ function transform(code: string): string {
 describe('defineComponentPlugin：Babel 自动转换组件', () => {
   it('简写裸函数：function X() { return <JSX/> } → defineComponent', () => {
     const out = transform(`function A() { return <div>hi</div> }`)
-    expect(out).toContain('const A = defineComponent(function A() {')
+    expect(out).toContain('const A = defineComponent(function () {')
+    expect(out).toContain('"A"') // 组件名从变量名传递（第二参数）
     expect(out).toContain('return () => _jsx("div"')
     expect(out).toMatch(/import \{ defineComponent \} from "@actview\/core"/)
   })
@@ -137,7 +138,8 @@ describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
     const out = transform(
       `function Child(props) { return props.condition ? <Comp /> : null }`,
     )
-    expect(out).toContain('const Child = defineComponent(function Child(props) {')
+    expect(out).toContain('const Child = defineComponent(function (props) {')
+    expect(out).toContain('"Child"')
     expect(out).toContain('return () => props.condition ? _jsx(Comp')
   })
 

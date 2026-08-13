@@ -18,8 +18,11 @@ import {
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
 import { getCurrentSuspense } from './suspense'
+import { getDevtoolsHook } from '../devtools'
 import { EffectScope } from '../reactivity/effectScope'
 import type { VNode } from '../vnode'
+
+let uid = 0
 
 /**
  * renderer 注入的渲染依赖（消除 renderer ↔ mountComponent 循环依赖）：
@@ -59,6 +62,10 @@ export function invokeHooks(hooks: (() => void)[]) {
 /** 组件实例：保存 setup/render 及当前子树 */
 export interface ComponentInstance {
   setup: (props: any) => () => any
+  /** 实例唯一 id（DevTools 用） */
+  id: number
+  /** 组件名（DevTools 用） */
+  name: string
   /** 普通对象 props：由父组件 patch 时更新值并手动调用 update() */
   props: any
   /** 父组件实例（provide/inject 链） */
@@ -136,6 +143,8 @@ export function mountComponent(
 
   const instance: ComponentInstance = {
     setup: options.__setup,
+    id: ++uid,
+    name: options.name || 'Anonymous',
     props,
     parent: parentInstance ?? null,
     injects: parentInstance?.injects ?? {},
@@ -192,6 +201,7 @@ export function mountComponent(
 
   // 更新函数：重新 render 并与旧子树 patch
   const update = () => {
+    const wasMounted = instance.isMounted
     try {
       const newSubTree = instance.render()
       const oldSubTree = instance.subTree
@@ -209,6 +219,18 @@ export function mountComponent(
     } catch (err) {
       // 渲染错误：沿组件树走 onErrorCaptured，再交给 ErrorBoundary
       handleError(instance, err)
+    }
+    // DevTools 埋点：首次渲染 = 挂载，之后 = 更新
+    const dth = getDevtoolsHook()
+    if (dth) {
+      const info = {
+        id: instance.id,
+        name: instance.name,
+        instance,
+        parent: instance.parent
+      }
+      if (wasMounted) dth.onComponentUpdate?.(info)
+      else dth.onComponentMount?.(info)
     }
   }
 
@@ -242,6 +264,13 @@ export function mountComponent(
     effect.stop() // 兜底（scope.stop 已含 render effect，幂等）
     // unmounted：卸载完成后触发（Vue 3 语义：在 beforeUnmount 之后）
     invokeHooks(instance.unmounted)
+    // DevTools 埋点：卸载
+    getDevtoolsHook()?.onComponentUnmount?.({
+      id: instance.id,
+      name: instance.name,
+      instance,
+      parent: instance.parent
+    })
   }
 
   // 组件 VNode 的 el 指向其子树根节点

@@ -27,6 +27,7 @@
     "@actview/router": "workspace:*",
     "@actview/store": "workspace:*",
     "@actview/testing": "workspace:*",
+    "@actview/devtools": "workspace:*",
     "@types/node": "^26.0.1",
     "actview": "workspace:*",
     "@babel/core": "^8.0.1",

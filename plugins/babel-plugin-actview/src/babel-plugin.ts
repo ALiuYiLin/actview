@@ -182,9 +182,9 @@ export default function defineComponentPlugin() {
         if (!/^[A-Z]/.test(name)) return
 
         // ---------- 2. 包装为 defineComponent（含 setup 风格 / 具名插槽） ----------
-        // 保留组件名（node.id）：defineComponent 产物存 name，KeepAlive include/exclude 用
-        const fn = t.functionExpression(node.id, node.params, node.body, false, false)
-        const wrapped = wrapComponentFn(fn)
+        // 组件名从变量名传递（内层函数匿名，避免 Babel 重命名内层函数）
+        const fn = t.functionExpression(null, node.params, node.body, false, false)
+        const wrapped = wrapComponentFn(fn, name)
         if (!wrapped) return
         const call = wrapped
 
@@ -211,7 +211,7 @@ export default function defineComponentPlugin() {
           t.isFunctionExpression(init) || t.isArrowFunctionExpression(init)
         if (!isFn) return
         // 手动 defineComponent 包装的跳过（init 是 call，非函数）
-        const wrapped = wrapComponentFn(init)
+        const wrapped = wrapComponentFn(init, id.name)
         if (!wrapped) return
         const call = wrapped
 
@@ -276,7 +276,7 @@ export default function defineComponentPlugin() {
  *   - 具名插槽提取：仅源码 JSX 形态（含 expression body）
  * 注意：setup 风格（最后 return 渲染函数）不允许——保持裸函数不转换
  */
-function wrapComponentFn(fn: any): any | null {
+function wrapComponentFn(fn: any, name?: string): any | null {
   const body = fn.body
   const isExprBody = !t.isBlockStatement(body)
   let last: any = null
@@ -327,8 +327,11 @@ function wrapComponentFn(fn: any): any | null {
     last.argument = t.arrowFunctionExpression([], t.nullLiteral())
   }
 
-  // 统一函数形态：defineComponent(fn)，props 全量进 setup（TS 类型保证形状）
-  return t.callExpression(t.identifier('defineComponent'), [fn])
+  // 统一函数形态：defineComponent(fn, name)，props 全量进 setup（TS 类型保证形状）
+  // name 从变量名传递（避免内层函数名被 Babel 重命名如 Child2）
+  const args = [fn]
+  if (name) args.push(t.stringLiteral(name))
+  return t.callExpression(t.identifier('defineComponent'), args)
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { Dep } from '../types'
 import { getCurrentScope } from './effectScope'
+import { getDevtoolsHook } from '../devtools'
 
 // ============================================================
 // 调度批处理 — effect 更新入微任务队列去重
@@ -123,6 +124,8 @@ export function track(target: object, key: any) {
   if (inst && inst.renderTracked && inst.renderTracked.length) {
     for (const hook of inst.renderTracked) hook({ target, key })
   }
+  // DevTools 埋点：依赖收集
+  getDevtoolsHook()?.onTrack?.({ target, key })
   let depsMap = targetMap.get(target)
 
   if (!depsMap) {
@@ -149,6 +152,8 @@ export function trigger(target: object, key: any) {
   const dep = depsMap.get(key)
   if (!dep) return
   const effects = new Set(dep)
+  // DevTools 埋点：依赖触发（每次 trigger 一次）
+  getDevtoolsHook()?.onTrigger?.({ target, key })
   effects.forEach((effect) => {
     // 调试钩子：依赖触发 render effect 时触发
     const inst = effect.instance
