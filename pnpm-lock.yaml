@@ -29,6 +29,9 @@ importers:
       '@actview/store':
         specifier: workspace:*
         version: link:packages/store
+      '@actview/testing':
+        specifier: workspace:*
+        version: link:packages/testing
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -77,6 +80,12 @@ importers:
         version: link:../jsx
 
   packages/store:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/testing:
     dependencies:
       '@actview/core':
         specifier: workspace:*

@@ -26,6 +26,7 @@
     "@actview/plugin-scoped": "workspace:*",
     "@actview/router": "workspace:*",
     "@actview/store": "workspace:*",
+    "@actview/testing": "workspace:*",
     "@types/node": "^26.0.1",
     "actview": "workspace:*",
     "@babel/core": "^8.0.1",
