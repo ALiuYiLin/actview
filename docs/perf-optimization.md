@@ -93,19 +93,20 @@ if (newVnode.__memoDeps) {
 - **短路必须继承 `el`/`__avChildren`**：否则下轮该行不短路时（deps 变了）旧 vnode 失去 DOM 归属。
 - **`v-memo` 不进 props**：不透传到 DOM/组件。
 
-## 三、当前 benchmark 数据（P0 + v-memo，本地实测 count=5）
+## 三、当前 benchmark 数据（本地实测 count=3）
 
-完整数据见 `README.md`（已更新）。核心改善项：
+完整数据见 `README.md`。三个阶段对比（单位 ms，本地 Chrome + puppeteer）：
 
-| 基准 | 优化前 | 当前 | 变化 |
-|---|---|---|---|
-| 局部更新（每第 10 行） | 53.5 | **33.0** | -38% |
-| 选中行高亮 | 37.9 | **20.8** | -45% |
-| 交换两行 | 53.3 | **32.7** | -39% |
-| 删除一行 | 35.3 | **25.1** | -29% |
-| 大表追加 1000 行 | 65.1 | 58.2 | -11% |
+| 基准 | 优化前 | P0+v-memo | `<solid>` 细粒度 | 总变化 |
+|---|---|---|---|---|
+| 创建 1000 行 | 50.9 | 50.9 | **46.9** | -7.9% |
+| 替换 1000 行 | 55.2 | 55.2 | **50.7** | -8.2% |
+| 局部更新（每第 10 行） | 53.5 | 33.0 | **27.2** | -49% |
+| 选中行高亮 | 37.9 | 20.8 | **10.5** | -72%（接近 Vue 8.6） |
+| 交换两行 | 53.3 | 32.7 | **29.7** | -44% |
+| 删除一行 | 35.3 | 25.1 | **23.6** | -33% |
 
-创建类基准持平（v-memo 只作用于更新路径）；run memory 4.31MB、体积 19.6/6.5kB 基本不变。
+创建类基准小幅提升；高亮从 20.8 → 10.5（细粒度直连 DOM，追平 Vue）。
 
 ## 四、路线决策（历史实验结论）
 
@@ -117,33 +118,46 @@ if (newVnode.__memoDeps) {
 
 **核心结论**：v-memo 是数据页优化的主收益来源（跨行短路），与 P1/P2 无关；剩余差距在"选中行内部仍是子树 diff"——即细粒度直连。
 
-## 五、规划：`<solid>` 双模细粒度（一期，含集合更新）
+## 五、已实施：`<solid>` 双模细粒度（一期，含集合更新）
 
 ### 目标
 
 消灭"选中行内部子树 diff"：`<solid>` 作用域内的 JSX 编译为 solid 式细粒度——DOM 骨架创建一次，每个 `{expr}` 成为独立 effect 直连 DOM。作用域外保持 Vue 式 re-render + v-memo。**只对热点区域付出细粒度成本**（内存可控）。
 
-### 一期范围（集合更新并入一期的决策）
+### 编译链（两阶段，职责分离）
 
-早期认为"数组结构变化是细粒度软肋，`<For>` keyed 复用放二期"。经 solid 源码分析（`packages/solid/src/reactive/array.ts` 的 `mapArray`），**项级复用机制与双模天然兼容，并入一期**：
+1. **主插件（defineComponentPlugin）只序列化**：`<solid>` 块内 JSX 用 `@babel/generator` 序列化为源码字符串，产出占位 `_jsx("solid", { children: ["..."] })`（块内 JSX 不再走普通 JSX 编译）。
+2. **独立 solid-plugin 二次编译**：Program exit 遍历识别占位，`parseSync` 重新解析字符串 → 编译为 `solidGet(_holder, container => { ... })`：
+   - JSX 元素 → `document.createElement` + 静态属性 `setAttribute`（连字符安全）+ `on*` → `addEventListener`（绑定一次，闭包捕获）
+   - 动态 `{expr}` → `createEffect(() => node.property = expr)`（直连 DOM）
+   - 数组 `arr.map(arrow)` → `mapArray(() => arr, container, arrow)`（项级 keyed 复用）
+   - `solidGet` 缓存工厂：holder 挂在组件 setup 级，render 重跑不重建块。
 
-- **项级 keyed 复用**（对齐 `mapArray`）：`<solid>` 内的数组渲染在"项"层做 diff——公共前缀/后缀跳过 + Map 索引复用；**复用的项零成本**（DOM + 内部绑定保留，只移动位置），新增项才创建 DOM + 注册绑定，消失项清理 effect 订阅。
-- **行内容直连**：每行内部 `{expr}` 是独立 effect，`setLabel` → 只触发该行绑定 → 直接写 DOM 属性。
-- **高亮**：对齐 `createSelector`——缓存 `id → boolean`，selected 变化只通知值翻转的行。
-- **内存优势**：数据页（每行 3-5 动态点）无 VNode 树，省掉的树 >> 增加的 effect（solid run memory 2.85MB < vue 4.08MB）。
+### 集合更新：mapArray 项级 keyed 复用
 
-### 一期交付
+对齐 solid `reactive/array.ts`，项级 diff：
 
-1. `<solid>` 编译期作用域（类似 `?scoped` 的编译期指令，babel 插件识别，不产生运行时组件）
-2. 块内 JSX → DOM 骨架一次创建 + 动态点独立 effect（复用 ActView 响应式系统，effectScope 统一清理）
-3. 数组渲染的项级 keyed 复用（mapArray 机制）
-4. 数据验证：benchmark 高亮/局部更新对齐 solid（目标 <10ms）
+- 公共前缀/后缀跳过（常见 update/select/remove 零成本）
+- Map 索引复用中间项；消失项 `scope.stop()` + 移除 DOM
+- **顺序未变 → 零移动**（`childNodes` 顺序检查，覆盖 update/select/remove/append）
+- **乱序 → LIS 最小移动**（对齐 Vue `patchKeyedChildren` 的 `getSequence`；新增项统一由移动循环挂载，`isConnected` 判断）
+- 删除分支需跳过"被复用到新位置的旧项"（`reusedIdx` 集合）；清空（`newLen === 0`）需同步移除 DOM
 
-### 设计约束
+### 已修复的坑
 
-- **props 桥接禁止**：`<solid>` 内靠闭包捕获外部 ref/reactive（父 re-render 的 props 变化传不进边界）
-- 块内 JSX 约束文档化（禁止依赖"每次渲染"的写法）
-- 双模编译产物（VNode 树 vs 工厂+effect）共存于 babel 插件
+- `aria-hidden` 等连字符属性：属性赋值改 `setAttribute`（`t.identifier` 非法）
+- babel 8 函数式插件实例缓存 → `solidUsed` 等状态在 Program enter 重置
+- 跨行字符串转义（python 脚本写入 `\n` 变真实换行 → 插件语法错误 → 页面白屏）
+- mapArray 全量 `appendChild` 重排导致 swap/remove 严重退化 → 顺序检查 + LIS
+
+### 实测（count=3）
+
+高亮 20.8 → **10.5**（追平 Vue 8.6）；局部更新 33.0 → **27.2**；全项提升（见第三章）。
+
+### 后续（二期候选）
+
+- 高亮再压：块内 createSelector 等价物（`id → boolean` 缓存，selected 变化只通知翻转行）
+- 行内动态 `class` 的 classList 细分（当前 setAttribute 整体重设）
 
 ## 六、复现
 

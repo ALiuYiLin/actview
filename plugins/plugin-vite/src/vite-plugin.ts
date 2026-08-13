@@ -5,10 +5,10 @@
 // 均见 @actview/babel-plugin-actview
 // ============================================================
 
-import { createBabelTransform, defineComponentPlugin } from '@actview/babel-plugin-actview'
+import { createBabelTransform, defineComponentPlugin, solidPlugin } from '@actview/babel-plugin-actview'
 
 // 模块级只创建一次 Babel 转换器（内部缓存 ConfigItem，Babel 8 同步版本）
-const transform = createBabelTransform(defineComponentPlugin)
+const transform = createBabelTransform([defineComponentPlugin, solidPlugin])
 
 export function actviewPlugin() {
   return {

@@ -8,3 +8,5 @@ export * from './errorBoundary'
 export * from './suspense'
 export * from './renderToString'
 export * from './transition'
+
+export { createSolidVNode, createEffect, mapArray, solidGet, SOLID_TYPE } from './solid'

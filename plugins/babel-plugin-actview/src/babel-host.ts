@@ -48,8 +48,19 @@ export function transformWithBabel(
  * 静态插件的便捷工厂：模块级调用一次，ConfigItem 只创建一次。
  * 适用于插件对象不随文件变化的场景（如 defineComponentPlugin）。
  */
-export function createBabelTransform(plugin: BabelPlugin) {
-  const pluginItem = createBabelItem(plugin)
-  return (code: string, filename: string): BabelHostResult | null =>
-    transformWithBabel(code, filename, pluginItem)
+export function createBabelTransform(plugin: BabelPlugin | BabelPlugin[]) {
+  const items = (Array.isArray(plugin) ? plugin : [plugin]).map((p) => createBabelItem(p))
+  return (code: string, filename: string): BabelHostResult | null => {
+    const result = babel.transformSync(code, {
+      filename,
+      plugins: items,
+      parserOpts: { plugins: ['jsx', 'typescript'] },
+      retainLines: true,
+      sourceMaps: true,
+      babelrc: false,
+      configFile: false,
+    })
+    if (!result) return null
+    return { code: result.code || code, map: result.map }
+  }
 }

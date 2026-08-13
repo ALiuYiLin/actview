@@ -13,3 +13,5 @@ export {
   transformWithBabel,
 } from './babel-host.ts'
 export type { BabelHostResult } from './babel-host.ts'
+
+export { default as solidPlugin } from './solid-plugin.ts'

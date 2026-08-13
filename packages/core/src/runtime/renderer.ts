@@ -5,6 +5,7 @@
 // ============================================================
 
 import { mountComponent, collectAttrs } from './mountComponent'
+import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import {
   mountTeleport,
   patchTeleport,
@@ -131,6 +132,11 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
 
+  // <solid> 块：内部由 effect 自驱动（黑盒 DOM 子树），只负责插入
+  if (vnode.$$typeof === SOLID_TYPE) {
+    return mountSolid(vnode, container)
+  }
+
   // 内置组件（Teleport / Transition）：优先于普通组件分支
   // 用 __builtin 标记判断（跨模块实例引用相等不可靠）
   if (vnode.type?.__builtin === 'teleport')
@@ -200,6 +206,13 @@ function patchVNode(
   index?: number,
   parent?: any
 ) {
+  // <solid> 块：内部自驱动，新旧始终短路（DOM/订阅不变，el 继承供 keyed 移动）
+  if (newVnode.$$typeof === SOLID_TYPE) {
+    newVnode.el = oldVnode?.el ?? newVnode.__el ?? null
+    newVnode.__scope = oldVnode?.__scope ?? newVnode.__scope
+    newVnode.__el = oldVnode?.__el ?? newVnode.__el
+    return
+  }
   // v-memo（esbuild 产物经 jsxFactory 提取）：deps 与上次相同 → 整棵子树短路，
   // 不 diff / 不碰 DOM。DOM 归属（el/__avChildren）从旧 vnode 继承。
   if (newVnode.__memoDeps) {
@@ -692,6 +705,11 @@ function replace(
 
 export function unmount(vnode: any, container?: Element, index?: number) {
   if (vnode == null) return
+  // <solid> 块：停止块内全部 effect + 移除 DOM
+  if (vnode.$$typeof === SOLID_TYPE) {
+    unmountSolid(vnode)
+    return
+  }
   // keep-alive 缓存：DOM 移入隐藏容器、实例保留（不销毁、不停 effect），
   // 重新激活时从缓存恢复
   const keepAlive = vnode.__keepAlive
