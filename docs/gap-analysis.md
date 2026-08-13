@@ -123,11 +123,47 @@
 
 ---
 
-## 三、优先级建议（按投入产出排序）
+## 三、P0 落地清单（已确认范围）
 
-1. **P0 — 响应式补齐**：`Map`/`Set` 代理、`toRaw`/`isReactive`/`isReadonly`/`isProxy`、`shallowRef`/`shallowReadonly`、`watch` 的 `flush`/`deep`/`once`、`customRef`。纯内核改动，收益面最广（`docs/bugs.md` 已承认的差距）。
-2. **P0 — SVG 命名空间 + `dangerouslySetInnerHTML`**：`createElementNS` 是硬缺口，没有它 `<svg>` 直接不可用。
-3. **P1 — `emits` / `defineExpose` / props 校验**：组件对外契约能力，中大型应用必需。
-4. **P1 — 路由守卫 + 嵌套路由 + 懒加载集成**：路由现在只能 demo，达不到生产可用。
-5. **P2 — 状态管理 / DevTools / hydration**：生态层，决定能否被真实项目采用。
-6. **P2 — 完整 TS 类型**：IntrinsicElements、SVG、ARIA、事件全量。
+### 3.1 本轮要做（P0）
+
+**A. 响应式系统补齐**
+
+| # | 事项 | 说明 |
+|---|---|---|
+| 1 | `Map` / `Set` / `WeakMap` / `WeakSet` 响应式代理 | 补 `reactive` 集合类型支持（`shouldProxy` 扩展 + 集合方法 instrumentation） |
+| 2 | `toRaw` / `isReactive` / `isReadonly` / `isProxy` | 判型工具（依赖 #7 的 identity 比较） |
+| 3 | `shallowRef` / `shallowReadonly` | 浅层 ref 与只读代理 |
+| 4 | `triggerRef` | 手动触发 `shallowRef` 依赖（`customRef` 砍，见 3.2） |
+| 5 | `watch` 的 `flush`（`pre`/`post`/`sync`）/ `deep` / `once` | 补齐 watch 选项（`onTrack`/`onTrigger` 砍，见 3.2） |
+| 6 | `onWatcherCleanup` | 独立注册清理回调 |
+| 7 | 数组 identity 方法 | `indexOf` / `includes` / `lastIndexOf` 对 reactive 元素的 toRaw 比较 |
+| 8 | `effectScope()` / `onScopeDispose()` 公开 API | 暴露手动作用域管理 |
+| 9 | `toValue` / `isShallow` | 取值统一 + 浅层判型 |
+
+**B. 渲染器 / DOM 层**
+
+| # | 事项 | 说明 |
+|---|---|---|
+| 10 | SVG 命名空间渲染 | `createElementNS`，`<svg>`/`<path>` 可用 |
+| 11 | `dangerouslySetInnerHTML` | HTML 字符串插入 |
+| 12 | 事件修饰符 `passive` | 滚动性能关键，无法用闭包替代（`once` 砍，见 3.2） |
+
+### 3.2 暂不进行（本轮不做）
+
+| 事项 | 决策原因 |
+|---|---|
+| ref 在 reactive 内自动解包 | 不迁就 React 式写法，保持显式 `.value` |
+| 表单双向绑定（v-model 等价物） | 减少语法糖，`value + onInput` 数据流更清晰 |
+| 编译期静态提升 / block tree / patchFlag | 性能优化后置，后续再做 |
+| `customRef` | 高级底层 API，精简路线砍掉 |
+| 事件修饰符 `once` | 纯语法糖，可用闭包实现 |
+| 合成事件标准化（SyntheticEvent） | 保持原生事件直连，不引入跨浏览器包装 |
+| `watch` 的 `onTrack` / `onTrigger` | 纯调试用途，后置 |
+
+### 3.3 后续（P1 / P2）
+
+1. **P1 — `emits` / `defineExpose` / props 校验**：组件对外契约能力，中大型应用必需。
+2. **P1 — 路由守卫 + 嵌套路由 + 懒加载集成**：路由现在只能 demo，达不到生产可用。
+3. **P2 — 状态管理 / DevTools / hydration**：生态层，决定能否被真实项目采用。
+4. **P2 — 完整 TS 类型**：IntrinsicElements、SVG、ARIA、事件全量。
