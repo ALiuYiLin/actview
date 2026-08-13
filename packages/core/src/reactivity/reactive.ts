@@ -6,11 +6,107 @@ import {
 } from './reactive-system'
 
 // ============================================================
-// 数组方法 instrumentation
-//   state.items.push(x) 等修改数组内容后，需要触发"读取了该数组"的依赖：
-//   1) 数组自身的 length/索引依赖（代理 set 会触发）
-//   2) 父级对象依赖（如 state.items）——数组代理 set 会通知
+// reactive — 深度/浅层响应式代理 + 只读代理 + 判型工具
+//   支持：普通对象 / 数组 / Map / Set / WeakMap / WeakSet
+//   工具：toRaw / isReactive / isReadonly / isProxy / isShallow / markRaw
 // ============================================================
+
+// ------------------------------------------------------------
+// 内部标记（对齐 Vue 3 ReactiveFlags，字符串避免跨模块 Symbol 不一致）
+// ------------------------------------------------------------
+const SKIP = '__v_skip'
+const RAW = '__v_raw'
+const IS_REACTIVE = '__v_isReactive'
+const IS_READONLY = '__v_isReadonly'
+const IS_SHALLOW = '__v_isShallow'
+
+const COMMON = 1 // 普通对象 / 数组
+const COLLECTION = 2 // Map / Set / WeakMap / WeakSet
+const INVALID = 0 // Date / RegExp / 自定义类实例等，不代理
+
+/** 原始类型名：Object.prototype.toString 的 '[object Xxx]' → 'Xxx' */
+function getRawType(value: any): string {
+  return Object.prototype.toString.call(value).slice(8, -1)
+}
+
+function targetTypeMap(rawType: string): number {
+  switch (rawType) {
+    case 'Object':
+    case 'Array':
+      return COMMON
+    case 'Map':
+    case 'Set':
+    case 'WeakMap':
+    case 'WeakSet':
+      return COLLECTION
+    default:
+      return INVALID
+  }
+}
+
+function isObject(value: any): boolean {
+  return value !== null && typeof value === 'object'
+}
+
+// ------------------------------------------------------------
+// 判型 / 原始值工具
+// ------------------------------------------------------------
+
+/** 标记对象为「原始值」：reactive/readonly 遇到它时跳过代理 */
+export function markRaw<T extends object>(obj: T): T {
+  ;(obj as any)[SKIP] = true
+  return obj
+}
+
+/** 递归取原始对象：代理 → 原始；非代理原样返回 */
+export function toRaw<T>(observed: T): T {
+  const raw = observed && (observed as any)[RAW]
+  return raw ? toRaw(raw) : observed
+}
+
+/** 是否响应式代理（readonly 代理需递归判断其 raw 是否响应式） */
+export function isReactive(value: unknown): boolean {
+  if (isReadonly(value)) {
+    return isReactive((value as any)[RAW])
+  }
+  return !!(value && (value as any)[IS_REACTIVE])
+}
+
+/** 是否只读代理 */
+export function isReadonly(value: unknown): boolean {
+  return !!(value && (value as any)[IS_READONLY])
+}
+
+/** 是否响应式或只读代理 */
+export function isProxy(value: unknown): boolean {
+  return isReactive(value) || isReadonly(value)
+}
+
+/** 是否浅层代理（shallowReactive / shallowRef / shallowReadonly） */
+export function isShallow(value: unknown): boolean {
+  return !!(value && (value as any)[IS_SHALLOW])
+}
+
+/** 是否应对该值做响应式代理 */
+function shouldReactive(v: any): boolean {
+  if (!isObject(v) || (v as any)[SKIP] || !Object.isExtensible(v)) return false
+  const type = targetTypeMap(getRawType(v))
+  if (type === COLLECTION) return true // Map / Set / WeakMap / WeakSet
+  if (type === INVALID) return false // Date / RegExp / 自定义类实例等
+  // COMMON：数组，或「真·普通对象」（proto 为 Object.prototype / null）。
+  // class 实例（如 RefImpl）proto 非 Object.prototype，不代理 —— 保持原 isPlainObject 语义
+  if (Array.isArray(v)) return true
+  const proto = Object.getPrototypeOf(v)
+  return proto === Object.prototype || proto === null
+}
+
+// ------------------------------------------------------------
+// 数组 instrumentation
+//   - 修改方法：pauseTracking 包裹（避免 effect 内改自身依赖时
+//     把修改过程内部读取收集进当前 effect）
+//   - identity 方法（indexOf/includes/lastIndexOf）：track 全部索引 +
+//     对 reactive 元素做 toRaw 比较（Vue 3 语义）
+// ------------------------------------------------------------
 
 const MUTATING_ARRAY_METHODS = [
   'push',
@@ -22,12 +118,9 @@ const MUTATING_ARRAY_METHODS = [
   'reverse'
 ] as const
 
-/** 包装后的修改方法：用原始实现调用（this 是数组代理），
- *  内部对 length/索引的写入会走代理 set =》 触发数组自身与父级依赖；
- *  执行期间 pauseTracking：不把修改过程内部读取收集进当前 effect */
-const arrayInstrumentations: Record<string, (...args: any[]) => any> = {}
+const mutatingInstrumentations: Record<string, (...args: any[]) => any> = {}
 MUTATING_ARRAY_METHODS.forEach((method) => {
-  arrayInstrumentations[method] = function (this: any, ...args: any[]) {
+  mutatingInstrumentations[method] = function (this: any, ...args: any[]) {
     pauseTracking()
     const res = (Array.prototype as any)[method].apply(this, args)
     resetTracking()
@@ -35,54 +128,30 @@ MUTATING_ARRAY_METHODS.forEach((method) => {
   }
 })
 
-// ============================================================
-// 可代理性判定
-//   只代理「普通对象 / 数组」；Date、Map、Set、class 实例、DOM 等
-//   原生类型内部依赖槽位，包代理会运行时崩溃，直接返回原值。
-//   markRaw 标记的对象永不代理。
-// ============================================================
+const IDENTITY_ARRAY_METHODS = ['includes', 'indexOf', 'lastIndexOf'] as const
 
-const rawSet = new WeakSet<object>()
+const identityInstrumentations: Record<string, (...args: any[]) => any> = {}
+IDENTITY_ARRAY_METHODS.forEach((method) => {
+  const arrayMethod = (Array.prototype as any)[method]
+  identityInstrumentations[method] = function (this: any, ...args: any[]) {
+    const arr = toRaw(this)
+    // track 所有索引：数组内容变化（push/索引赋值）时依赖可被触发
+    for (let i = 0; i < this.length; i++) track(arr, String(i))
+    // 先用原始参数跑（参数可能是 reactive 代理，直接比较）
+    const res = arrayMethod.apply(arr, args)
+    if (res === -1 || res === false) {
+      // 未命中：用 toRaw 后的参数再跑（reactive 元素 → 原始值）
+      return arrayMethod.apply(arr, args.map(toRaw))
+    }
+    return res
+  }
+})
 
-/** 标记对象为「原始值」：reactive/readonly 遇到它时跳过代理 */
-export function markRaw<T extends object>(obj: T): T {
-  rawSet.add(obj)
-  return obj
-}
-
-function isPlainObject(v: any): boolean {
-  // null / 非对象（含 undefined，如访问 toJSON 等 symbol 属性时）不判为普通对象
-  if (v === null || typeof v !== 'object') return false
-  const proto = Object.getPrototypeOf(v)
-  return proto === Object.prototype || proto === null
-}
-
-/** 是否应对该值做响应式代理 */
-function shouldProxy(v: any): boolean {
-  return (
-    (Array.isArray(v) || isPlainObject(v)) &&
-    !rawSet.has(v) &&
-    !(v as any).__v_skip && // Vue 3：__v_skip 标记的对象跳过代理
-    Object.isExtensible(v) // Vue 3：非可扩展对象不代理
-  )
-}
-
-function warnReadonly(key: PropertyKey) {
-  console.warn(`[actview] readonly 对象不允许修改: ${String(key)}`)
-}
-
-/** 惰性深层代理的缓存（按代理类型分开） */
-const reactiveMap = new WeakMap<object, any>()
-const shallowMap = new WeakMap<object, any>()
-const readonlyMap = new WeakMap<object, any>()
-/** 已创建的响应式代理集合：reactive(proxy) 幂等返回原代理 */
-const proxySet = new WeakSet<object>()
-
-/** 迭代键：代表「对象的 key 集合」，用于 for...in / in 操作的依赖 */
+/** 迭代键：代表「对象的 key 集合」，用于 for...in / in / 集合 size 的依赖 */
 const ITERATE_KEY = Symbol('iterate')
 
 /** 数组整数索引 key（'0'/'12' 等；'length'/'foo' 不是） */
-const isIntegerKey = (key: PropertyKey) =>
+const isIntegerKey = (key: any) =>
   typeof key === 'string' &&
   key !== 'NaN' &&
   key[0] !== '-' &&
@@ -91,7 +160,7 @@ const isIntegerKey = (key: PropertyKey) =>
 /** 数组新增整数索引时：length 自动同步，set('length') 检测不到变化，需显式触发 */
 function triggerArrayLengthIfNeeded(
   target: any,
-  key: PropertyKey,
+  key: any,
   hadKey: boolean
 ) {
   if (!hadKey && Array.isArray(target) && isIntegerKey(key)) {
@@ -99,27 +168,123 @@ function triggerArrayLengthIfNeeded(
   }
 }
 
-// ============================================================
-// 数组代理（响应式 / 只读）
-// ============================================================
+// ------------------------------------------------------------
+// 对象 / 数组代理
+// ------------------------------------------------------------
 
-/** 响应式数组代理：拦截修改方法 + 索引/length 变更时通知父级 */
-function createArrayProxy(
-  raw: any[],
-  parent: { target: object; key: PropertyKey }
-): any[] {
-  const proxy = new Proxy(raw, {
-    /* 在 handlers 定义后登记到 proxySet */
-    get(target, key, receiver) {
-      // 修改方法返回 instrumented 包装（this 绑定为数组代理）
-      if (typeof key === 'string' && key in arrayInstrumentations) {
-        return arrayInstrumentations[key]
+/** 惰性深层代理的缓存 */
+const reactiveMap = new WeakMap<object, any>()
+const shallowReactiveMap = new WeakMap<object, any>()
+const readonlyMap = new WeakMap<object, any>()
+const shallowReadonlyMap = new WeakMap<object, any>()
+
+function warnReadonly(key: any) {
+  console.warn(`[actview] readonly 对象不允许修改: ${String(key)}`)
+}
+
+/**
+ * 对象 handlers（普通对象 / 顶层数组共用）。
+ * 数组 identity/mutation 方法经 get 陷阱拦截；嵌套数组值惰性建数组代理。
+ */
+function createObjectHandlers(readonly: boolean, shallow: boolean) {
+  return {
+    get(target: object, key: any, receiver: any) {
+      if (key === RAW) return target
+      if (key === IS_REACTIVE) return !readonly
+      if (key === IS_READONLY) return readonly
+      if (key === IS_SHALLOW) return shallow
+
+      const targetIsArray = Array.isArray(target)
+      if (targetIsArray) {
+        if (key in identityInstrumentations) return identityInstrumentations[key]
+        if (!readonly && key in mutatingInstrumentations)
+          return mutatingInstrumentations[key]
       }
+
       track(target, key)
       const value = Reflect.get(target, key, receiver)
-      return shouldProxy(value) ? reactive(value) : value
+      if (shallow) return value
+      if (Array.isArray(value))
+        return new Proxy(
+          value,
+          createArrayHandlers({ target, key }, readonly, shallow)
+        )
+      return shouldReactive(value)
+        ? readonly
+          ? readonlyProxy(value)
+          : reactiveProxy(value)
+        : value
     },
-    set(target, key, value, receiver) {
+    set(target: object, key: any, value: any, receiver: any) {
+      if (readonly) {
+        warnReadonly(key)
+        return true
+      }
+      const hadKey = Reflect.has(target, key)
+      const oldValue = Reflect.get(target, key, receiver)
+      const result = Reflect.set(target, key, value, receiver)
+      if (result && oldValue !== value) {
+        trigger(target, key)
+        if (!hadKey) trigger(target, ITERATE_KEY)
+        triggerArrayLengthIfNeeded(target, key, hadKey)
+      }
+      return result
+    },
+    deleteProperty(target: object, key: any) {
+      if (readonly) {
+        warnReadonly(key)
+        return true
+      }
+      const had = Reflect.has(target, key)
+      const result = Reflect.deleteProperty(target, key)
+      if (had) {
+        trigger(target, key)
+        trigger(target, ITERATE_KEY)
+      }
+      return result
+    },
+    has(target: object, key: any) {
+      track(target, ITERATE_KEY)
+      return Reflect.has(target, key)
+    },
+    ownKeys(target: object) {
+      track(target, ITERATE_KEY)
+      return Reflect.ownKeys(target)
+    }
+  }
+}
+
+/** 数组代理 handlers：含修改/identity 方法 + 父级依赖通知 */
+function createArrayHandlers(
+  parent: { target: object; key: any } | null,
+  readonly: boolean,
+  shallow: boolean
+) {
+  return {
+    get(target: object, key: any, receiver: any) {
+      if (key === RAW) return target
+      if (key === IS_REACTIVE) return !readonly
+      if (key === IS_READONLY) return readonly
+      if (key === IS_SHALLOW) return shallow
+
+      if (key in identityInstrumentations) return identityInstrumentations[key]
+      if (!readonly && key in mutatingInstrumentations)
+        return mutatingInstrumentations[key]
+
+      track(target, key)
+      const value = Reflect.get(target, key, receiver)
+      if (shallow) return value
+      return shouldReactive(value)
+        ? readonly
+          ? readonlyProxy(value)
+          : reactiveProxy(value)
+        : value
+    },
+    set(target: object, key: any, value: any, receiver: any) {
+      if (readonly) {
+        warnReadonly(key)
+        return true
+      }
       const hadKey = Reflect.has(target, key)
       const oldValue = Reflect.get(target, key, receiver)
       const result = Reflect.set(target, key, value, receiver)
@@ -127,100 +292,26 @@ function createArrayProxy(
         trigger(target, key)
         triggerArrayLengthIfNeeded(target, key, hadKey)
         // 数组内容变化 =》 通知读取了该数组的父级依赖（如 state.items）
-        trigger(parent.target, parent.key)
-        // 新增 key（如 push 的新索引）=》 通知迭代依赖
+        if (parent) trigger(parent.target, parent.key)
         if (!hadKey) trigger(target, ITERATE_KEY)
       }
       return result
     },
-    deleteProperty(target, key) {
+    deleteProperty(target: object, key: any) {
+      if (readonly) {
+        warnReadonly(key)
+        return true
+      }
       const had = Reflect.has(target, key)
       const result = Reflect.deleteProperty(target, key)
       if (had) {
         trigger(target, key)
         trigger(target, ITERATE_KEY)
-        trigger(parent.target, parent.key)
+        if (parent) trigger(parent.target, parent.key)
       }
       return result
     },
-    // for...in / in 数组：依赖 key 集合
-    has(target, key) {
-      track(target, ITERATE_KEY)
-      return Reflect.has(target, key)
-    },
-    ownKeys(target) {
-      track(target, ITERATE_KEY)
-      return Reflect.ownKeys(target)
-    }
-  })
-  proxySet.add(proxy)
-  return proxy
-}
-
-/** 只读数组代理：可读可遍历，修改被拦截并警告 */
-function createReadonlyArrayProxy(raw: any[]): any[] {
-  const proxy = new Proxy(raw, {
-    get(target, key, receiver) {
-      track(target, key)
-      const value = Reflect.get(target, key, receiver)
-      return shouldProxy(value) ? readonly(value) : value
-    },
-    set(_target, key) {
-      warnReadonly(key)
-      return true
-    },
-    deleteProperty(_target, key) {
-      warnReadonly(key)
-      return true
-    },
-    has(target, key) {
-      track(target, ITERATE_KEY)
-      return Reflect.has(target, key)
-    },
-    ownKeys(target) {
-      track(target, ITERATE_KEY)
-      return Reflect.ownKeys(target)
-    }
-  })
-  return proxy
-}
-
-// ============================================================
-// 对象代理（深度响应式 / 浅响应式 / 只读）
-// ============================================================
-
-function createObjectHandlers(deep: boolean) {
-  return {
-    get(target: object, key: PropertyKey, receiver: any) {
-      track(target, key)
-      const value = Reflect.get(target, key, receiver)
-      if (!deep) return value // shallow：不包嵌套对象
-      if (Array.isArray(value)) return createArrayProxy(value, { target, key })
-      return shouldProxy(value) ? reactive(value) : value
-    },
-    set(target: object, key: PropertyKey, value: any, receiver: any) {
-      const hadKey = Reflect.has(target, key)
-      const oldValue = Reflect.get(target, key, receiver)
-      const result = Reflect.set(target, key, value, receiver)
-      if (result && oldValue !== value) {
-        trigger(target, key)
-        // 新增 key =》 影响 for...in 遍历结果
-        if (!hadKey) trigger(target, ITERATE_KEY)
-        triggerArrayLengthIfNeeded(target, key, hadKey)
-      }
-      return result
-    },
-    deleteProperty(target: object, key: PropertyKey) {
-      const had = Reflect.has(target, key)
-      const result = Reflect.deleteProperty(target, key)
-      if (had) {
-        trigger(target, key)
-        trigger(target, ITERATE_KEY)
-      }
-      return result
-    },
-    // for...in / key in obj：依赖 key 集合，增删 key 时触发
-    has(target: object, key: PropertyKey) {
+    has(target: object, key: any) {
       track(target, ITERATE_KEY)
       return Reflect.has(target, key)
     },
@@ -231,65 +322,245 @@ function createObjectHandlers(deep: boolean) {
   }
 }
 
-function createReadonlyObjectHandlers() {
+// ------------------------------------------------------------
+// 集合代理（Map / Set / WeakMap / WeakSet）
+// ------------------------------------------------------------
+
+function toReactiveValue(value: any): any {
+  return shouldReactive(value) ? reactiveProxy(value) : value
+}
+
+function toReadonlyValue(value: any): any {
+  return shouldReactive(value) ? readonlyProxy(value) : value
+}
+
+function createCollectionMethod(readonly: boolean, shallow: boolean) {
+  const wrap = (value: any) =>
+    readonly ? toReadonlyValue(value) : shallow ? value : toReactiveValue(value)
+
+  const warn = (op: string) =>
+    console.warn(`[actview] ${op} 失败：目标为只读集合`)
+
   return {
-    get(target: object, key: PropertyKey, receiver: any) {
+    get(this: any, key: any): any {
+      const target = toRaw(this)
       track(target, key)
-      const value = Reflect.get(target, key, receiver)
-      if (Array.isArray(value)) return createReadonlyArrayProxy(value)
-      return shouldProxy(value) ? readonly(value) : value
+      return wrap(target.get(key))
     },
-    set(_target: object, key: PropertyKey) {
-      warnReadonly(key)
-      return true
+    set(this: any, key: any, value: any): any {
+      const target = toRaw(this)
+      if (readonly) {
+        warn('set')
+        return this
+      }
+      const hadKey = target.has(key)
+      const oldValue = target.get(key)
+      const result: any = target.set(key, value)
+      if (!hadKey) {
+        trigger(target, key)
+        trigger(target, ITERATE_KEY)
+      } else if (!Object.is(value, oldValue)) {
+        trigger(target, key)
+      }
+      return result
     },
-    deleteProperty(_target: object, key: PropertyKey) {
-      warnReadonly(key)
-      return true
+    add(this: any, value: any): any {
+      const target = toRaw(this)
+      if (readonly) {
+        warn('add')
+        return this
+      }
+      const hadKey = target.has(value)
+      const result: any = target.add(value)
+      if (!hadKey) {
+        trigger(target, value)
+        trigger(target, ITERATE_KEY)
+      }
+      return result
     },
-    has(target: object, key: PropertyKey) {
+    has(this: any, key: any): any {
+      const target = toRaw(this)
+      track(target, key)
       track(target, ITERATE_KEY)
-      return Reflect.has(target, key)
+      return target.has(key)
     },
-    ownKeys(target: object) {
+    delete(this: any, key: any): any {
+      const target = toRaw(this)
+      if (readonly) {
+        warn('delete')
+        return false
+      }
+      const hadKey = target.has(key)
+      const result: any = target.delete(key)
+      if (hadKey) {
+        trigger(target, key)
+        trigger(target, ITERATE_KEY)
+      }
+      return result
+    },
+    clear(this: any): void {
+      const target = toRaw(this)
+      if (readonly) {
+        warn('clear')
+        return
+      }
+      let keys: any[] = []
+      if (target instanceof Map) keys = Array.from(target.keys())
+      else keys = Array.from(target.values())
+      target.clear()
+      trigger(target, ITERATE_KEY)
+      for (const k of keys) trigger(target, k)
+    },
+    forEach(
+      this: any,
+      cb: (value: any, key: any, map: any) => void,
+      thisArg?: any
+    ): void {
+      const target = toRaw(this)
       track(target, ITERATE_KEY)
-      return Reflect.ownKeys(target)
+      target.forEach((value: any, key: any) => {
+        cb.call(thisArg, wrap(value), wrap(key), this)
+      })
+    },
+    keys(this: any) {
+      const target = toRaw(this)
+      track(target, ITERATE_KEY)
+      return wrapIterator(target.keys(), wrap)
+    },
+    values(this: any) {
+      const target = toRaw(this)
+      track(target, ITERATE_KEY)
+      return wrapIterator(target.values(), wrap)
+    },
+    entries(this: any) {
+      const target = toRaw(this)
+      track(target, ITERATE_KEY)
+      return wrapEntriesIterator(target.entries(), wrap)
+    },
+    [Symbol.iterator](this: any) {
+      const target = toRaw(this)
+      track(target, ITERATE_KEY)
+      return target instanceof Map
+        ? wrapEntriesIterator(target[Symbol.iterator](), wrap)
+        : wrapIterator(target[Symbol.iterator](), wrap)
     }
   }
 }
 
-// ============================================================
+function wrapIterator(
+  iterator: Iterator<any>,
+  wrap: (v: any) => any
+): IterableIterator<any> {
+  return {
+    [Symbol.iterator]() {
+      return this
+    },
+    next() {
+      const { value, done } = iterator.next()
+      return done ? { value, done } : { value: wrap(value), done }
+    }
+  } as IterableIterator<any>
+}
+
+function wrapEntriesIterator(
+  iterator: Iterator<any>,
+  wrap: (v: any) => any
+): IterableIterator<any> {
+  return {
+    [Symbol.iterator]() {
+      return this
+    },
+    next() {
+      const { value, done } = iterator.next()
+      return done ? { value, done } : { value: [value[0], wrap(value[1])], done }
+    }
+  } as IterableIterator<any>
+}
+
+function createCollectionHandlers(readonly: boolean, shallow: boolean) {
+  const methods = createCollectionMethod(readonly, shallow)
+
+  return {
+    get(target: object, key: any, receiver: any) {
+      if (key === RAW) return target
+      if (key === IS_REACTIVE) return !readonly
+      if (key === IS_READONLY) return readonly
+      if (key === IS_SHALLOW) return shallow
+
+      if (key === 'size') {
+        track(target, ITERATE_KEY)
+        return Reflect.get(target, key, target)
+      }
+
+      if (key in methods) return (methods as any)[key]
+
+      return Reflect.get(target, key, receiver)
+    }
+  }
+}
+
+// ------------------------------------------------------------
 // 公开 API
-// ============================================================
+// ------------------------------------------------------------
 
-/** 深度响应式：普通对象 / 数组的嵌套结构也响应式 */
-export function reactive<T extends object>(obj: T): T {
-  if (!shouldProxy(obj)) return obj
-  if (proxySet.has(obj)) return obj // 已是响应式代理：幂等返回
-  const cached = reactiveMap.get(obj)
-  if (cached) return cached as T
-  const proxy = new Proxy(obj, createObjectHandlers(true)) as T
-  reactiveMap.set(obj, proxy)
-  proxySet.add(proxy)
+function createReactiveObject(
+  target: object,
+  isReadonly: boolean,
+  isShallow: boolean
+) {
+  if (!shouldReactive(target)) return target
+  // 已是代理：幂等返回；例外——readonly(reactive(obj)) 需再包一层只读
+  if ((target as any)[RAW] && !(isReadonly && (target as any)[IS_REACTIVE])) {
+    return target
+  }
+
+  const proxyMap = isReadonly
+    ? isShallow
+      ? shallowReadonlyMap
+      : readonlyMap
+    : isShallow
+      ? shallowReactiveMap
+      : reactiveMap
+  const existing = proxyMap.get(target)
+  if (existing) return existing
+
+  const type = targetTypeMap(getRawType(target))
+  const handlers =
+    type === COLLECTION
+      ? createCollectionHandlers(isReadonly, isShallow)
+      : type === COMMON && Array.isArray(target)
+        ? createArrayHandlers(null, isReadonly, isShallow)
+        : createObjectHandlers(isReadonly, isShallow)
+
+  const proxy = new Proxy(target, handlers)
+  proxyMap.set(target, proxy)
   return proxy
+}
+
+function reactiveProxy<T extends object>(obj: T): T {
+  return createReactiveObject(obj, false, false) as T
+}
+
+function readonlyProxy<T extends object>(obj: T): Readonly<T> {
+  return createReactiveObject(obj, true, false) as Readonly<T>
+}
+
+/** 深度响应式：嵌套结构（对象/数组/集合）也响应式 */
+export function reactive<T extends object>(obj: T): T {
+  return reactiveProxy(obj)
 }
 
 /** 浅响应式：只代理第一层，嵌套对象保持原值（不被代理、不响应） */
 export function shallowReactive<T extends object>(obj: T): T {
-  if (!shouldProxy(obj)) return obj
-  const cached = shallowMap.get(obj)
-  if (cached) return cached as T
-  const proxy = new Proxy(obj, createObjectHandlers(false)) as T
-  shallowMap.set(obj, proxy)
-  return proxy
+  return createReactiveObject(obj, false, true) as T
 }
 
 /** 只读（深度）：任何修改（含嵌套）被拦截并警告；可读、可被响应式跟踪 */
 export function readonly<T extends object>(obj: T): Readonly<T> {
-  if (!shouldProxy(obj)) return obj as Readonly<T>
-  const cached = readonlyMap.get(obj)
-  if (cached) return cached as Readonly<T>
-  const proxy = new Proxy(obj, createReadonlyObjectHandlers()) as Readonly<T>
-  readonlyMap.set(obj, proxy)
-  return proxy
+  return readonlyProxy(obj)
+}
+
+/** 浅只读：仅第一层只读，嵌套可写 */
+export function shallowReadonly<T extends object>(obj: T): Readonly<T> {
+  return createReactiveObject(obj, true, true) as Readonly<T>
 }

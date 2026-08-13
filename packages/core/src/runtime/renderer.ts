@@ -20,6 +20,32 @@ const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 const Fragment = Symbol.for('react.fragment')
 const Text = Symbol.for('react.text')
 
+// ------------------------------------------------------------
+// SVG 命名空间 — createElementNS 渲染 SVG 元素
+// ------------------------------------------------------------
+
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+const SVG_TAGS = new Set(
+  (
+    'svg,animate,animateMotion,animateTransform,circle,clipPath,defs,desc,' +
+    'ellipse,feBlend,feColorMatrix,feComponentTransfer,feComposite,feConvolveMatrix,' +
+    'feDiffuseLighting,feDisplacementMap,feDistantLight,feDropShadow,feFlood,feFuncA,' +
+    'feFuncB,feFuncG,feFuncR,feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,' +
+    'feOffset,fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,' +
+    'foreignObject,g,image,line,linearGradient,marker,mask,metadata,mpath,path,pattern,' +
+    'polygon,polyline,radialGradient,rect,set,stop,symbol,switch,text,textPath,tspan,' +
+    'use,view'
+  ).split(',')
+)
+
+/** 按标签创建元素：SVG 元素走 createElementNS，其余 createElement */
+function createElement(tag: string): Element {
+  return SVG_TAGS.has(tag)
+    ? document.createElementNS(SVG_NS, tag)
+    : document.createElement(tag)
+}
+
 function createTextVNode(text: string) {
   return {
     $$typeof: REACT_ELEMENT_TYPE,
@@ -175,10 +201,14 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
     return el
   }
   // 原生元素
-  const el = document.createElement(vnode.type as string)
+  const el = createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
-  vnode.__avChildren = patchChildren(null, vnode.props?.children, el, undefined, parent)
+  // dangerouslySetInnerHTML：直接注入 HTML，忽略 children（React 语义）
+  const hasDanger = vnode.props?.dangerouslySetInnerHTML != null
+  vnode.__avChildren = hasDanger
+    ? []
+    : patchChildren(null, vnode.props?.children, el, undefined, parent)
   container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
@@ -286,9 +316,11 @@ function patchVNode(
   if (oldVnode.props !== newVnode.props) {
     patchProps(oldVnode.props, newVnode.props, el)
   }
+  // dangerouslySetInnerHTML：忽略 children
+  const hasDanger = newVnode.props?.dangerouslySetInnerHTML != null
   newVnode.__avChildren = patchChildren(
-    oldVnode.props?.children,
-    newVnode.props?.children,
+    hasDanger ? undefined : oldVnode.props?.children,
+    hasDanger ? undefined : newVnode.props?.children,
     el,
     oldVnode,
     parent
@@ -568,19 +600,33 @@ interface Invoker extends Function {
   attached: number
 }
 
-/** 事件 props 名 → DOM 事件名：onClick → click；onClickCapture → click（capture 由调用方解析） */
-function toEventName(key: string): string | null {
+/** 事件 props 名 → 事件名 + 修饰符：onClick → click；onClickCapture → click + capture；onScrollPassive → scroll + passive */
+function parseEventKey(
+  key: string
+): { eventName: string; capture: boolean; passive: boolean } | null {
   let name = key.slice(2) // 去掉 'on'
   if (!name) return null
-  if (name.endsWith('Capture')) name = name.slice(0, -7)
+  let capture = false
+  let passive = false
+  if (name.endsWith('CapturePassive')) {
+    capture = true
+    passive = true
+    name = name.slice(0, -15)
+  } else if (name.endsWith('Passive')) {
+    passive = true
+    name = name.slice(0, -7)
+  } else if (name.endsWith('Capture')) {
+    capture = true
+    name = name.slice(0, -7)
+  }
   // DOM 标准事件名均为小写（onMouseDown → mousedown）；oninput 本就小写
-  return name.toLowerCase()
+  return { eventName: name.toLowerCase(), capture, passive }
 }
 
 function patchEvent(el: any, key: string, value: any) {
-  const eventName = toEventName(key)
-  if (!eventName) return
-  const capture = key.endsWith('Capture')
+  const parsed = parseEventKey(key)
+  if (!parsed) return
+  const { eventName, capture, passive } = parsed
   const vei = (el._vei ??= {}) as Record<string, Invoker>
   let invoker = vei[key]
 
@@ -595,9 +641,9 @@ function patchEvent(el: any, key: string, value: any) {
     }) as unknown as Invoker
     invoker.value = value
     invoker.attached = Date.now()
-    el.addEventListener(eventName, invoker, capture)
+    el.addEventListener(eventName, invoker, { capture, passive })
   } else if (invoker) {
-    // 解绑
+    // 解绑（removeEventListener 只需 capture 匹配，passive 忽略）
     el.removeEventListener(eventName, invoker, capture)
     delete vei[key]
   }
@@ -607,6 +653,12 @@ function setProp(el: any, key: string, value: any) {
   // 事件：addEventListener + capture + invoker 统一解绑（参考 Vue 3 patchEvent）
   if (key.startsWith('on')) {
     patchEvent(el, key, value)
+    return
+  }
+  // dangerouslySetInnerHTML：注入 HTML 字符串
+  if (key === 'dangerouslySetInnerHTML') {
+    el.innerHTML =
+      value && value.__html != null ? String(value.__html) : ''
     return
   }
   // class / style / value / checked 走 property

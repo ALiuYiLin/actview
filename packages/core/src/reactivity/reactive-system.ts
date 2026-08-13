@@ -66,15 +66,16 @@ export class ReactiveEffect {
     // effect 重跑是独立执行上下文：恢复依赖收集
     // （数组修改方法内部 pauseTracking 期间嵌套触发的 effect 也要能重新 track）
     const prevShouldTrack = shouldTrack
+    const preEffect = activeEffect
     try {
       shouldTrack = true
       cleanupEffect(this)
-      const preEffect = activeEffect
       activeEffect = this
       const result = this.fn()
-      activeEffect = preEffect
       return result
     } finally {
+      // 抛错也要恢复 activeEffect，避免泄漏到后续 track/trigger 造成级联污染
+      activeEffect = preEffect
       this._running = false
       shouldTrack = prevShouldTrack
     }
@@ -97,7 +98,7 @@ function cleanupEffect(effect: ReactiveEffect) {
 }
 
 let activeEffect: ReactiveEffect | null = null
-const targetMap = new WeakMap<object, Map<PropertyKey, Dep>>()
+const targetMap = new WeakMap<object, Map<any, Dep>>()
 
 // ------------------------------------------------------------
 // 依赖收集开关（pauseTracking）
@@ -113,7 +114,7 @@ export function resetTracking() {
   shouldTrack = true
 }
 
-export function track(target: object, key: PropertyKey) {
+export function track(target: object, key: any) {
   if (!activeEffect || !shouldTrack) return
   let depsMap = targetMap.get(target)
 
@@ -135,7 +136,7 @@ export function track(target: object, key: PropertyKey) {
   }
 }
 
-export function trigger(target: object, key: PropertyKey) {
+export function trigger(target: object, key: any) {
   const depsMap = targetMap.get(target)
   if (!depsMap) return
   const dep = depsMap.get(key)
