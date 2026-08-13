@@ -14,6 +14,6 @@ export type {
 export { createMemoryHistory, createWebHistory } from './history'
 export type { RouterHistory } from './history'
 
-export type { RouteRecord, MatchedRoute } from './matcher'
+export type { RouteRecord, MatchedRoute, NavigationGuard } from './matcher'
 
 export { RouterLink, RouterView } from './components'

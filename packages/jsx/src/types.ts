@@ -1,5 +1,7 @@
 // ============================================================
-// VNode 与属性类型
+// VNode 与属性类型 — 完整 TSX 类型体系
+//   - VNode / ComponentType / PropsOf
+//   - DOM 事件全量 + ARIA + HTML 通用属性 + 各元素专属 + SVG
 // ============================================================
 
 /** VNode 的 type 字段允许的类型 */
@@ -31,7 +33,7 @@ export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
     ? P
     : {}
 
-export type VNodeChild = VNode | string | number | boolean | null | undefined
+export type VNodeChild = VNode | string | number | boolean | null | undefined | void
 export type VNodeChildren = VNodeChild | VNodeChild[]
 
 /** 组件 setup 返回的 render 函数类型 */
@@ -49,75 +51,176 @@ export interface FormEvent extends Event {
   }
 }
 
+/** 事件处理器通用形状（原生 DOM 事件，无合成事件包装） */
+export type EventHandler<E extends Event = Event> = (e: E) => void
+
 // ============================================================
-// 属性类型 — 用于 JSX.IntrinsicElements
+// DOM 事件（全量常用，含 capture 变体）
 // ============================================================
 
-/** 通用 HTML 元素属性 */
-export interface HtmlProps {
+export interface DOMAttributes {
+  // 鼠标
+  onClick?: EventHandler<MouseEvent>
+  onDblClick?: EventHandler<MouseEvent>
+  onMouseDown?: EventHandler<MouseEvent>
+  onMouseUp?: EventHandler<MouseEvent>
+  onMouseMove?: EventHandler<MouseEvent>
+  onMouseEnter?: EventHandler<MouseEvent>
+  onMouseLeave?: EventHandler<MouseEvent>
+  onMouseOver?: EventHandler<MouseEvent>
+  onMouseOut?: EventHandler<MouseEvent>
+  onContextMenu?: EventHandler<MouseEvent>
+  // 键盘
+  onKeyDown?: EventHandler<KeyboardEvent>
+  onKeyUp?: EventHandler<KeyboardEvent>
+  onKeyPress?: EventHandler<KeyboardEvent>
+  // 焦点
+  onFocus?: EventHandler<FocusEvent>
+  onBlur?: EventHandler<FocusEvent>
+  onFocusIn?: EventHandler<FocusEvent>
+  onFocusOut?: EventHandler<FocusEvent>
+  // 表单
+  onInput?: EventHandler<FormEvent>
+  onChange?: EventHandler<FormEvent>
+  onSubmit?: EventHandler<FormEvent>
+  onReset?: EventHandler<FormEvent>
+  onInvalid?: EventHandler<FormEvent>
+  onSelect?: EventHandler<FormEvent>
+  onSearch?: EventHandler<FormEvent>
+  // 剪贴板
+  onCopy?: EventHandler<ClipboardEvent>
+  onCut?: EventHandler<ClipboardEvent>
+  onPaste?: EventHandler<ClipboardEvent>
+  // 拖拽
+  onDrag?: EventHandler<DragEvent>
+  onDragStart?: EventHandler<DragEvent>
+  onDragEnd?: EventHandler<DragEvent>
+  onDragOver?: EventHandler<DragEvent>
+  onDragEnter?: EventHandler<DragEvent>
+  onDragLeave?: EventHandler<DragEvent>
+  onDrop?: EventHandler<DragEvent>
+  // 指针
+  onPointerDown?: EventHandler<PointerEvent>
+  onPointerUp?: EventHandler<PointerEvent>
+  onPointerMove?: EventHandler<PointerEvent>
+  onPointerEnter?: EventHandler<PointerEvent>
+  onPointerLeave?: EventHandler<PointerEvent>
+  // 触摸
+  onTouchStart?: EventHandler<TouchEvent>
+  onTouchEnd?: EventHandler<TouchEvent>
+  onTouchMove?: EventHandler<TouchEvent>
+  onTouchCancel?: EventHandler<TouchEvent>
+  // 滚动 / 滚轮
+  onScroll?: EventHandler<Event>
+  onWheel?: EventHandler<WheelEvent>
+  // 媒体 / 资源
+  onLoad?: EventHandler<Event>
+  onError?: EventHandler<Event>
+  onAbort?: EventHandler<Event>
+  onCanPlay?: EventHandler<Event>
+  onEnded?: EventHandler<Event>
+  onLoadedData?: EventHandler<Event>
+  onPause?: EventHandler<Event>
+  onPlay?: EventHandler<Event>
+  onPlaying?: EventHandler<Event>
+  onProgress?: EventHandler<Event>
+  onTimeUpdate?: EventHandler<Event>
+  onVolumeChange?: EventHandler<Event>
+  onWaiting?: EventHandler<Event>
+  // 动画 / 过渡
+  onAnimationStart?: EventHandler<AnimationEvent>
+  onAnimationEnd?: EventHandler<AnimationEvent>
+  onTransitionEnd?: EventHandler<TransitionEvent>
+  // capture 变体（主要事件）
+  onClickCapture?: EventHandler<MouseEvent>
+  onMouseDownCapture?: EventHandler<MouseEvent>
+  onMouseUpCapture?: EventHandler<MouseEvent>
+  onKeyDownCapture?: EventHandler<KeyboardEvent>
+  onKeyUpCapture?: EventHandler<KeyboardEvent>
+  onFocusCapture?: EventHandler<FocusEvent>
+  onBlurCapture?: EventHandler<FocusEvent>
+  onChangeCapture?: EventHandler<FormEvent>
+  onInputCapture?: EventHandler<FormEvent>
+  onSubmitCapture?: EventHandler<FormEvent>
+  onScrollCapture?: EventHandler<Event>
+  // 小写形式（历史兼容）
+  onclick?: EventHandler<MouseEvent>
+  ondblclick?: EventHandler<MouseEvent>
+  onmousedown?: EventHandler<MouseEvent>
+  onmouseup?: EventHandler<MouseEvent>
+  onmouseover?: EventHandler<MouseEvent>
+  onmouseout?: EventHandler<MouseEvent>
+  onfocus?: EventHandler<FocusEvent>
+  onblur?: EventHandler<FocusEvent>
+  onkeydown?: EventHandler<KeyboardEvent>
+  onkeyup?: EventHandler<KeyboardEvent>
+  onchange?: EventHandler<FormEvent>
+  oninput?: EventHandler<FormEvent>
+  onsubmit?: EventHandler<FormEvent>
+  onselect?: EventHandler<FormEvent>
+  onscroll?: EventHandler<Event>
+}
+
+// ============================================================
+// ARIA 属性
+// ============================================================
+
+export interface AriaAttributes {
+  [key: `aria-${string}`]: string | number | boolean | undefined
+}
+
+// ============================================================
+// HTML 通用属性（无宽索引签名 —— 自定义属性请用 data-*）
+// ============================================================
+
+export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
+  children?: VNodeChildren
+  key?: string | number | null
+  ref?: any
   id?: string
   class?: string
   className?: string
   style?: string | Record<string, string | number>
   title?: string
-  value?: string | number | readonly string[]
-  checked?: boolean
-  disabled?: boolean
-  placeholder?: string
-  name?: string
-  type?: string
-  href?: string
-  src?: string
-
-  // 事件处理器（小写形式，兼容旧写法）
-  onclick?: (e: MouseEvent) => void
-  ondblclick?: (e: MouseEvent) => void
-  onmousedown?: (e: MouseEvent) => void
-  onmouseup?: (e: MouseEvent) => void
-  onmouseover?: (e: MouseEvent) => void
-  onmouseout?: (e: MouseEvent) => void
-  onfocus?: (e: FocusEvent) => void
-  onblur?: (e: FocusEvent) => void
-  onkeydown?: (e: KeyboardEvent) => void
-  onkeyup?: (e: KeyboardEvent) => void
-  onchange?: (e: FormEvent) => void
-  oninput?: (e: FormEvent) => void
-  onsubmit?: (e: FormEvent) => void
-  onselect?: (e: FormEvent) => void
-
-  // 事件处理器（camelCase，推荐写法；与 DOM 事件对应）
-  onClick?: (e: MouseEvent) => void
-  onDblClick?: (e: MouseEvent) => void
-  onMouseDown?: (e: MouseEvent) => void
-  onMouseUp?: (e: MouseEvent) => void
-  onMouseOver?: (e: MouseEvent) => void
-  onMouseOut?: (e: MouseEvent) => void
-  onMouseMove?: (e: MouseEvent) => void
-  onFocus?: (e: FocusEvent) => void
-  onBlur?: (e: FocusEvent) => void
-  onKeyDown?: (e: KeyboardEvent) => void
-  onKeyUp?: (e: KeyboardEvent) => void
-  onKeyPress?: (e: KeyboardEvent) => void
-  onChange?: (e: FormEvent) => void
-  onInput?: (e: FormEvent) => void
-  onSubmit?: (e: FormEvent) => void
-  onSelect?: (e: FormEvent) => void
-  onScroll?: (e: Event) => void
-  onLoad?: (e: Event) => void
-  onError?: (e: Event) => void
-  // capture 变体（onXxxCapture → 捕获阶段监听）
-  onClickCapture?: (e: MouseEvent) => void
-  onMouseDownCapture?: (e: MouseEvent) => void
-  onKeyDownCapture?: (e: KeyboardEvent) => void
-  onChangeCapture?: (e: FormEvent) => void
-  onInputCapture?: (e: FormEvent) => void
-
+  // 全局属性
+  dir?: string
+  lang?: string
+  hidden?: boolean
+  draggable?: boolean | 'true' | 'false'
+  tabIndex?: number
+  accessKey?: string
+  contentEditable?: boolean | 'true' | 'false' | 'plaintext-only'
+  spellCheck?: boolean
+  role?: string
+  slot?: string
+  translate?: 'yes' | 'no'
   [key: `data-${string}`]: unknown
-  [key: string]: unknown
 }
 
-/** input 元素特有属性 */
-export interface InputProps extends HtmlProps {
+// ============================================================
+// 各元素专属属性
+// ============================================================
+
+export interface AnchorHTMLAttributes extends HTMLAttributes {
+  href?: string
+  target?: string
+  download?: string
+  rel?: string
+  hreflang?: string
+  referrerPolicy?: string
+}
+
+export interface ImgHTMLAttributes extends HTMLAttributes {
+  src?: string
+  alt?: string
+  width?: number | string
+  height?: number | string
+  loading?: 'eager' | 'lazy'
+  decoding?: 'async' | 'sync' | 'auto'
+  srcSet?: string
+}
+
+export interface InputHTMLAttributes extends HTMLAttributes {
   type?:
     | 'text'
     | 'password'
@@ -142,15 +245,228 @@ export interface InputProps extends HtmlProps {
     | 'datetime-local'
   value?: string | number | readonly string[]
   checked?: boolean
-  placeholder?: string
   disabled?: boolean
+  placeholder?: string
   readonly?: boolean
+  readOnly?: boolean
   required?: boolean
+  name?: string
   accept?: string
   multiple?: boolean
   min?: number | string
   max?: number | string
   step?: number | string
-  minlength?: number
-  maxlength?: number
+  minLength?: number
+  maxLength?: number
+  autoFocus?: boolean
+  autoComplete?: string
+  pattern?: string
+  size?: number
+}
+
+export interface TextareaHTMLAttributes extends HTMLAttributes {
+  value?: string
+  rows?: number
+  cols?: number
+  placeholder?: string
+  disabled?: boolean
+  readonly?: boolean
+  required?: boolean
+  name?: string
+  maxLength?: number
+  minLength?: number
+  autoFocus?: boolean
+  wrap?: string
+}
+
+export interface SelectHTMLAttributes extends HTMLAttributes {
+  value?: string | readonly string[]
+  multiple?: boolean
+  disabled?: boolean
+  required?: boolean
+  name?: string
+  size?: number
+  autoFocus?: boolean
+}
+
+export interface OptionHTMLAttributes extends HTMLAttributes {
+  value?: string | number
+  selected?: boolean
+  disabled?: boolean
+  label?: string
+}
+
+export interface ButtonHTMLAttributes extends HTMLAttributes {
+  type?: 'submit' | 'reset' | 'button'
+  disabled?: boolean
+  name?: string
+  value?: string
+  autoFocus?: boolean
+}
+
+export interface FormHTMLAttributes extends HTMLAttributes {
+  action?: string
+  method?: 'get' | 'post'
+  target?: string
+  noValidate?: boolean
+  encType?: string
+  name?: string
+}
+
+export interface LabelHTMLAttributes extends HTMLAttributes {
+  htmlFor?: string
+  form?: string
+}
+
+export interface MediaHTMLAttributes extends HTMLAttributes {
+  src?: string
+  controls?: boolean
+  autoPlay?: boolean
+  loop?: boolean
+  muted?: boolean
+  preload?: 'none' | 'metadata' | 'auto'
+  poster?: string
+  crossOrigin?: string
+}
+
+export interface TableHTMLAttributes extends HTMLAttributes {
+  colSpan?: number
+  rowSpan?: number
+  headers?: string
+  scope?: string
+  cellPadding?: number | string
+  cellSpacing?: number | string
+}
+
+export interface MetaHTMLAttributes extends HTMLAttributes {
+  charset?: string
+  content?: string
+  httpEquiv?: string
+  name?: string
+}
+
+export interface LinkHTMLAttributes extends HTMLAttributes {
+  href?: string
+  rel?: string
+  type?: string
+  media?: string
+  as?: string
+  crossOrigin?: string
+  integrity?: string
+}
+
+export interface IframeHTMLAttributes extends HTMLAttributes {
+  src?: string
+  name?: string
+  width?: number | string
+  height?: number | string
+  allow?: string
+  allowFullScreen?: boolean
+  loading?: 'eager' | 'lazy'
+  sandbox?: string
+  title?: string
+}
+
+export interface AreaHTMLAttributes extends HTMLAttributes {
+  href?: string
+  target?: string
+  alt?: string
+  coords?: string
+  shape?: string
+  rel?: string
+  download?: string
+}
+
+export interface OlHTMLAttributes extends HTMLAttributes {
+  reversed?: boolean
+  start?: number
+  type?: string
+}
+
+export interface ProgressHTMLAttributes extends HTMLAttributes {
+  value?: number
+  max?: number
+}
+
+export interface MeterHTMLAttributes extends HTMLAttributes {
+  value?: number
+  min?: number
+  max?: number
+  low?: number
+  high?: number
+  optimum?: number
+}
+
+export interface TimeHTMLAttributes extends HTMLAttributes {
+  dateTime?: string
+}
+
+export interface DelHTMLAttributes extends HTMLAttributes {
+  cite?: string
+  dateTime?: string
+}
+
+export interface InsHTMLAttributes extends HTMLAttributes {
+  cite?: string
+  dateTime?: string
+}
+
+export interface BlockquoteHTMLAttributes extends HTMLAttributes {
+  cite?: string
+}
+
+export interface QuoteHTMLAttributes extends HTMLAttributes {
+  cite?: string
+}
+
+// ============================================================
+// SVG 属性
+// ============================================================
+
+export interface SVGAttributes extends AriaAttributes, DOMAttributes {
+  children?: VNodeChildren
+  viewBox?: string
+  fill?: string
+  stroke?: string
+  strokeWidth?: number | string
+  strokeLinecap?: string
+  strokeLinejoin?: string
+  strokeDasharray?: string
+  fillOpacity?: number | string
+  strokeOpacity?: number | string
+  d?: string
+  cx?: number | string
+  cy?: number | string
+  r?: number | string
+  rx?: number | string
+  ry?: number | string
+  x?: number | string
+  y?: number | string
+  x1?: number | string
+  y1?: number | string
+  x2?: number | string
+  y2?: number | string
+  width?: number | string
+  height?: number | string
+  points?: string
+  transform?: string
+  opacity?: number | string
+  clipPath?: string
+  clipRule?: string
+  fillRule?: string
+  strokeMiterlimit?: number | string
+  preserveAspectRatio?: string
+  href?: string
+  xlinkHref?: string
+  gradientUnits?: string
+  gradientTransform?: string
+  offset?: number | string
+  stopColor?: string
+  stopOpacity?: number | string
+  markerUnits?: string
+  maskUnits?: string
+  maskContentUnits?: string
+  pathLength?: number | string
+  path?: string
+  [key: `data-${string}`]: unknown
 }
