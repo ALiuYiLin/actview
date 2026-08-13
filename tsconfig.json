@@ -27,6 +27,7 @@
       "@actview/plugin-scoped": ["./plugins/plugin-scoped/src/index.ts"],
       "@actview/plugin-scoped/*": ["./plugins/plugin-scoped/src/*"],
       "@actview/router": ["./packages/router/src/index.ts"],
+      "@actview/store": ["./packages/store/src/index.ts"],
       "actview": ["./packages/actview/src/index.ts"]
     },
 

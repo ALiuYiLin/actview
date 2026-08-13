@@ -26,6 +26,9 @@ importers:
       '@actview/router':
         specifier: workspace:*
         version: link:packages/router
+      '@actview/store':
+        specifier: workspace:*
+        version: link:packages/store
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -72,6 +75,12 @@ importers:
       '@actview/jsx':
         specifier: workspace:*
         version: link:../jsx
+
+  packages/store:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:*
+        version: link:../core
 
   plugins/babel-plugin-actview:
     dependencies:

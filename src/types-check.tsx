@@ -48,5 +48,27 @@ const extraProp = <Strict name="x" foo="bar" />
 // 合法：声明 + HTML 属性（class/style/事件 允许透传）
 const ok = <Strict name="x" class="btn" onClick={() => {}} />
 
+// @actview/store 类型推导：useStore() 返回类型 = setup 返回类型
+import { defineStore } from '@actview/store'
+const useCounter = defineStore('tc-counter', () => {
+  return { count: 1, label: 'x' }
+})
+const counter = useCounter()
+const countNum: number = counter.count // 推导为 number
+const labelStr: string = counter.label // 推导为 string
+// @ts-expect-error - label 是 string，不能赋给 number
+const wrongLabel: number = counter.label
+
 // 保持引用，避免 noUnusedLocals 报错（声明即用）
-export const __typesCheck = [svg, aria, data, events, missingName, extraProp, ok]
+export const __typesCheck = [
+  svg,
+  aria,
+  data,
+  events,
+  missingName,
+  extraProp,
+  ok,
+  countNum,
+  labelStr,
+  wrongLabel
+]
