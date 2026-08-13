@@ -68,21 +68,6 @@ export function provide(key: string, value: any) {
 }
 
 /**
- * 读取当前组件的外部属性（attrs = props 白名单外的属性）。
- *   useAttrs()           → 整个 attrs 对象
- *   useAttrs('title')    → attrs.title（不存在返回 undefined）
- * 只能在组件 setup 中调用（与生命周期钩子一致，复用 currentInstance 上下文）。
- */
-export function useAttrs(key?: string): any {
-  const instance = getCurrentInstance()
-  if (!instance) {
-    console.warn('[actview] useAttrs 只能在组件 setup 中调用')
-    return key ? undefined : {}
-  }
-  return key ? instance.attrs?.[key] : instance.attrs
-}
-
-/**
  * 读取当前组件的注入表（provide/inject）。
  *   useInjects()          → 整个注入表
  *   useInjects('theme')   → 注入值（未提供返回 undefined）

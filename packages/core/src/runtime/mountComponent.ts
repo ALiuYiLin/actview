@@ -1,10 +1,12 @@
 // ============================================================
 // 组件挂载 — 用户思路的核心
-//   const render = __setup(props)      // props 为普通对象
+//   const render = __setup(props)      // props 为普通对象（全量，key/ref 除外）
 //   runEffect(() => {
 //     const newVnode = render()
 //     patch(oldVnode, newVnode)   // 响应式变化时自动执行
 //   })
+// 语义对齐 React：setup(props) 收到全部传入属性，无 props/attrs 分离、
+// 无自动透传（用户显式 {...props} 选择继承）。
 // ============================================================
 
 import {
@@ -58,8 +60,6 @@ export interface ComponentInstance {
   setup: (props: any) => () => any
   /** 普通对象 props：由父组件 patch 时更新值并手动调用 update() */
   props: any
-  /** attrs：props 白名单外的属性（fallthrough 用），同样增量更新 */
-  attrs: any
   /** 父组件实例（provide/inject 链） */
   parent: ComponentInstance | null
   /** 注入表：未调用 provide 时共享父引用（零拷贝）；首次 provide 时 copy-on-write */
@@ -99,16 +99,14 @@ export function mountComponent(
     throw new Error('[actview] mountComponent: 无效的组件，缺少 __setup')
   }
 
-  // props 为普通对象：父组件通过 patchComponent 更新值 + 手动 update()。
-  // 阶段 2：按组件声明的 __props 白名单拆分为 setup props 与 attrs
-  //   - 有声明：声明内 → setup(props)，声明外（class/data-*/on* 等）→ ctx.attrs
-  //   - 无声明（函数形态）：props 全量（兼容现有 setup 读取），attrs 同全量（fallthrough 用）
-  const { props, attrs } = splitProps(options.__props, vnode.props)
+  // props 全量（key/ref 除外）：普通对象，父组件通过 patchComponent 更新值 + 手动 update()
+  const props = { ...(vnode.props || {}) }
+  delete props.ref
+  delete props.key
 
   const instance: ComponentInstance = {
     setup: options.__setup,
     props,
-    attrs,
     parent: parentInstance ?? null,
     injects: parentInstance?.injects ?? {},
     render: null as unknown as () => VNode,
@@ -133,7 +131,6 @@ export function mountComponent(
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
   setCurrentInstance(instance)
   instance.render = options.__setup(props, {
-    attrs,
     // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
     // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
     get injects() {
@@ -146,12 +143,6 @@ export function mountComponent(
   const update = () => {
     try {
       const newSubTree = instance.render()
-      // attribute fallthrough：外部传入的 attrs（非 props 声明属性）合并到单根元素
-      // 的 props（class 拼接、其余根元素显式声明优先；Fragment 多根不透传）。
-      // inheritAttrs: false 时跳过自动合并（attrs 仍在 ctx.attrs 供显式绑定）
-      if (options.__inheritAttrs !== false) {
-        mergeAttrsToRoot(newSubTree, attrs)
-      }
       const oldSubTree = instance.subTree
       instance.subTree = newSubTree
       // 子树 children 的父实例 = 本组件实例（子组件 provide/inject 继承来源）
@@ -208,153 +199,3 @@ export function mountComponent(
   // 组件 VNode 的 el 指向其子树根节点
   vnode.el = instance.subTree ? instance.subTree.el : null
 }
-
-// ============================================================
-// Attribute Fallthrough（阶段 1：全量透传）
-//   外部传入组件但组件未在根元素显式使用的属性（attrs）自动合并到
-//   单根元素 props，解决 `<Content class="vp-doc" />` 丢 class 问题。
-//   详见 docs/attr-fallthrough.md
-// ============================================================
-
-const FragmentTag = Symbol.for('react.fragment')
-
-/** 是否忽略该 key（内部字段，不参与 fallthrough） */
-function isInternalAttrKey(key: string): boolean {
-  return key === 'key' || key === 'ref' || key === 'children' || key === 'slots'
-}
-
-/**
- * 把外部传入 props 中「根元素未声明」的属性合并到根 vnode 的 props。
- * 规则（对齐 Vue 单根语义）：
- *   - 仅单根生效：Fragment（多根）不透传
- *   - class：拼接合并（组件自带 + 外部共存）
- *   - style：根元素显式声明优先（阶段 1 简化，不做对象深合并）
- *   - 事件 on*：根元素已有 → 跳过（显式优先）；没有 → 透传自动绑定
- *   - 其余：根元素显式声明优先
- * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
- */
-/** 事件透传：onXxx（含 onClickCapture、小写 onclick）；on 后须为字母 */
-function isEventKey(key: string): boolean {
-  return key.length > 2 && /^on[A-Za-z]/.test(key)
-}
-
-/**
- * 值类型过滤：仅「能安全 setAttribute 的值」参与透传
- *   - string / number / boolean ✓（直接 setAttribute）
- *   - style 对象 ✓（浅合并进根元素）
- *   - on* 事件函数 ✓（绑定到根元素）
- *   - 其余对象 / 数组 / 函数 ✗（避免 setAttribute("[object Object]") 污染根元素，
- *     与 Vue 的差异点：Vue 对所有未声明 prop 落根，这里仅保护对象/数组）
- */
-function isPassThroughValue(key: string, value: any): boolean {
-  const t = typeof value
-  if (t === 'string' || t === 'number' || t === 'boolean') return true
-  // style：仅普通对象（数组排除；字符串已在上面返回 true）
-  if (key === 'style') {
-    return t === 'object' && !Array.isArray(value)
-  }
-  if (t === 'function' && isEventKey(key)) return true
-  return false
-}
-
-/**
- * 收集 attrs：组件声明的 __props 白名单外的属性。
- *   - 有声明：声明外的 key（class、data-*、aria-*、on* 等）→ attrs
- *   - 无声明（函数形态）：全部（除内部字段 key/ref/children/slots）→ attrs
- */
-export function collectAttrs(
-  declared: readonly string[] | undefined,
-  vnodeProps: any
-): any {
-  const all = vnodeProps || {}
-  const attrs: any = {}
-  const hasDeclared = !!declared && declared.length > 0
-  for (const key in all) {
-    if (key === 'key' || key === 'ref') continue
-    if (isInternalAttrKey(key)) continue
-    if (!hasDeclared || !declared.includes(key)) attrs[key] = all[key]
-  }
-  return attrs
-}
-
-/**
- * 按组件声明的 __props 白名单拆分 vnode.props 为 setup props 与 attrs。
- *   - 无声明（函数形态）：props 全量（兼容现有 setup(props) 读取全量外部属性），
- *     attrs 同全量（fallthrough 用）
- *   - 有声明（options 形态）：声明内 → props（+ children/slots 内部字段），
- *     声明外 → attrs
- */
-function splitProps(
-  declared: readonly string[] | undefined,
-  vnodeProps: any
-): { props: any; attrs: any } {
-  const all = vnodeProps || {}
-  const props: any = {}
-  const hasDeclared = !!declared && declared.length > 0
-  for (const key in all) {
-    if (key === 'key' || key === 'ref') continue
-    if (isInternalAttrKey(key)) {
-      props[key] = all[key]
-      continue
-    }
-    if (!hasDeclared || declared.includes(key)) props[key] = all[key]
-  }
-  return { props, attrs: collectAttrs(declared, vnodeProps) }
-}
-
-/**
- * 把外部传入 attrs（组件未声明为 props 的属性）合并到根 vnode 的 props。
- * 阶段 2（对齐 Vue 完整语义，全量透传）：
- *   - 仅单根生效：Fragment（多根）不透传（对齐 Vue，需显式 {...attrs}）
- *   - attrs 全量透传（不再白名单），值类型过滤见 isPassThroughValue
- *   - class：拼接合并（组件自带 + 外部共存）
- *   - style：对象浅合并（根已有 style 时不覆盖）
- *   - 事件 on*：根元素已有 → 跳过（显式优先，阶段 2 保留；Vue invoker 并存列后续）
- *   - 其余（id、data-*、aria-* 等）：根元素显式声明优先
- *   - data-v-*（scoped hash）：在 attrs 中 → 落子组件根元素，实现
- *     「子 root 继承父 scopeId」；多级嵌套经组件 props 链逐级累积
- * vnode 是每次 render 新建的，直接克隆 props 替换安全（不污染复用节点）。
- */
-export function mergeAttrsToRoot(subTree: any, attrs: any) {
-  if (subTree == null) return
-  // Fragment 多根：不自动 fallthrough（Vue 同款，需显式 {...attrs} 绑定）
-  if (subTree.type === FragmentTag) return
-  // 内置组件（Teleport/Transition）：props 有特殊语义，不透传
-  if (subTree.type?.__builtin) return
-  if (!attrs) return
-
-  const rootProps = { ...(subTree.props || {}) }
-  for (const key of Object.keys(attrs)) {
-    if (isInternalAttrKey(key)) continue
-    const value = attrs[key]
-    // 值类型过滤：非标量且非 style/事件的 attrs 不透传
-    if (!isPassThroughValue(key, value)) continue
-    if (value == null || value === false) continue
-
-    if (key === 'class' || key === 'className') {
-      // class 合并：根元素已有 + 外部，统一落到 class
-      const existing = rootProps.class ?? rootProps.className ?? ''
-      const combined = [existing, value].filter(Boolean).join(' ')
-      rootProps.class = combined
-      delete rootProps.className
-      continue
-    }
-    if (key === 'style' && rootProps.style != null) {
-      // style 合并：根已有 style 时才浅合并；根为字符串 style 时显式优先
-      // （不合并对象，避免字符串被静默丢弃）
-      if (
-        typeof rootProps.style === 'object' &&
-        !Array.isArray(rootProps.style) &&
-        typeof value === 'object' &&
-        !Array.isArray(value)
-      ) {
-        rootProps.style = { ...rootProps.style, ...value }
-      }
-      continue
-    }
-    // 其余（id/data-*/aria-*/on* 等）：根元素显式声明优先
-    if (!(key in rootProps)) rootProps[key] = value
-  }
-  subTree.props = rootProps
-}
-

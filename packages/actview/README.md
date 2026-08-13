@@ -41,7 +41,7 @@ createApp(<App />).mount('#app')
 | 组件 | `defineComponent` |
 | 响应式 | `reactive` / `shallowReactive` / `readonly` / `markRaw` / `ref` / `isRef` / `unref` / `toRef` / `toRefs` / `computed` / `watch` / `watchEffect` / `nextTick` |
 | 生命周期 | `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` |
-| 依赖注入 | `provide` / `useAttrs` / `useInjects` |
+| 依赖注入 | `provide` / `useInjects` |
 | 内置组件 | `Teleport` / `Transition` / `KeepAlive` / `ErrorBoundary` / `Suspense` / `lazy` |
 | SSR / 其他 | `renderToString` / `getCurrentScope` |
 | 类型 | `App` / `SetupContext` / `ComponentOptions` |

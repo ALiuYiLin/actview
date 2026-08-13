@@ -1,33 +1,28 @@
 // ============================================================
 // 组件定义包装器
 // Babel 插件将 function Component() 转为 defineComponent(...)
+// 语义对齐 React：setup(props) 收到全部传入属性（key/ref 除外），
+// 无 props/attrs 分离、无自动透传（用户显式 {...props} 选择继承）。
 // ============================================================
 
-/** options 形态的 setup 上下文：props 白名单外的属性（attrs） */
+/** setup 上下文：注入表（provide/inject） */
 export interface SetupContext {
-  attrs: Record<string, any>
   /** 注入表：继承自最近提供方（未使用 provide 的组件共享父引用，零拷贝） */
   injects: Record<string, any>
 }
 
-/** options 形态的组件定义（对齐 Vue options API 的 props 分离语义） */
+/** options 形态的组件定义 */
 export interface ComponentOptions<Props = Record<string, any>> {
-  /** props 白名单：声明内的属性进 setup.props，声明外的进 ctx.attrs */
-  props?: readonly string[]
   setup: (props: Props, ctx: SetupContext) => any
-  /** 默认 true：attrs 自动合并到单根元素；false 时需显式 {...ctx.attrs} 绑定 */
-  inheritAttrs?: boolean
 }
 
 type ComponentOptionsResult<Props> = {
   __setup: (props: Props, ctx: SetupContext) => any
-  __props?: readonly string[]
-  __inheritAttrs?: boolean
 } & ((props: Props & Record<string, any>) => any)
 
 /**
- * defineComponent(options)：对象形态（props 白名单分离 + ctx.attrs）。
- * 产物 { __setup, __props?, __inheritAttrs? }，类型层面伪装 call signature：
+ * defineComponent(options)：对象形态（setup(props, ctx)）。
+ * 产物 { __setup }，类型层面伪装 call signature：
  * 让产物能通过 JSX 类型检查，运行时仍是普通对象（as 断言无运行时代码）。
  */
 export function defineComponent<Props = Record<string, any>>(
@@ -35,8 +30,7 @@ export function defineComponent<Props = Record<string, any>>(
 ): ComponentOptionsResult<Props>
 
 /**
- * defineComponent(setup)：函数形态（无 props 声明，全量属性走 attrs ——
- * Vue 无声明语义）。产物 { __setup }。
+ * defineComponent(setup)：函数形态。产物 { __setup }。
  */
 export function defineComponent<Setup extends (...args: any[]) => any>(
   setup: Setup
@@ -48,9 +42,5 @@ export function defineComponent(opt: any) {
   if (typeof opt === 'function') {
     return { __setup: opt }
   }
-  const { props, setup, inheritAttrs } = opt
-  const out: any = { __setup: setup }
-  if (props && props.length) out.__props = props
-  if (inheritAttrs === false) out.__inheritAttrs = false
-  return out
+  return { __setup: opt.setup }
 }

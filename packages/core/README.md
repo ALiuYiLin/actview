@@ -8,8 +8,8 @@
 
 - **响应式系统**：`reactive`/`ref`/`computed`/`watch`/`effectScope` + 微任务调度批处理（`queueJob`/`nextTick`）
 - **渲染器**：VNode 树 → 真实 DOM（挂载/更新/卸载、keyed diff、事件与属性 patch）
-- **组件体系**：`defineComponent`（options 形态：`props`/`setup`/`inheritAttrs`）、`createApp`、props 白名单与 attrs fallthrough 透传
-- **生命周期与组合式 API**：`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted`、`provide`/`useInjects`/`useAttrs`、`getCurrentScope`
+- **组件体系**：`defineComponent`、`createApp`、props 全量进 setup（React 语义，用户显式 `{...props}` 透传）
+- **生命周期与组合式 API**：`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted`、`provide`/`useInjects`、`getCurrentScope`
 - **内置组件**：`Transition`、`KeepAlive`、`ErrorBoundary`、`Suspense`、`Teleport`、`lazy`
 - **SSR**：`renderToString`（VNode → HTML 字符串，构建期/SSR 前置，无 DOM 依赖）
 
@@ -24,17 +24,14 @@ pnpm add @actview/core
 ```tsx
 import { createApp, reactive, defineComponent } from '@actview/core'
 
-const App = defineComponent({
-  props: { title: String },
-  setup(props) {
-    const state = reactive({ count: 0 })
-    return () => (
-      <div onClick={() => state.count++}>
-        {props.title}: {state.count}
-      </div>
-    )
-  },
-})
+function App(props: { title: string }) {
+  const state = reactive({ count: 0 })
+  return (
+    <div onClick={() => state.count++}>
+      {props.title}: {state.count}
+    </div>
+  )
+}
 
 createApp(<App title="hello" />).mount('#app')
 ```
@@ -59,9 +56,9 @@ createApp(<App title="hello" />).mount('#app')
 | 导出 | 说明 |
 |---|---|
 | `createApp` | 应用入口（`app.mount`） |
-| `defineComponent` | options 形态组件定义（产物 `{ __setup, __props?, __inheritAttrs? }`） |
+| `defineComponent` | 组件定义包装器（产物 `{ __setup }`，props 全量进 setup） |
 | `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` | 生命周期钩子 |
-| `provide` / `useInjects` / `useAttrs` | 依赖注入与透传属性读取 |
+| `provide` / `useInjects` | 依赖注入 |
 | `Transition` / `KeepAlive` / `ErrorBoundary` / `Suspense` / `Teleport` / `lazy` | 内置组件 |
 | `renderToString` | VNode → HTML 字符串 |
 | 类型：`App` / `SetupContext` / `ComponentOptions` / `ComponentInstance` / `VNode` | 常用类型 |

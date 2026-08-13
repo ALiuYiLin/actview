@@ -36,7 +36,6 @@ export {
   onBeforeUnmount,
   onUnmounted,
   provide,
-  useAttrs,
   useInjects,
   renderToString,
   Teleport,

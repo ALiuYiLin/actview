@@ -326,80 +326,8 @@ function wrapComponentFn(fn: any): any | null {
     last.argument = t.arrowFunctionExpression([], t.nullLiteral())
   }
 
-  // 自动 props 白名单：从函数第一个参数的 TS 类型字面量提取属性名
-  //   function Component(props: { x1: string, x2: number }) {...}
-  //   → defineComponent({ props: ['x1', 'x2'], setup: function(props){...} })
-  //   —— 运行时 props/attrs 分离（声明内进 setup.props、声明外进 ctx.attrs）。
-  // 无法提取（无类型/any/类型别名引用/参数缺省）时回退函数形态（props 全量）：
-  //   esbuild/rolldown 先转后类型已剥离，Babel 拿不到注解 → 自动回退（best-effort）
-  const propsKeys = extractPropsFromType(fn)
-  let call: any
-  if (propsKeys) {
-    call = t.callExpression(t.identifier('defineComponent'), [
-      t.objectExpression([
-        t.objectProperty(
-          t.identifier('props'),
-          t.arrayExpression(propsKeys.map(k => t.stringLiteral(k))),
-        ),
-        t.objectProperty(t.identifier('setup'), fn),
-      ]),
-    ])
-  } else {
-    call = t.callExpression(t.identifier('defineComponent'), [fn])
-  }
-  return call
-}
-
-/**
- * 从组件函数第一个参数提取 props 白名单。支持两种来源：
- *   A. TS 类型注解（内联对象类型字面量 TSTypeLiteral）：
- *      `props: { x1: string, x2?: number }` / `{ x1, x2 }: { x1: string, x2: number }` → ['x1', 'x2']
- *   B. 解构参数（无类型注解）：`{ x1, x2 }` → ['x1', 'x2']（属性名即 props 白名单）
- * 回退 null（保持函数形态，props 全量）：
- *   - 无注解且非解构 / any / 类型别名引用（Babel 无类型检查器无法跨文件解析）
- *   - 解构带 rest（`{ x1, ...rest }`）：白名单会让 rest 在运行时拿不到剩余 attrs，
- *     保守回退全量（rest 语义保持）
- *   - esbuild/rolldown 先转后类型与解构已剥离（解构被运行时展开成 props.x1）→ 自动回退
- */
-function extractPropsFromType(fn: any): string[] | null {
-  const firstParam = fn.params?.[0]
-  if (!firstParam) return null
-
-  // A. TS 类型注解（Identifier 或 ObjectPattern 参数都可带）
-  const typeAnno = firstParam.typeAnnotation?.typeAnnotation
-  if (typeAnno && t.isTSTypeLiteral(typeAnno)) {
-    const keys: string[] = []
-    for (const member of typeAnno.members) {
-      if (!t.isTSPropertySignature(member)) continue
-      const name = getKeyName(member.key)
-      if (name) keys.push(name)
-    }
-    if (keys.length) return keys
-  }
-
-  // B. 解构参数（无类型注解）：属性名即 props 白名单；
-  //    带 rest（{ x1, ...rest }）时保守回退（rest 语义需要全量 props）
-  if (t.isObjectPattern(firstParam)) {
-    // Babel 8：rest 以 RestElement 存在于 properties 数组（旧版 firstParam.rest 已弃用）
-    const hasRest = firstParam.properties.some((p: any) => t.isRestElement(p))
-    if (hasRest) return null
-    const keys: string[] = []
-    for (const prop of firstParam.properties) {
-      if (!t.isObjectProperty(prop)) continue
-      const name = getKeyName(prop.key)
-      if (name) keys.push(name)
-    }
-    return keys.length ? keys : null
-  }
-
-  return null
-}
-
-/** 从 JSX/TS 属性 key（Identifier 或 StringLiteral）取属性名；其他形态返回 null */
-function getKeyName(key: any): string | null {
-  if (t.isIdentifier(key)) return key.name
-  if (t.isStringLiteral(key)) return key.value
-  return null
+  // 统一函数形态：defineComponent(fn)，props 全量进 setup（TS 类型保证形状）
+  return t.callExpression(t.identifier('defineComponent'), [fn])
 }
 
 /**

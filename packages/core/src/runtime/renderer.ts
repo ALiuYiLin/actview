@@ -4,7 +4,7 @@
 //   oldVnode 为 null → 挂载；type/key 相同 → 更新；否则替换
 // ============================================================
 
-import { mountComponent, collectAttrs } from './mountComponent'
+import { mountComponent } from './mountComponent'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import {
   mountTeleport,
@@ -346,15 +346,8 @@ function patchComponent(
   }
 
   if (!isSameProps(oldVnode.props, newVnode.props)) {
-    // 增量更新 props 与 attrs，任一有变化都触发子组件更新：
-    // attrs-only 变化（options 形态下仅外部属性变化，如 <Box id="a"> → id="b"）
-    // 也必须重渲染，否则 mergeAttrsToRoot 不重跑、根 DOM 属性陈旧
-    const options = oldVnode.type
-    const declared = options?.__props
-    const propsChanged = updateProps(instance.props, newVnode.props)
-    const newAttrs = collectAttrs(declared, newVnode.props)
-    const attrsChanged = updateProps(instance.attrs, newAttrs)
-    if (propsChanged || attrsChanged) {
+    // 增量更新 props（key/ref 除外），有变化触发子组件更新
+    if (updateProps(instance.props, newVnode.props)) {
       instance.update()
     }
   }
@@ -363,11 +356,12 @@ function patchComponent(
   newVnode.el = instance.subTree ? instance.subTree.el : oldVnode.el
 }
 
-/** 把新 props 增量写入旧 props，返回是否有变化 */
+/** 把新 props 增量写入旧 props（跳过 key/ref），返回是否有变化 */
 export function updateProps(oldProps: any, newProps: any): boolean {
   newProps = newProps || {}
   let changed = false
   for (const key in newProps) {
+    if (key === 'key' || key === 'ref') continue
     if (!Object.is(oldProps[key], newProps[key])) {
       oldProps[key] = newProps[key]
       changed = true
@@ -375,6 +369,7 @@ export function updateProps(oldProps: any, newProps: any): boolean {
   }
   // 移除父组件不再传递的 props
   for (const key in oldProps) {
+    if (key === 'key' || key === 'ref') continue
     if (!(key in newProps)) {
       delete oldProps[key]
       changed = true

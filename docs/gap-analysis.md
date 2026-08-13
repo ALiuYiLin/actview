@@ -11,7 +11,7 @@
 
 - **响应式**：`reactive` / `shallowReactive` / `readonly` / `markRaw` / `ref` / `isRef` / `unref` / `toRef` / `toRefs` / `computed` / `watch` / `watchEffect` / `EffectScope`（内部）
 - **渲染**：虚拟 DOM + `patch`、keyed diff（LIS 最小移动）、同索引 diff、props 细粒度更新、受控 input 光标保位、批处理 + `nextTick`、运行时短路（props/children 引用短路）、`v-memo`、`<solid>` 细粒度
-- **组件**：`createApp().mount`、`defineComponent`（函数/options 形态）、生命周期四件套、插槽（默认/作用域/具名）、动态组件、`KeepAlive`、`ErrorBoundary`、`Suspense`/`lazy`、`Teleport`、`Transition`（简化版）、`provide`/`useInjects`/`useAttrs`、attribute fallthrough、模板引用
+- **组件**：`createApp().mount`、`defineComponent`（函数形态，props 全量进 setup）、生命周期四件套、插槽（默认/作用域/具名）、动态组件、`KeepAlive`、`ErrorBoundary`、`Suspense`/`lazy`、`Teleport`、`Transition`（简化版）、`provide`/`useInjects`、显式 `{...props}` 透传、模板引用
 - **构建/生态**：`renderToString`（静态序列化）、`@actview/router`（最小）、`@actview/plugin-vite`、`@actview/babel-plugin-actview`、`@actview/plugin-scoped`、TS 类型（泛型推导 + 基础 IntrinsicElements）
 
 ---
@@ -163,7 +163,32 @@
 
 ### 3.3 后续（P1 / P2）
 
-1. **P1 — `emits` / `defineExpose` / props 校验**：组件对外契约能力，中大型应用必需。
-2. **P1 — 路由守卫 + 嵌套路由 + 懒加载集成**：路由现在只能 demo，达不到生产可用。
-3. **P2 — 状态管理 / DevTools / hydration**：生态层，决定能否被真实项目采用。
-4. **P2 — 完整 TS 类型**：IntrinsicElements、SVG、ARIA、事件全量。
+#### P1-1：组件契约对齐 React（方案 3）— 移除 props/attrs 分离与自动透传
+
+> 设计纠偏：ActView 是 TSX 写法，props 形状由 TS 类型（`export type AppProps` + `function App(props: AppProps)`）在编译期保证，**不需要** Vue 的 props 校验 / `emits` / `ctx.attrs` / 自动 fallthrough。
+> 回调通过 props 定义函数（父组件直接传），不引入 `emits`。
+
+| 移除 | 说明 |
+|---|---|
+| `defineComponent` options 形态 props 白名单 / `inheritAttrs` | `__props` / `__inheritAttrs` 删除，统一 `defineComponent(setup)` |
+| `splitProps` / `collectAttrs` / `mergeAttrsToRoot` | props/attrs 分离与自动 fallthrough 删除 |
+| `useAttrs` | 语义消失，删除 |
+| Babel `extractPropsFromType` | 不再生成 props 白名单 |
+
+**结果语义（对齐 React）**：
+
+- `setup(props)` 收到**全部**传入属性（`key`/`ref` 除外，`children` 在 `props.children`）
+- 框架**不自动透传**，用户显式 `{...props}` 选择继承（含 scoped `data-v-*` 跨文件继承）
+- 条件渲染 / Fragment 多根的「根元素识别」问题不存在——落点是用户显式行为
+- TS 类型别名（`props: AppProps`）与内联类型行为一致（运行时不再依赖 props 名单）
+
+#### P1-2：路由守卫 + 嵌套路由 + 懒加载集成
+
+1. 嵌套路由（`children` + 嵌套 `<RouterView>`）
+2. 路由守卫（`beforeEach` / `afterEach` + `beforeEnter`）
+3. 懒加载集成（`component: () => import(...)` 与 `lazy`/`Suspense` 打通）
+
+#### P2
+
+1. **状态管理 / DevTools / hydration**：生态层，决定能否被真实项目采用。
+2. **完整 TS 类型**：IntrinsicElements、SVG、ARIA、事件全量。

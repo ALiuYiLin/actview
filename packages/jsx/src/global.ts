@@ -29,10 +29,9 @@ declare global {
     }
 
     /**
-     * 组件元素 props 检查：声明类型 + 任意额外 attrs 属性。
-     * JSX 元素属性允许「props 白名单外」的 attrs（class、style、data-*、on* 等）
-     * ——运行时进入 ctx.attrs 并 fallthrough，对齐 Vue 宽松语义。
-     * 声明内属性（如 { label: string }）仍做必填/类型检查。
+     * 组件元素 props 检查：声明类型 + 任意额外属性（class、style、data-*、on* 等）。
+     * 对齐 React 宽松语义：声明内属性做类型检查，额外 HTML 属性/事件允许传入
+     * （props 全量进 setup，用户显式 {...props} 选择透传）。
      */
     type LibraryManagedAttributes<C, P> = P & Record<string, any>
   }

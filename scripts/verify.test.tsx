@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, useAttrs, useInjects, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, useInjects, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
@@ -1776,314 +1776,125 @@ describe('场景 26：keyed diff Fragment 根组件', () => {
 })
 
 // ------------------------------------------------------------
-// 场景 27：attribute fallthrough（非 prop 属性透传到根元素）
+// 场景 27：props 全量 + 显式 {...props} 透传（React 语义，无自动 fallthrough）
 // ------------------------------------------------------------
-describe('场景 27：attribute fallthrough', () => {
-  it('背景场景：外部 class 落到组件根元素（.vp-doc 生效）', () => {
+describe('场景 27：props 全量 + 显式透传', () => {
+  it('props 全量进 setup：业务 props 与 class 都能读到', () => {
+    let captured: any
+    function Content(props: any) {
+      captured = props
+      return <div class="content-body">{props.children}</div>
+    }
+    function App() {
+      return <Content class="vp-doc" title="t" features={[1, 2]}>内容</Content>
+    }
+    mount('#s27a', App)
+    expect(captured.class).toBe('vp-doc')
+    expect(captured.title).toBe('t')
+    expect(captured.features).toEqual([1, 2])
+  })
+
+  it('不显式透传：外部 class/属性不落根元素（方案 3 核心语义）', () => {
     function Content(props: any) {
       return <div class="content-body">{props.children}</div>
     }
     function App() {
-      return <Content class="vp-doc">内容</Content>
+      return <Content class="vp-doc" title="t">内容</Content>
     }
-    const host = mount('#s27a', App)
+    const host = mount('#s27b', App)
     const root = host.querySelector('.content-body')!
-    expect(root.classList.contains('vp-doc')).toBe(true)
-    expect(root.classList.contains('content-body')).toBe(true) // 自带 class 保留
+    expect(root.classList.contains('vp-doc')).toBe(false)
+    expect(root.getAttribute('title')).toBeNull()
   })
 
-  it('class 合并：组件自带 + 外部共存', () => {
-    function Panel() {
-      return <section class="panel">P</section>
+  it('显式 {...props} 透传：class/属性落根', () => {
+    function Panel(props: any) {
+      return <div {...props} class="panel">P</div>
+    }
+    function App() {
+      return <Panel class="extra" title="t" data-x="1" />
+    }
+    const host = mount('#s27c', App)
+    const div = host.querySelector('.panel')!
+    // spread 在前、class 在后 → 自带 class 覆盖外部
+    expect(div.className).toBe('panel')
+    expect(div.getAttribute('title')).toBe('t')
+    expect(div.getAttribute('data-x')).toBe('1')
+  })
+
+  it('class 手动拼接：组件自带 + 外部共存', () => {
+    function Panel({ class: cls, ...rest }: any) {
+      return <div class={['panel', cls].filter(Boolean).join(' ')} {...rest}>P</div>
     }
     function App() {
       return <Panel class="extra-1 extra-2" />
     }
-    const host = mount('#s27b', App)
-    const sec = host.querySelector('section')!
+    const host = mount('#s27d', App)
+    const sec = host.querySelector('.panel')!
     expect(sec.classList.contains('panel')).toBe(true)
     expect(sec.classList.contains('extra-1')).toBe(true)
     expect(sec.classList.contains('extra-2')).toBe(true)
   })
 
-  it('显式优先：根元素已声明的属性不被外部覆盖', () => {
-    function Btn(props: any) {
-      return <button type="button" id="inner">{props.children}</button>
+  it('scoped 跨文件继承：data-v-* 经显式 {...props} 落子根，多级累积', () => {
+    function Leaf(props: any) {
+      return <div class="leaf" {...props}>L</div>
     }
-    function App() {
-      return <Btn type="submit" id="outer">点</Btn>
-    }
-    const host = mount('#s27c', App)
-    const btn = host.querySelector('button')!
-    expect(btn.getAttribute('type')).toBe('button') // 内部显式优先
-    expect(btn.id).toBe('inner')
-  })
-
-  it('全量透传：id/title/data-x 等标量 attrs 透传（阶段 2）', () => {
-    function Card() {
-      return <div class="card">C</div>
-    }
-    function App() {
-      return <Card id="card-1" title="提示" data-x="1" />
-    }
-    const host = mount('#s27d', App)
-    const card = host.querySelector('.card')!
-    expect(card.id).toBe('card-1')
-    expect(card.getAttribute('title')).toBe('提示') // 标量 attrs 全量透传
-    expect(card.getAttribute('data-x')).toBe('1')
-  })
-
-  it('bug 回归：业务 props（数组/对象）不透传 =》 根元素无 features 属性', () => {
-    // 全量透传时 <VPFeatures features={[...]}> 根元素带 features="[object Array]"
-    function VPFeatures(props: any) {
-      return <div class="VPFeatures">{props.children}</div>
-    }
-    function App() {
-      return <VPFeatures features={[{ title: 'a' }, { title: 'b' }]}>内容</VPFeatures>
-    }
-    const host = mount('#s27d2', App)
-    const root = host.querySelector('.VPFeatures')!
-    expect(root.hasAttribute('features')).toBe(false) // 业务 prop 不透传
-    expect(root.hasAttribute('title')).toBe(false)
-    expect(root.className).toBe('VPFeatures')
-  })
-
-  it('style 对象合并：根 {color} + attrs {fontSize} =》 两者都在', () => {
-    function Panel() {
-      return <section class="panel" style={{ color: 'red' }}>P</section>
-    }
-    function App() {
-      return <Panel style={{ fontSize: '12px' }} />
-    }
-    const host = mount('#s27d3', App)
-    const sec = host.querySelector('section')!
-    expect(sec.style.color).toBe('red') // 根自带保留
-    expect(sec.style.fontSize).toBe('12px') // attrs 合并进来
-  })
-
-  it('Fragment 多根：不自动 fallthrough', () => {
-    function Multi() {
-      return (
-        <>
-          <p class="m1">1</p>
-          <p class="m2">2</p>
-        </>
-      )
-    }
-    function App() {
-      return <Multi class="should-not-apply" />
-    }
-    const host = mount('#s27e', App)
-    expect(host.querySelector('.m1')!.classList.contains('should-not-apply')).toBe(false)
-    expect(host.querySelector('.m2')!.classList.contains('should-not-apply')).toBe(false)
-  })
-
-  it('options 形态：props 白名单分离，声明外进 attrs 落根', () => {
-    const Box = defineComponent({
-      props: ['title'],
-      setup(props: any, ctx: any) {
-        return () => <div class="box" title={props.title}>{props.title}</div>
-      },
-    })
-    function App() {
-      return <Box title="内部" id="box-id" data-k="v" />
-    }
-    const host = mount('#s27-opt1', App)
-    const box = host.querySelector('.box')!
-    expect(box.textContent).toBe('内部') // 声明内：进 setup props
-    expect(box.getAttribute('title')).toBe('内部') // 根显式绑定
-    expect(box.id).toBe('box-id') // 声明外：attrs 落根
-    expect(box.getAttribute('data-k')).toBe('v') // data-* attrs 落根
-  })
-
-  it('inheritAttrs: false：不自动透传，需显式 {...ctx.attrs}', () => {
-    const NoInherit = defineComponent({
-      inheritAttrs: false,
-      setup(_props: any, ctx: any) {
-        return () => <div class="noinherit">{ctx.attrs.title}</div>
-      },
-    })
-    function App() {
-      return <NoInherit title="看得到" data-y="2" />
-    }
-    const host = mount('#s27-opt2', App)
-    const div = host.querySelector('.noinherit')!
-    expect(div.textContent).toBe('看得到') // ctx.attrs 可读
-    expect(div.getAttribute('data-y')).toBeNull() // 未显式绑定 → 不透传
-    const WithSpread = defineComponent({
-      inheritAttrs: false,
-      setup(_props: any, ctx: any) {
-        return () => <div class="withspread" {...ctx.attrs}></div>
-      },
-    })
-    function App2() {
-      return <WithSpread data-y="2" />
-    }
-    const host2 = mount('#s27-opt3', App2)
-    expect(host2.querySelector('.withspread')!.getAttribute('data-y')).toBe('2')
-  })
-
-  it('scoped 继承：data-v-* attrs 落子 root，多级嵌套逐级累积', () => {
-    // 父文件编译产物：<Child/> 组件元素带 data-v-parent（父文件 scoped hash）
-    function Leaf() {
-      return <div class="leaf">L</div>
-    }
-    const Mid = defineComponent(function () {
-      return () => <Leaf />
+    const Mid = defineComponent(function (props: any) {
+      return () => <Leaf {...props} />
     })
     function Root() {
       return <Mid data-v-parent="abc123" />
     }
-    const host = mount('#s27-opt4', Root)
+    const host = mount('#s27e', Root)
     const leaf = host.querySelector('.leaf')!
-    // data-v-parent 经 Mid（函数形态无声明 → attrs 全量）→ Leaf 根（同样 attrs 全量）逐级累积
     expect(leaf.getAttribute('data-v-parent')).toBe('abc123')
   })
 
-  it('attrs-only 更新：options 形态仅外部属性变化也重渲染', async () => {
-    const state = reactive({ boxId: 'a' })
-    const Box = defineComponent({
-      props: ['title'],
-      setup(props: any, _ctx: any) {
-        return () => <div class="box" title={props.title}>B</div>
-      },
-    })
-    function App() {
-      return <Box title="t" id={state.boxId} />
-    }
-    const host = mount('#s27-opt5', App)
-    const box = host.querySelector('.box')!
-    expect(box.id).toBe('a') // attrs 落根
-
-    state.boxId = 'b' // 仅 attrs（id）变化，声明 props（title）不变
-    await nextTick()
-    expect(box.id).toBe('b') // 修复：attrsChanged 也触发 update
-  })
-
-  it('renderToString：options 形态 setup 访问 ctx.attrs 不崩溃', () => {
-    const Box = defineComponent({
-      props: ['title'],
-      setup(props: any, ctx: any) {
-        // SSR 传空 attrs（无 attrs fallthrough），访问不抛错
-        expect(ctx.attrs).toBeDefined()
-        return () => <div class="box">{props.title}</div>
-      },
-    })
-    const html = renderToString(<Box title="SSR" />)
-    expect(html).toContain('SSR')
-  })
-
-  it('style 值类型过滤：数组/函数不透传，根无污染', () => {
-    function Plain() {
-      return <div class="plain">P</div>
-    }
-    function App() {
-      return <Plain style={[1, 2] as any} />
-    }
-    const host = mount('#s27-opt6', App)
-    const div = host.querySelector('.plain')!
-    // style 数组被值类型过滤拦截 → 根不落 style
-    expect(div.getAttribute('style')).toBeNull()
-  })
-
-  it('根字符串 style 保留（外部 style 对象不覆盖字符串）', () => {
-    function Colored() {
-      return <div class="colored" style="color: red">C</div>
-    }
-    function App() {
-      return <Colored style={{ background: 'blue' }} />
-    }
-    const host = mount('#s27-opt7', App)
-    const div = host.querySelector('.colored')!
-    // 根 style 为字符串：显式优先，外部对象不合并、不丢弃字符串
-    // （happy-dom 序列化会给字符串 style 补分号，用包含断言）
-    expect(div.getAttribute('style')).toContain('color: red')
-  })
-
-  it('条件渲染三元组件（Babel 转换产物形态）：单根时 class 透传', () => {
-    // 等价于 `function Child(props) { return props.condition ? <Comp/> : null }`
-    // 经 babel-plugin-actview 转换后的产物（defineComponent + render 三元）
-    function Comp() {
-      return <div class="inner">C</div>
-    }
-    const Cond = defineComponent(function (props: any) {
-      return () => (props.condition ? <Comp /> : null)
-    })
-    function App() {
-      return <Cond class="from-parent" condition={true} />
-    }
-    const host = mount('#s27-cond', App)
-    const root = host.querySelector('.inner')!
-    expect(root.classList.contains('from-parent')).toBe(true)
-    expect(root.classList.contains('inner')).toBe(true)
-  })
-
-  it('内置组件根（Teleport）不透传', () => {
-    const target = document.createElement('div')
-    target.id = 's27-target'
-    document.body.appendChild(target)
-    function TeleWrapper() {
-      return (
-        <Teleport to="#s27-target">
-          <span class="tele-child">T</span>
-        </Teleport>
-      )
-    }
-    function App() {
-      return <TeleWrapper class="should-not" title="no" />
-    }
-    mount('#s27e2', App)
-    const child = target.querySelector('.tele-child')!
-    expect(child.classList.contains('should-not')).toBe(false)
-    expect(child.hasAttribute('title')).toBe(false)
-  })
-
-  it('更新：外部 class 变化 =》 根元素 class 更新（走 updateProps → update）', async () => {
-    const state = reactive({ cls: 'a' })
-    function Content() {
-      return <div class="body">B</div>
-    }
-    function App() {
-      return <Content class={state.cls} />
-    }
-    const host = mount('#s27f', App)
-    const root = host.querySelector('.body')!
-    expect(root.classList.contains('a')).toBe(true)
-
-    state.cls = 'b'
-    await nextTick()
-    expect(root.classList.contains('a')).toBe(false)
-    expect(root.classList.contains('b')).toBe(true)
-    expect(root.classList.contains('body')).toBe(true) // 自带 class 始终保留
-  })
-
-  it('事件透传：外部 onclick 落到无事件根元素并触发', () => {
+  it('事件 props：父组件传回调，子组件显式绑定', () => {
     let clicked = 0
     function Wrap(props: any) {
-      return <div class="wrap">{props.children}</div>
+      return <button class="wrap" onclick={props.onClick}>W</button>
     }
     function App() {
-      return <Wrap onclick={() => clicked++}>W</Wrap>
+      return <Wrap onClick={() => clicked++} />
     }
-    const host = mount('#s27g', App)
+    const host = mount('#s27f', App)
     host.querySelector('.wrap')!.dispatchEvent(new Event('click'))
     expect(clicked).toBe(1)
   })
 
-  it('排除：key / ref / children / slots 不落根元素', () => {
+  it('key/ref 不进 props（React 语义）', () => {
+    let captured: any
     let refVal: any = null
     function Item(props: any) {
+      captured = props
       return <li class="item">{props.children}</li>
     }
     function App() {
       return <Item key="k1" ref={(el: any) => (refVal = el)}>文本</Item>
     }
+    const host = mount('#s27g', App)
+    expect(captured.key).toBeUndefined()
+    expect(captured.ref).toBeUndefined()
+    expect(host.querySelector('.item')!.textContent).toBe('文本')
+    expect(refVal).not.toBeNull()
+  })
+
+  it('props 更新：父组件 props 变化触发子组件重渲染', async () => {
+    const state = reactive({ cls: 'a' })
+    function Content(props: any) {
+      return <div class={`body ${props.class ?? ''}`.trim()}>B</div>
+    }
+    function App() {
+      return <Content class={state.cls} />
+    }
     const host = mount('#s27h', App)
-    const li = host.querySelector('.item')!
-    expect(li.getAttribute('key')).toBeNull()
-    expect(li.getAttribute('ref')).toBeNull()
-    expect(li.textContent).toBe('文本') // children 正常渲染而非落属性
-    expect(refVal).not.toBeNull() // ref 回调正常执行
+    const root = host.querySelector('.body')!
+    expect(root.classList.contains('a')).toBe(true)
+    state.cls = 'b'
+    await nextTick()
+    expect(root.classList.contains('b')).toBe(true)
   })
 })
 
@@ -2305,37 +2116,16 @@ describe('场景 32：provide / inject', () => {
     expect(host.querySelector('.leaf')!.textContent).toBe('dark-3-2')
   })
 
-  it('useInjects(key) 未提供返回 undefined；useAttrs(key) 读取外部属性', () => {
-    function Panel(_props: any, ctx?: any) {
+  it('useInjects(key) 未提供返回 undefined', () => {
+    function Panel(_props: any) {
       const missing = useInjects('nope')
-      const title = useAttrs('title')
-      const all = useAttrs()
       return (
-        <div class="panel" title={title}>
-          {missing ?? 'none'}-{typeof all.title}-{ctx.attrs?.id}
+        <div class="panel">
+          {missing ?? 'none'}
         </div>
       )
     }
-    function App() {
-      return <Panel title="hello" id="p1" />
-    }
-    const host = mount('#s32-8', App)
-    const el = host.querySelector('.panel')!
-    expect(el.getAttribute('title')).toBe('hello')
-    expect(el.textContent).toBe('none-string-p1')
-  })
-
-  it('useAttrs() 无 key 返回整个 attrs（函数形态全量）', () => {
-    let attrsRef: any
-    function Box() {
-      attrsRef = useAttrs()
-      return <div class="box">box</div>
-    }
-    function App() {
-      return <Box title="t" data-x="dx" />
-    }
-    mount('#s32-9', App)
-    expect(attrsRef.title).toBe('t')
-    expect(attrsRef['data-x']).toBe('dx')
+    const host = mount('#s32-8', Panel)
+    expect(host.querySelector('.panel')!.textContent).toBe('none')
   })
 })

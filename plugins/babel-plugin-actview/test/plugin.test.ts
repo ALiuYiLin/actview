@@ -201,13 +201,13 @@ describe('defineComponentPlugin：三元 / 逻辑 return 条件渲染', () => {
   })
 })
 
-describe('defineComponentPlugin：自动 props 提取（TS 类型注解）', () => {
-  it('内联对象类型 → defineComponent({ props, setup })', () => {
+describe('defineComponentPlugin：组件统一函数形态（方案 3，无 props 白名单）', () => {
+  it('内联对象类型 → 统一 defineComponent(function)（不再提取白名单）', () => {
     const out = transform(
       `function Child(props: { x1: string, x2?: number }) { return <div>{props.x1}</div> }`,
     )
-    expect(out).toContain('props: ["x1", "x2"]')
-    expect(out).toContain('setup: function')
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
   })
 
   it('props: any → 函数形态回退（无白名单）', () => {
@@ -236,19 +236,20 @@ describe('defineComponentPlugin：自动 props 提取（TS 类型注解）', () 
     expect(out).not.toContain('props: [')
   })
 
-  it('解构参数（无类型注解）：{ x1, x2 } → props 白名单', () => {
+  it('解构参数（无类型注解）：{ x1, x2 } → 统一函数形态', () => {
     const out = transform(
       `function App({ x1, x2 }) { return <div>{x1}{x2}</div> }`,
     )
-    expect(out).toContain('props: ["x1", "x2"]')
-    expect(out).toContain('setup: function')
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
   })
 
-  it('解构 + 类型注解：{ x1 }: { x1: string } → props 白名单', () => {
+  it('解构 + 类型注解：{ x1 }: { x1: string } → 统一函数形态', () => {
     const out = transform(
       `function App({ x1 }: { x1: string }) { return <div>{x1}</div> }`,
     )
-    expect(out).toContain('props: ["x1"]')
+    expect(out).toContain('defineComponent(function')
+    expect(out).not.toContain('props: [')
   })
 
   it('解构带 rest（{ x1, ...rest }）：保守回退函数形态', () => {

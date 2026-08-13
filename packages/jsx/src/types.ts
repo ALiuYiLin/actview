@@ -22,8 +22,6 @@ export interface VNode<Type = VNodeTypes> {
 /** 组件类型：defineComponent 产物（{ __setup } + call signature），props 泛型化 */
 export type ComponentType<P = any> = {
   __setup: (props: P, ctx?: any) => any
-  __props?: readonly string[]
-  __inheritAttrs?: boolean
 } & ((props: P) => any)
 
 /** 从组件类型推导 props：取 __setup 的第一个参数 */
