@@ -35,6 +35,13 @@
 - keyed diff：LIS 最长递增子序列最小移动（参考 Vue 3）
 - 文本节点、input value 同步（selection 保持）
 - `renderToString`（VNode → HTML 静态序列化）
+- 运行时短路：patchProps 值比较 / props 引用 / children 引用短路
+- `v-memo`：行级显式依赖短路（deps 未变整棵子树复用）
+
+## 双模细粒度（`<solid>`）
+- `<solid>` 编译期作用域标签：块内 JSX 编译为 DOM 直连 effect（骨架创建一次、`{expr}` 独立 effect），块外保持 Vue 式 re-render
+- 集合更新：`mapArray` 项级 keyed 复用（公共前后缀跳过 + LIS 最小移动 + 顺序未变零移动）
+- 运行时：`solidGet` / `createEffect` / `mapArray`（effect 归 EffectScope 统一清理）
 
 ## 构建期与生态
 - `@actview/router`：createRouter、createWebHistory / createMemoryHistory、RouterLink、RouterView、路由匹配

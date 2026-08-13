@@ -112,6 +112,17 @@ function App(props) {
 | props 细粒度更新 | `patchProps` / `setProp`（class/style/value/checked/事件/属性） |
 | 受控 input 光标保位 | 更新 value 前后记录/恢复 `selectionStart/End` |
 | 调度批处理 | `queueJob` 微任务去重 + `nextTick(cb?)` |
+| 运行时短路 | `patchProps` 值比较跳过 / `patchVNode` props 引用短路 / `patchChildren` children 引用短路 |
+| `v-memo` | 行级显式依赖短路：deps 未变整棵子树复用（JSX `v-memo={[deps]}`，编译期提取） |
+
+### 双模细粒度（`<solid>` 运行时）
+
+| API | 说明 |
+|---|---|
+| `createEffect(fn)` | 细粒度 effect：响应式依赖变化时重跑 fn，直接写 DOM（`<solid>` 块内动态点编译产物） |
+| `mapArray(list, parent, mapFn)` | 项级 keyed 复用渲染：公共前后缀跳过 + Map 索引 + LIS 最小移动 + 顺序未变零移动；消失项清理订阅 |
+| `solidGet(holder, factory)` | `<solid>` 块占位 vnode 工厂缓存：首次执行建 DOM + 注册 effect，render 重跑复用 |
+| `createSolidVNode` | `<solid>` 块编译产物 vnode 构造（renderer 以黑盒子 DOM 子树挂载/卸载） |
 
 ### 构建期 / SSR
 

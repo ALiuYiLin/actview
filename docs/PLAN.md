@@ -89,12 +89,19 @@
     - 顺带修复：patch 复用分支检测实例活性（`isActive`），失效实例（如 Suspense fallback 替换后）重建而非复用
 11. ~~**`ref` 模板引用**~~ ✅（本次提交，verify 场景 15）
     - 已实现：`props.ref`（函数或 `{ value }`）挂载时指向 DOM（元素）/ 组件实例，卸载时置 null
-12. **attribute fallthrough 阶段 2：Vue options 形态**（📋 设计见 docs/attr-fallthrough.md，阶段 1 已完成）
+12. ~~**attribute fallthrough 阶段 2：Vue options 形态**~~ ✅ 已实施
     - `defineComponent` 支持对象参数 `{ props: [...], setup(props, ctx) }`；函数形态归一化为「props 白名单为空」
     - props 白名单分离：setup 只收白名单内属性，其余进 `ctx.attrs`（暴露 `$attrs`）
     - fallthrough 细化：白名单内属性不透传；白名单外全量透传（class/style 合并、显式优先）
     - `inheritAttrs: false` 支持
     - 函数形态兼容策略：保持「props 全量 + 全量 fallthrough」（向后兼容，建议）
+
+### 阶段五：性能（P3，已完成）
+
+13. ~~**P0 运行时短路**~~ ✅：`patchProps` 值比较跳过 / `patchVNode` props 引用短路 / `patchChildren` children 引用短路（详情见 `docs/perf-optimization.md`）
+14. ~~**v-memo 指令**~~ ✅：行级显式依赖短路——deps 未变整棵子树复用（jsxFactory 从 props 提取 + renderer `sameMemoDeps`，babel 零改动）
+15. ~~**`<solid>` 双模细粒度**~~ ✅：热点区域编译为 DOM 直连 effect + `mapArray` 项级 keyed 复用（公共前后缀跳过 + LIS 最小移动 + 顺序未变零移动）；benchmark 高亮 20.8 → 9.9（追平 Vue 8.6）
+    - 二期候选：块内 createSelector 等价物（高亮只通知翻转行）；动态 class 的 classList 细分
 
 ### 阶段四：工程化（P2-P3）
 
@@ -104,30 +111,3 @@
 
 ---
 
-## 完成记录
-
-| 日期 | 项 | 说明 |
-|---|---|---|
-| 提交 d413312 | 数组方法 instrumentation | 惰性深层代理 + 数组代理；`push/pop/shift/unshift/splice/sort/reverse` 与索引赋值触发更新；verify 场景 6 |
-| 提交 34a8729 | for...in / 'in' 响应 | `ITERATE_KEY` + `has`/`ownKeys` 陷阱，增删 key 触发；verify 场景 7 |
-| 提交 6f892fd | markRaw / readonly / shallowReactive | 只代理普通对象/数组（Date/Map/Set 不代理）；verify 场景 8 |
-| 提交 caa6931 | 受控 input 光标保位 | `setInputValue` 记录/恢复 `selectionStart/End`；verify 场景 9 |
-| 提交 53b4af6 | 调度批处理 + nextTick | `queueJob` 微任务去重；`ReactiveEffect.scheduler/active`；`nextTick(cb?)`；verify 场景 10 |
-| 本次提交 | LIS 最小移动 diff | `getSequence`（贪心+二分+前驱回溯）定位不动节点，仅移动非 LIS 节点；verify 场景 2 增强（insertBefore 次数断言） |
-| 本次提交 | 事件系统升级 | `patchEvent` + invoker 缓存（`el._vei`）；`onClickCapture` 支持 capture；handler 更新不重绑、null 解绑；verify 场景 11 |
-| 本次提交 | 生命周期钩子 + computed/ref/watch | `onMounted`/`onUpdated`/`onBeforeUnmount`（currentInstance 上下文）；`computed`（脏标记惰性缓存）；`ref`/`isRef`/`unref`；`watch`（immediate/cleanup/stop）；verify 场景 12、13 |
-| 本次提交 | 插槽 / 动态组件 / keep-alive | 默认+作用域插槽；`<component is>`；`KeepAlive`（隐藏容器缓存 + 实例复用）；修复 replace 不卸载旧组件的泄漏；verify 场景 14 |
-| 本次提交 | 错误边界 / Suspense / lazy / ref | `ErrorBoundary`（栈注册 + fallback）；`Suspense`+`lazy` 异步组件；`props.ref` 模板引用；修复复用分支对失效实例重建；verify 场景 15 |
-| 本次提交 | 类型泛型化 | `ComponentType<P>`/`PropsOf` props 推导；jsx 工厂泛型重载（标签→IntrinsicElements、组件→props、Fragment）；camelCase 事件类型（`onClick` 等 + capture）；verify 场景 16（@ts-expect-error 编译期反向断言） |
-| 提交 c7e6c6e | 修复 effect 内修改数组爆栈 | `pauseTracking`/`resetTracking`（数组修改方法暂停收集）；`ReactiveEffect.run()` 重入保护 + `shouldTrack` 恢复；verify 场景 17 |
-| 提交 e060ebf | 修复同索引 diff 文本错位 + Fragment 文本索引偏移 | vnode 级 children 缓存（`__avChildren`），文本 vnode 的 el 跨 diff 持久化，不再用 `childNodes[index]` 猜测；verify 场景 18 |
-| 本次提交 | 修复空文本节点残留 | 空文本不创建节点、patch 置空移除旧节点、恢复时按锚点重建；verify 场景 19 |
-| 本次提交 | 具名插槽 | Babel 插件 `<template slot="name">` 编译期转 `slots` prop（支持作用域参数）；verify 场景 20 |
-| 本次提交 | EffectScope 自动停止 | 组件实例持 scope，setup 期间 watch/computed/render effect 注册，卸载时统一停止；verify 场景 21 |
-| 本次提交 | 修复生命周期钩子内改响应式无限循环 | 钩子触发统一 `invokeHooks` + `pauseTracking`（对齐 Vue 3 post 队列语义）；LifecyclePage 重构（普通变量计数 + tick 渲染时钟）；verify 场景 12 回归 |
-| 本次提交 | attribute fallthrough 阶段 1（全量透传） | `mergeAttrsToRoot`：render 后把外部 props（attrs）合并到单根元素（class 拼接、其余根元素显式优先、事件透传、Fragment 多根/内置组件不透传）；解决 `<Content class="vp-doc" />` 丢 class；verify 场景 27（8 用例）；阶段 2 见「阶段三 12」 |
-| 本次提交 | scoped CSS（新包 `@actview/plugin-scoped`，v0.2.0 重构） | 纯编译期 scoped：`import './x.css?scoped'` 自动触发文件级注入 `data-v-md5(路径)前8位`（源码 JSX 与 `_jsx()` 双形态、整文件所有元素、`<template slot>` 插槽内容额外 `-s` 属性、多 css 多 hash、`_jsx('div', null)` 也注入）+ PostCSS 变换（移植 Vue `pluginScoped.ts`：`:deep`/`:slotted`/`:global`、keyframes 重命名）；CSS/JSX 同源 hash（经 Vite resolver，alias 兼容）；零运行时成本、`renderToString` 兼容；css.test 17 + babel.test 13 + scripts/scoped.test 5 用例。**已知限制**：文件级语义下同文件所有组件都带 hash（跨文件组件不受影响）；`:slotted()` 仅同文件内有效（纯编译期无运行时 scope 传递）；useScoped API 已移除（breaking，v0.1.0 → v0.2.0） |
-| 本次提交 | 插件包拆分与改名 | `@actview/plugin` → 拆分：`@actview/babel-plugin-actview`（v0.1.0，defineComponent 编译核心 + 测试独立）+ `@actview/plugin-vite`（v1.0.11 继承版本，薄壳 vite 插件依赖 babel 包）；旧 `@actview/plugin`（v1.0.12）转 deprecated 兼容 re-export；release.mjs 发布顺序 babel → vite → plugin；vite.config/文档/README 全量更新；产物与改名前一致（179 用例三绿） |
-| 本次提交 | Babel 支持三元/`&&` return | babel-plugin-actview 的 `isRenderExpr`：结尾与早退 return 识别 ConditionalExpression/LogicalExpression（任一分支含 JSX/_jsx，null 分支不单独触发），`return cond ? <Comp/> : null` 不再裸函数崩溃（React 惯例单根写法 → fallthrough 正常）；非渲染三元/`p.v ?? null`/`a && null` 不误转；babel.test +10、verify +1（190 用例三绿） |
-| 本次提交 | 透传机制档 2（完整 Vue 对齐） | `defineComponent({ props, setup(props, ctx), inheritAttrs? })` options 形态；props 白名单分离（声明内 → setup.props、声明外 → ctx.attrs）；mergeAttrsToRoot 移除白名单改**全量透传**（值类型过滤：string/number/boolean/style 对象/on* 透传，数组/函数/对象跳过）；函数形态兼容策略（props=attrs=全量）；inheritAttrs: false；更新链路 patchComponent 同步拆分 attrs（propsChanged || attrsChanged 触发 update，修复 attrs-only 更新）；SSR setup 传空 ctx.attrs（options 形态不崩）；**data-v-\* 全量透传落子 root = 子组件 root 继承父 scopeId（scoped 跨文件 root 样式生效）**；verify 场景 27 +7（197 用例三绿）；差异点（事件显式优先/值类型过滤/根字符串 style 保留）文档化 |
-| 本次提交 | 修复 plugin-scoped node_modules 硬跳过（v0.2.1） | jsx 子插件不再按路径跳过 node_modules：源码分发的主题/库包（actpress 主题等）发布在 node_modules 下也会合法 `import '...css?scoped'`，原硬跳过导致「CSS 已 scoped 化但元素无属性」→ 主题样式全失效；`?scoped` 快速跳过对全部文件安全（不命中即返回 null，性能不受影响）；vite-plugin 层新增 5 用例锁定（node_modules 注入 / 无 ?scoped 返回 null / CSS 侧一致 / 两侧 hash 一致）（210 用例三绿） |

@@ -1,6 +1,6 @@
 # 测试说明 — actview 测试覆盖与后续计划
 
-> 本文档说明 actview 的测试体系：`scripts/verify.test.tsx`（框架自研场景）+ `scripts/actview.test.tsx`（Vue 3 迁移用例），以及**后续待执行的测试计划**。
+> 本文档说明 actview 的测试体系：`scripts/verify.test.tsx`（框架自研场景）+ `scripts/actview.test.tsx`（Vue 3 迁移用例）+ 插件层测试（babel / scoped / vite-plugin）+ 性能机制测试（`scripts/vmemo.test.tsx` / `scripts/solid.test.tsx`），以及**后续待执行的测试计划**。
 > 原 `scripts/verify.mjs` + `verify-entry.tsx`（手写 DOM stub）已迁移到 vitest，场景保留为用例。
 
 ---
@@ -19,7 +19,7 @@
 pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
 ```
 
-当前共 **81 个用例**（verify 36 + actview 迁移 45），全部通过时退出码为 0。
+当前共 **231 个用例 / 13 个测试文件**，全部通过时退出码为 0（`pnpm test`）。构成：verify 自研场景 + actview 迁移用例 + babel 插件编译用例（33）+ scoped 用例 + vite-plugin 用例 + `vmemo`（3）+ `solid`（6）。
 
 ---
 
