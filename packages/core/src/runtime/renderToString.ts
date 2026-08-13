@@ -115,10 +115,17 @@ function serializeNode(node: any): string {
     // 用轻量 instance（带钩子空数组即可注册），钩子注册后**不 flush**
     // （SSR/静态生成语义：setup + render，不执行 DOM 钩子，与 Vue SSR 一致）。
     const ssrInstance = {
+      beforeMount: [] as (() => void)[],
       mounted: [] as (() => void)[],
       updated: [] as (() => void)[],
       beforeUnmount: [] as (() => void)[],
       unmounted: [] as (() => void)[],
+      activated: [] as (() => void)[],
+      deactivated: [] as (() => void)[],
+      errorCaptured: [] as ((err: any) => boolean | void)[],
+      serverPrefetch: [] as (() => Promise<any> | any)[],
+      renderTracked: [] as ((e: any) => void)[],
+      renderTriggered: [] as ((e: any) => void)[],
       scope: null,
       parent: null,
       injects: {} as Record<string, any>,
@@ -136,6 +143,8 @@ function serializeNode(node: any): string {
     } finally {
       setCurrentInstance(null)
     }
+    // onServerPrefetch：SSR 阶段同步执行预取钩子（异步 Promise 无法等待，尽力而为）
+    for (const hook of ssrInstance.serverPrefetch) hook()
     if (typeof render === 'function') {
       return serializeNode(render())
     }

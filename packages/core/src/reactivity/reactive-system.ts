@@ -49,6 +49,8 @@ export class ReactiveEffect {
   active = true
   /** 可选的调度器：设置后 trigger 不再同步 run，而是调用 scheduler */
   scheduler?: (effect: ReactiveEffect) => void
+  /** 关联的组件实例（调试钩子 onRenderTracked / onRenderTriggered 用） */
+  instance?: any
   private fn: () => void
   /** 重入保护：run() 执行中再次被 trigger 直接跳过（防止 effect 内修改自身依赖爆栈） */
   private _running = false
@@ -116,6 +118,11 @@ export function resetTracking() {
 
 export function track(target: object, key: any) {
   if (!activeEffect || !shouldTrack) return
+  // 调试钩子：render effect 依赖收集时触发
+  const inst = activeEffect.instance
+  if (inst && inst.renderTracked && inst.renderTracked.length) {
+    for (const hook of inst.renderTracked) hook({ target, key })
+  }
   let depsMap = targetMap.get(target)
 
   if (!depsMap) {
@@ -143,6 +150,11 @@ export function trigger(target: object, key: any) {
   if (!dep) return
   const effects = new Set(dep)
   effects.forEach((effect) => {
+    // 调试钩子：依赖触发 render effect 时触发
+    const inst = effect.instance
+    if (inst && inst.renderTriggered && inst.renderTriggered.length) {
+      for (const hook of inst.renderTriggered) hook({ target, key })
+    }
     // 有 scheduler 的 effect（如组件更新）走调度，否则同步执行
     if (effect.scheduler) effect.scheduler(effect)
     else effect.run()
@@ -151,10 +163,13 @@ export function trigger(target: object, key: any) {
 
 export interface RunEffectOptions {
   scheduler?: (effect: ReactiveEffect) => void
+  /** 关联的组件实例（onRenderTracked / onRenderTriggered 调试钩子用） */
+  instance?: any
 }
 
 export function runEffect(fn: () => void, options?: RunEffectOptions) {
   const _effect = new ReactiveEffect(fn, options?.scheduler)
+  _effect.instance = options?.instance
   // 首次立即同步执行（挂载渲染）；后续更新由 scheduler 调度
   _effect.run()
   return _effect

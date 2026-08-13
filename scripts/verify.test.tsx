@@ -1443,7 +1443,7 @@ describe('场景 23：Teleport / Transition', () => {
     function App() {
       return (
         <div id="t-tr">
-          <Transition name="fade">
+          <Transition name="fade" appear>
             {state.show ? <div class="tr-box">进入</div> : null}
           </Transition>
         </div>
@@ -1470,7 +1470,7 @@ describe('场景 23：Teleport / Transition', () => {
     function App() {
       return (
         <div id="t-tr-d">
-          <Transition name="fade" duration={300}>
+          <Transition name="fade" duration={300} appear>
             {state.show ? <div class="tr-box-d">进入</div> : null}
           </Transition>
         </div>

@@ -182,7 +182,8 @@ export default function defineComponentPlugin() {
         if (!/^[A-Z]/.test(name)) return
 
         // ---------- 2. 包装为 defineComponent（含 setup 风格 / 具名插槽） ----------
-        const fn = t.functionExpression(null, node.params, node.body, false, false)
+        // 保留组件名（node.id）：defineComponent 产物存 name，KeepAlive include/exclude 用
+        const fn = t.functionExpression(node.id, node.params, node.body, false, false)
         const wrapped = wrapComponentFn(fn)
         if (!wrapped) return
         const call = wrapped

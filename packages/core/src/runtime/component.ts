@@ -14,10 +14,13 @@ export interface SetupContext {
 /** options 形态的组件定义 */
 export interface ComponentOptions<Props = Record<string, any>> {
   setup: (props: Props, ctx: SetupContext) => any
+  /** 组件名（KeepAlive include/exclude、DevTools 等用） */
+  name?: string
 }
 
 type ComponentOptionsResult<Props> = {
   __setup: (props: Props, ctx: SetupContext) => any
+  name?: string
 } & ((props: Props & Record<string, any>) => any)
 
 /**
@@ -40,7 +43,11 @@ export function defineComponent<Setup extends (...args: any[]) => any>(
 
 export function defineComponent(opt: any) {
   if (typeof opt === 'function') {
-    return { __setup: opt }
+    const out: any = { __setup: opt }
+    if (opt.name) out.name = opt.name
+    return out
   }
-  return { __setup: opt.setup }
+  const out: any = { __setup: opt.setup }
+  if (opt.name) out.name = opt.name
+  return out
 }

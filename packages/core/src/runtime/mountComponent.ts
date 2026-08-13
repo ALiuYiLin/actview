@@ -17,6 +17,7 @@ import {
 } from '../reactivity/reactive-system'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
+import { getCurrentSuspense } from './suspense'
 import { EffectScope } from '../reactivity/effectScope'
 import type { VNode } from '../vnode'
 
@@ -45,7 +46,7 @@ export interface RendererDeps {
  * 写时触发自身 =》 无限循环。Vue 3 的钩子在 post 队列执行（activeEffect 为 null）
  * 天然无此问题 —— 这里用 pauseTracking 对齐该语义。
  */
-function invokeHooks(hooks: (() => void)[]) {
+export function invokeHooks(hooks: (() => void)[]) {
   if (!hooks.length) return
   pauseTracking()
   try {
@@ -64,7 +65,7 @@ export interface ComponentInstance {
   parent: ComponentInstance | null
   /** 注入表：未调用 provide 时共享父引用（零拷贝）；首次 provide 时 copy-on-write */
   injects: Record<string, any>
-  render: () => VNode
+  render: () => any
   subTree: VNode | null
   update: () => void
   unmount: () => void
@@ -77,10 +78,39 @@ export interface ComponentInstance {
   /** 组件 effect scope：setup 期间的 watch/computed/render effect 注册于此，卸载时统一停止 */
   scope: EffectScope
   /** 生命周期钩子数组（setup 执行期间注册） */
+  beforeMount: (() => void)[]
   mounted: (() => void)[]
   updated: (() => void)[]
   beforeUnmount: (() => void)[]
   unmounted: (() => void)[]
+  activated: (() => void)[]
+  deactivated: (() => void)[]
+  errorCaptured: ((err: any) => boolean | void)[]
+  serverPrefetch: (() => Promise<any> | any)[]
+  renderTracked: ((e: any) => void)[]
+  renderTriggered: ((e: any) => void)[]
+}
+
+/** 沿组件树向上处理渲染错误：先走 onErrorCaptured，再交给 ErrorBoundary */
+export function handleError(instance: ComponentInstance, err: any) {
+  let cur: ComponentInstance | null = instance
+  while (cur) {
+    const hooks = cur.errorCaptured
+    if (hooks && hooks.length) {
+      for (const hook of hooks) {
+        const result = hook(err)
+        if (result === false) return // 已处理，停止向上传播
+      }
+    }
+    cur = cur.parent
+  }
+  const boundary = getErrorBoundary()
+  if (boundary && boundary.errorRef?.value == null) {
+    boundary.errorRef.value = err
+    boundary.update?.()
+  } else {
+    console.error('[actview] 组件渲染错误:', err)
+  }
 }
 
 /** 挂载组件 VNode：实例化并建立响应式更新 effect（deps 由 renderer 注入） */
@@ -109,7 +139,7 @@ export function mountComponent(
     props,
     parent: parentInstance ?? null,
     injects: parentInstance?.injects ?? {},
-    render: null as unknown as () => VNode,
+    render: null as unknown as () => any,
     subTree: null,
     update: () => {},
     unmount: () => {},
@@ -117,10 +147,17 @@ export function mountComponent(
     container: container as Element | null,
     isActive: () => false,
     scope: new EffectScope(),
+    beforeMount: [],
     mounted: [],
     updated: [],
     beforeUnmount: [],
-    unmounted: []
+    unmounted: [],
+    activated: [],
+    deactivated: [],
+    errorCaptured: [],
+    serverPrefetch: [],
+    renderTracked: [],
+    renderTriggered: []
   }
   vnode.component = instance
 
@@ -130,7 +167,7 @@ export function mountComponent(
   // setup 执行期间挂载 currentInstance 上下文：
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
   setCurrentInstance(instance)
-  instance.render = options.__setup(props, {
+  const setupResult = options.__setup(props, {
     // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
     // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
     get injects() {
@@ -138,6 +175,20 @@ export function mountComponent(
     }
   })
   setCurrentInstance(null)
+
+  if (setupResult && typeof setupResult.then === 'function') {
+    // 异步 setup（返回 Promise<render>）：向最近 Suspense 注册，占位渲染 null
+    const suspense = getCurrentSuspense()
+    suspense?.suspenseCtx?.register()
+    instance.render = () => null
+    setupResult.then((render: any) => {
+      instance.render = render
+      suspense?.suspenseCtx?.resolve()
+      instance.update()
+    })
+  } else {
+    instance.render = setupResult
+  }
 
   // 更新函数：重新 render 并与旧子树 patch
   const update = () => {
@@ -156,22 +207,19 @@ export function mountComponent(
         instance.isMounted = true
       }
     } catch (err) {
-      // 渲染错误：交给最近的 ErrorBoundary（显示 fallback）
-      const boundary = getErrorBoundary()
-      if (boundary && boundary.errorRef?.value == null) {
-        boundary.errorRef.value = err
-        boundary.update?.()
-      } else {
-        console.error('[actview] 组件渲染错误:', err)
-      }
+      // 渲染错误：沿组件树走 onErrorCaptured，再交给 ErrorBoundary
+      handleError(instance, err)
     }
   }
+
+  // 首次挂载前触发 onBeforeMount（首次 render 之前）
+  invokeHooks(instance.beforeMount)
 
   // runEffect 立即执行首次挂载（同步渲染）；之后响应式变化经 scheduler
   // 入微任务队列去重批量更新（调度批处理）
   // render effect 注册进组件 scope，随组件卸载自动停止
   const effect = instance.scope.run(() =>
-    runEffect(update, { scheduler: queueJob })
+    runEffect(update, { scheduler: queueJob, instance })
   )
 
   // 首次渲染已完成（DOM 已挂载）→ 触发 onMounted

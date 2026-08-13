@@ -19,6 +19,8 @@ import { ref } from '../reactivity/ref'
 // ============================================================
 
 const suspenseStack: any[] = []
+const Fragment = Symbol.for('react.fragment')
+const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 
 export function pushSuspense(instance: any) {
   suspenseStack.push(instance)
@@ -30,7 +32,7 @@ export function popSuspense(instance: any) {
 }
 
 /** 返回最近的 Suspense 实例（栈顶），没有则 null */
-function getCurrentSuspense(): any {
+export function getCurrentSuspense(): any {
   return suspenseStack.length ? suspenseStack[suspenseStack.length - 1] : null
 }
 
@@ -49,10 +51,34 @@ export const Suspense = defineComponent(function (props: any) {
   pushSuspense(self)
   onBeforeUnmount(() => popSuspense(self))
 
-  return () => (pending.value ? (props.fallback ?? null) : props.children)
+  // children 始终挂载（pending 时 display:none 隐藏，不卸载），
+  // fallback 在 pending 时追加显示 —— 避免异步组件被卸载重挂导致 setup 反复执行
+  return () => {
+    const children = props.children
+    if (children == null) return pending.value ? (props.fallback ?? null) : null
+    return {
+      $$typeof: REACT_ELEMENT_TYPE,
+      type: Fragment,
+      key: null,
+      ref: null,
+      props: {
+        children: [
+          {
+            $$typeof: REACT_ELEMENT_TYPE,
+            type: 'div',
+            key: null,
+            ref: null,
+            props: {
+              style: pending.value ? { display: 'none' } : null,
+              children: Array.isArray(children) ? children : [children]
+            }
+          },
+          pending.value ? (props.fallback ?? null) : null
+        ]
+      }
+    }
+  }
 })
-
-const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 
 function createVNode(type: any): any {
   return {

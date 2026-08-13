@@ -1,7 +1,7 @@
 // ============================================================
 // Transition / Teleport — 内置组件
-//   处置决策：Teleport 完整实现（DOM 传送）；Transition 最小可用
-//   （进入/离开过渡类 + transitionend/时长兜底，无 mode/多子节点等高级语义）
+//   Teleport：DOM 传送（完整）
+//   Transition：单子节点进入/离开过渡（增强：mode / appear / JS 钩子）
 //
 // 识别方式：vnode.type 为标记对象（带 __builtin + __setup 形状，
 //   满足 isComponentVNode 的组件判定，但 renderer 在组件分支之前优先
@@ -13,6 +13,7 @@
 // ============================================================
 
 import { getChildren } from '../vnode'
+import { defineComponent } from './component'
 
 /** renderer 注入的 patchChildren（挂载/更新 children 的核心） */
 let _patchChildren: ((...args: any[]) => any[]) | null = null
@@ -92,9 +93,10 @@ export function unmountTeleport(vnode: any) {
 
 // ------------------------------------------------------------
 // Transition：单子节点进入/离开过渡
-//   - 进入：插入 DOM =》 +enter-from/-active =》 rAF×2 =》 +enter-to =》 清理
-//   - 离开：+leave-from/-active =》 rAF×2 =》 +leave-to =》 transitionend/时长兜底 =》 移除 DOM
-//   - 无过渡时长（transitionDuration 为 0s，含 happy-dom/无样式场景）=》 立即完成
+//   - CSS 类模式：+enter-from/-active → rAF×2 → +enter-to → 清理
+//   - JS 钩子模式：onBeforeEnter/onEnter(done)/onAfterEnter（替代 CSS 类）
+//   - mode="out-in"：旧节点离开动画完成后新节点再进入
+//   - appear：首次挂载也播放进入动画（默认不播放，对齐 Vue）
 // ------------------------------------------------------------
 
 export const Transition = /* @__PURE__ */ {
@@ -107,16 +109,6 @@ function getTransitionDuration(el: Element): number {
   const s = window.getComputedStyle(el)
   const d = parseFloat(s.transitionDuration || '0')
   return isNaN(d) ? 0 : d
-}
-
-/**
- * 生效时长（毫秒）：优先 props.duration（显式，Vue 的 :duration 语义），
- * 否则读 CSS transition 时长；0 = 无过渡 =》 立即完成
- */
-function resolveDuration(props: any): number {
-  const explicit = props?.duration
-  if (typeof explicit === 'number' && explicit >= 0) return explicit
-  return 0
 }
 
 /** 双 rAF（Vue 同款：确保 enter-from 类生效后再切到 enter-to） */
@@ -151,14 +143,20 @@ function removeClass(el: Element, ...names: string[]) {
   for (const n of names) el.classList.remove(n)
 }
 
-/** 播放进入动画（fire-and-forget） */
-export function playEnter(el: Element, name: string, duration?: number) {
-  const base = name || 'v'
+/** 播放进入动画：JS 钩子优先，否则 CSS 类 */
+function playEnter(el: Element, props: any) {
+  const p = props || {}
+  if (p.onEnter) {
+    p.onBeforeEnter?.(el)
+    p.onEnter(el, () => p.onAfterEnter?.(el))
+    return
+  }
+  const base = p.name || 'v'
   addClass(el, `${base}-enter-from`, `${base}-enter-active`)
   doubleRaf().then(() => {
     removeClass(el, `${base}-enter-from`)
     addClass(el, `${base}-enter-to`)
-    const ms = duration ?? getTransitionDuration(el) * 1000
+    const ms = p.duration ?? getTransitionDuration(el) * 1000
     waitForEnd(el, ms, () => {
       removeClass(el, `${base}-enter-to`, `${base}-enter-active`)
     })
@@ -166,24 +164,50 @@ export function playEnter(el: Element, name: string, duration?: number) {
 }
 
 /** 播放离开动画，结束后回调（onDone 里执行真实卸载） */
-export function playLeave(
-  el: Element,
-  name: string,
-  duration: number,
-  onDone: () => void
-) {
-  const base = name || 'v'
+export function playLeave(el: Element, props: any, onDone: () => void) {
+  const p = props || {}
+  if (p.onLeave) {
+    p.onBeforeLeave?.(el)
+    p.onLeave(el, () => {
+      p.onAfterLeave?.(el)
+      onDone()
+    })
+    return
+  }
+  const base = p.name || 'v'
+  const ms = p.duration ?? getTransitionDuration(el) * 1000
   addClass(el, `${base}-leave-from`, `${base}-leave-active`)
   doubleRaf().then(() => {
     removeClass(el, `${base}-leave-from`)
     addClass(el, `${base}-leave-to`)
-    waitForEnd(el, duration, onDone)
+    waitForEnd(el, ms, onDone)
   })
 }
 
+/** 让全部旧子节点播放离开动画，全部结束后回调（out-in 模式用） */
+function leaveAll(
+  oldChildren: any[],
+  props: any,
+  onAllDone: () => void
+) {
+  const pending: Element[] = []
+  for (const oc of oldChildren) {
+    const el = oc?.el
+    if (el && el.parentNode) {
+      pending.push(el)
+      playLeave(el, props, () => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+        const i = pending.indexOf(el)
+        if (i >= 0) pending.splice(i, 1)
+        if (pending.length === 0) onAllDone()
+      })
+    }
+  }
+  if (pending.length === 0) onAllDone()
+}
+
 /**
- * 挂载 Transition：挂载单子节点 + 进入动画
- * 返回被挂载的子 vnode（供后续 leave 拦截）
+ * 挂载 Transition：挂载单子节点；appear 才播放进入动画（Vue 语义）
  */
 export function mountTransition(vnode: any, container: Element | null, parent?: any) {
   const children = normalizeSingle(getChildren(vnode))
@@ -192,15 +216,14 @@ export function mountTransition(vnode: any, container: Element | null, parent?: 
   const child = toVNodeSafe(children)
   patchChildrenSafe(null, [child], container, undefined, parent)
   const el = child?.el
-  if (el) playEnter(el, vnode.props?.name, resolveDuration(vnode.props))
+  if (el && vnode.props?.appear) playEnter(el, vnode.props)
   vnode.__avChildren = [child]
   return null
 }
 
 /**
  * 更新 Transition：子节点变化时旧节点播 leave（延迟卸载）+ 新节点进入。
- * 注意：此处不调用通用 unmount（会同步删 DOM），旧节点 DOM 由
- * leave 完成后移除；组件树整体卸载时（unmountTransition）直接卸载。
+ * mode="out-in"：旧节点离开动画完成后新节点再进入。
  */
 export function patchTransition(
   oldVnode: any,
@@ -208,38 +231,36 @@ export function patchTransition(
   container: Element | null,
   parent?: any
 ) {
-  const name = newVnode.props?.name
+  const props = newVnode.props
   const oldChildren = oldVnode.__avChildren ?? []
   const newChildren = normalizeSingle(getChildren(newVnode))
   newVnode.el = null
   newVnode.__avChildren = []
+
   if (newChildren == null) {
     // 子节点被移除：旧节点播 leave 后卸载
-    for (const oc of oldChildren) {
-      const el = oc?.el
-      if (el && el.parentNode) {
-        playLeave(el, name, resolveDuration(newVnode.props), () => {
-          if (el.parentNode) el.parentNode.removeChild(el)
-        })
-      }
-    }
+    leaveAll(oldChildren, props, () => {})
     return
   }
+
   const newChild = toVNodeSafe(newChildren)
-  patchChildrenSafe(null, [newChild], container, undefined, parent)
-  const newEl = newChild?.el
-  if (newEl) playEnter(newEl, name, resolveDuration(newVnode.props))
-  newVnode.__avChildren = [newChild]
-  // 旧节点：与新的不是同一节点 =》 播 leave 延迟卸载
-  for (const oc of oldChildren) {
-    if (oc === newChild || oc?.el === newEl) continue
-    const el = oc?.el
-    if (el && el.parentNode) {
-      playLeave(el, name, resolveDuration(newVnode.props), () => {
-        if (el.parentNode) el.parentNode.removeChild(el)
-      })
-    }
+
+  const mountNew = () => {
+    patchChildrenSafe(null, [newChild], container, undefined, parent)
+    const newEl = newChild?.el
+    if (newEl) playEnter(newEl, props)
+    newVnode.__avChildren = [newChild]
   }
+
+  if (props?.mode === 'out-in') {
+    // 先离开旧，全部完成后进入新
+    leaveAll(oldChildren, props, mountNew)
+    return
+  }
+
+  // 默认 / in-out：先进入新，同时离开旧
+  mountNew()
+  leaveAll(oldChildren, props, () => {})
 }
 
 /** 卸载 Transition（组件树整体拆除）：直接卸载子节点，无动画 */
@@ -296,3 +317,34 @@ function patchChildrenSafe(
   }
   return _patchChildren(oldChildren, newChildren, container, oldVnode, parent)
 }
+
+// ------------------------------------------------------------
+// TransitionGroup：列表增删过渡
+//   给列表每一项打 __transitionGroup 标记；renderer 的 unmount 检测到
+//   标记后播放 leave 动画再延迟移除 DOM（列表项删除动画）。
+// ------------------------------------------------------------
+
+const Fragment = Symbol.for('react.fragment')
+
+export const TransitionGroup = defineComponent(function (props: any) {
+  return () => {
+    const children = props.children
+    const list = Array.isArray(children)
+      ? children
+      : children != null && children !== false && children !== true
+        ? [children]
+        : []
+    for (const c of list) {
+      if (c && typeof c === 'object') {
+        c.__transitionGroup = { name: props.name }
+      }
+    }
+    return {
+      $$typeof: Symbol.for('react.element'),
+      type: Fragment,
+      key: null,
+      ref: null,
+      props: { children: list }
+    }
+  }
+})

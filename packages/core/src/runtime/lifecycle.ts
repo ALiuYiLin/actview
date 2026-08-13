@@ -2,8 +2,7 @@ import type { ComponentInstance } from './mountComponent'
 
 // ============================================================
 // 生命周期钩子 — 模块级 currentInstance 上下文
-//   onMounted / onUpdated / onBeforeUnmount 只能在组件 setup 中调用
-//   （setup 执行期间 currentInstance 指向该组件实例）
+//   只能在组件 setup 中调用（setup 执行期间 currentInstance 指向该组件实例）
 //   setCurrentInstance 同时激活/恢复组件的 effect scope：
 //   setup 期间创建的 watch/computed 注册进组件 scope，卸载时自动停止
 // ============================================================
@@ -22,7 +21,18 @@ export function setCurrentInstance(instance: ComponentInstance | null) {
   instance?.scope?.on()
 }
 
-type HookType = 'mounted' | 'updated' | 'beforeUnmount' | 'unmounted'
+type HookType =
+  | 'mounted'
+  | 'updated'
+  | 'beforeMount'
+  | 'beforeUnmount'
+  | 'unmounted'
+  | 'activated'
+  | 'deactivated'
+
+export function onBeforeMount(fn: () => void) {
+  registerHook('beforeMount', fn)
+}
 
 export function onMounted(fn: () => void) {
   registerHook('mounted', fn)
@@ -39,6 +49,52 @@ export function onBeforeUnmount(fn: () => void) {
 /** 卸载完成后触发（beforeUnmount 之后、组件 effect 停止之后；Vue 3 语义） */
 export function onUnmounted(fn: () => void) {
   registerHook('unmounted', fn)
+}
+
+/** KeepAlive 缓存组件被激活时触发（首次挂载后、每次从缓存恢复时） */
+export function onActivated(fn: () => void) {
+  registerHook('activated', fn)
+}
+
+/** KeepAlive 缓存组件被移入缓存（失活）时触发 */
+export function onDeactivated(fn: () => void) {
+  registerHook('deactivated', fn)
+}
+
+/** 捕获子组件渲染错误：返回 false 阻止向上传播（对齐 Vue 3 语义） */
+export function onErrorCaptured(fn: (err: any) => boolean | void) {
+  if (!currentInstance) {
+    console.warn('[actview] onErrorCaptured 只能在组件 setup 中调用')
+    return
+  }
+  currentInstance.errorCaptured.push(fn)
+}
+
+/** SSR 预取：renderToString 阶段执行（异步数据预取），客户端不执行 */
+export function onServerPrefetch(fn: () => Promise<any> | any) {
+  if (!currentInstance) {
+    console.warn('[actview] onServerPrefetch 只能在组件 setup 中调用')
+    return
+  }
+  currentInstance.serverPrefetch.push(fn)
+}
+
+/** 调试：render effect 依赖收集时触发 */
+export function onRenderTracked(fn: (e: any) => void) {
+  if (!currentInstance) {
+    console.warn('[actview] onRenderTracked 只能在组件 setup 中调用')
+    return
+  }
+  currentInstance.renderTracked.push(fn)
+}
+
+/** 调试：render effect 被依赖触发重跑时触发 */
+export function onRenderTriggered(fn: (e: any) => void) {
+  if (!currentInstance) {
+    console.warn('[actview] onRenderTriggered 只能在组件 setup 中调用')
+    return
+  }
+  currentInstance.renderTriggered.push(fn)
 }
 
 function registerHook(type: HookType, fn: () => void) {

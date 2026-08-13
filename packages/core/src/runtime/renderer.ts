@@ -4,7 +4,7 @@
 //   oldVnode 为 null → 挂载；type/key 相同 → 更新；否则替换
 // ============================================================
 
-import { mountComponent } from './mountComponent'
+import { mountComponent, invokeHooks } from './mountComponent'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import {
   mountTeleport,
@@ -13,6 +13,7 @@ import {
   mountTransition,
   patchTransition,
   unmountTransition,
+  playLeave,
   bindPatchChildren
 } from './transition'
 
@@ -758,14 +759,38 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     return
   }
   // keep-alive 缓存：DOM 移入隐藏容器、实例保留（不销毁、不停 effect），
-  // 重新激活时从缓存恢复
+  // 重新激活时从缓存恢复；失活触发 deactivated；超出 max 淘汰最旧
   const keepAlive = vnode.__keepAlive
   if (keepAlive) {
-    const { cache, storage, key } = keepAlive
+    const { cache, storage, key, max } = keepAlive
     const el = vnode.component?.subTree?.el ?? vnode.el
     if (el && el.parentNode) storage.appendChild(el)
     cache.set(key, vnode)
+    invokeHooks(vnode.component?.deactivated)
+    // max LRU 淘汰：超出上限时卸载最旧缓存项
+    if (max != null) {
+      while (cache.size > max) {
+        const oldestKey = cache.keys().next().value
+        const oldest = cache.get(oldestKey)
+        oldest?.component?.unmount?.()
+        cache.delete(oldestKey)
+      }
+    }
     delete vnode.__keepAlive
+    return
+  }
+  // TransitionGroup：列表项删除动画 —— 播放 leave 后延迟卸载
+  const transitionGroup = vnode.__transitionGroup
+  if (transitionGroup) {
+    const el = vnode.component?.subTree?.el ?? vnode.el
+    if (el && el.parentNode) {
+      playLeave(el, transitionGroup, () => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+        vnode.component?.unmount?.()
+      })
+    } else {
+      vnode.component?.unmount?.()
+    }
     return
   }
   // 内置组件：Teleport =》 从目标容器移除；Transition =》 直接卸载子节点（无动画）
