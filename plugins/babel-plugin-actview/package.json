@@ -1,6 +1,6 @@
 {
   "name": "@actview/babel-plugin-actview",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Babel 插件：JSX 组件自动 defineComponent 转换（ActView 编译核心，独立于 Vite 宿主）",
   "exports": {
