@@ -6,6 +6,7 @@
 
 import { mountComponent, invokeHooks } from './mountComponent'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
+import { pauseTracking, resetTracking } from '../reactivity/reactive-system'
 import {
   mountTeleport,
   patchTeleport,
@@ -328,9 +329,10 @@ function patchVNode(
   )
 }
 
-/** 组件更新：props 未变则复用旧实例；变了则更新 props 并手动触发
- *  子组件 update()，完成精确更新（不再整组件卸载重挂）。
- *  props 用普通对象 + 显式调度，避免响应式 track/set 引发的 effect 递归重入 */
+/** 组件更新：props 未变则复用旧实例；变了则更新 props（shallowReactive 代理，
+ *  写入自动触发读取该 prop 的 computed/watch/render effect），并手动触发
+ *  子组件 update() 作为双保险（jobQueue Set 去重，不会双渲染），
+ *  完成精确更新（不再整组件卸载重挂）。 */
 function patchComponent(
   oldVnode: any,
   newVnode: any,
@@ -357,24 +359,35 @@ function patchComponent(
   newVnode.el = instance.subTree ? instance.subTree.el : oldVnode.el
 }
 
-/** 把新 props 增量写入旧 props（跳过 key/ref），返回是否有变化 */
+/**
+ * 把新 props 增量写入旧 props（跳过 key/ref），返回是否有变化。
+ * props 是 shallowReactive 代理：读写期间必须 pauseTracking——
+ * 本函数在父组件渲染 effect 上下文中执行，若读取代理触发 track，
+ * 父 effect 会被污染性地订阅到子组件 props（子 props 写入 → 父重渲染
+ * → 又写子 props → 自激死循环）。写入的 trigger 不受 pauseTracking 影响。
+ */
 export function updateProps(oldProps: any, newProps: any): boolean {
   newProps = newProps || {}
   let changed = false
-  for (const key in newProps) {
-    if (key === 'key' || key === 'ref') continue
-    if (!Object.is(oldProps[key], newProps[key])) {
-      oldProps[key] = newProps[key]
-      changed = true
+  pauseTracking()
+  try {
+    for (const key in newProps) {
+      if (key === 'key' || key === 'ref') continue
+      if (!Object.is(oldProps[key], newProps[key])) {
+        oldProps[key] = newProps[key]
+        changed = true
+      }
     }
-  }
-  // 移除父组件不再传递的 props
-  for (const key in oldProps) {
-    if (key === 'key' || key === 'ref') continue
-    if (!(key in newProps)) {
-      delete oldProps[key]
-      changed = true
+    // 移除父组件不再传递的 props
+    for (const key in oldProps) {
+      if (key === 'key' || key === 'ref') continue
+      if (!(key in newProps)) {
+        delete oldProps[key]
+        changed = true
+      }
     }
+  } finally {
+    resetTracking()
   }
   return changed
 }

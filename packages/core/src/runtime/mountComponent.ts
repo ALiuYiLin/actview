@@ -9,12 +9,8 @@
 // 无自动透传（用户显式 {...props} 选择继承）。
 // ============================================================
 
-import {
-  runEffect,
-  queueJob,
-  pauseTracking,
-  resetTracking
-} from '../reactivity/reactive-system'
+import { shallowReactive } from '../reactivity/reactive'
+import { runEffect, queueJob, pauseTracking, resetTracking } from '../reactivity/reactive-system'
 import { setCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
 import { getCurrentSuspense } from './suspense'
@@ -136,8 +132,11 @@ export function mountComponent(
     throw new Error('[actview] mountComponent: 无效的组件，缺少 __setup')
   }
 
-  // props 全量（key/ref 除外）：普通对象，父组件通过 patchComponent 更新值 + 手动 update()
-  const props = { ...(vnode.props || {}) }
+  // props 全量（key/ref 除外）：shallowReactive 代理（对齐 Vue 3）——
+  // computed(() => props.x) / watch(() => props.x) 可追踪 props 变化；
+  // 父组件 patchComponent → updateProps 写代理触发依赖，自动重算重渲染。
+  // 手动 instance.update() 保留为双保险（jobQueue Set 去重，不双渲染）。
+  const props = shallowReactive({ ...(vnode.props || {}) })
   delete props.ref
   delete props.key
 
@@ -175,15 +174,25 @@ export function mountComponent(
 
   // setup 执行期间挂载 currentInstance 上下文：
   // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
+  // pauseTracking：setup 在父组件渲染 effect 上下文中同步执行（挂载发生在父渲染
+  // 期间），若 setup 内直接读响应式 props（如快照 const），会把父 effect 污染性
+  // 地订阅到本组件 props（写入 → 父重渲染 → 自激循环）。computed/watch 的惰性
+  // 求值在各自 effect.run() 内强制恢复追踪，不受影响（对齐 invokeHooks 语义）。
   setCurrentInstance(instance)
-  const setupResult = options.__setup(props, {
-    // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
-    // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
-    get injects() {
-      return instance.injects
-    }
-  })
-  setCurrentInstance(null)
+  pauseTracking()
+  let setupResult: any
+  try {
+    setupResult = options.__setup(props, {
+      // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
+      // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
+      get injects() {
+        return instance.injects
+      }
+    })
+  } finally {
+    resetTracking()
+    setCurrentInstance(null)
+  }
 
   if (setupResult && typeof setupResult.then === 'function') {
     // 异步 setup（返回 Promise<render>）：向最近 Suspense 注册，占位渲染 null
