@@ -33,8 +33,17 @@ export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
     ? P
     : {}
 
-export type VNodeChild = VNode | string | number | boolean | null | undefined | void
-export type VNodeChildren = VNodeChild | VNodeChild[]
+/** children 递归：允许任意嵌套数组（map/数组变量混入 children 场景） */
+export type VNodeChild =
+  | VNode
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | void
+  | VNodeChild[]
+export type VNodeChildren = VNodeChild
 
 /** 组件 setup 返回的 render 函数类型 */
 export type LazyVNode = () => VNode
@@ -143,22 +152,68 @@ export interface DOMAttributes {
   onInputCapture?: EventHandler<FormEvent>
   onSubmitCapture?: EventHandler<FormEvent>
   onScrollCapture?: EventHandler<Event>
-  // 小写形式（历史兼容）
+  // 小写形式（历史兼容；运行时 parseEventKey 统一 toLowerCase，全量对齐驼峰版）
   onclick?: EventHandler<MouseEvent>
   ondblclick?: EventHandler<MouseEvent>
   onmousedown?: EventHandler<MouseEvent>
   onmouseup?: EventHandler<MouseEvent>
+  onmousemove?: EventHandler<MouseEvent>
+  onmouseenter?: EventHandler<MouseEvent>
+  onmouseleave?: EventHandler<MouseEvent>
   onmouseover?: EventHandler<MouseEvent>
   onmouseout?: EventHandler<MouseEvent>
-  onfocus?: EventHandler<FocusEvent>
-  onblur?: EventHandler<FocusEvent>
+  oncontextmenu?: EventHandler<MouseEvent>
   onkeydown?: EventHandler<KeyboardEvent>
   onkeyup?: EventHandler<KeyboardEvent>
-  onchange?: EventHandler<FormEvent>
+  onkeypress?: EventHandler<KeyboardEvent>
+  onfocus?: EventHandler<FocusEvent>
+  onblur?: EventHandler<FocusEvent>
+  onfocusin?: EventHandler<FocusEvent>
+  onfocusout?: EventHandler<FocusEvent>
   oninput?: EventHandler<FormEvent>
+  onchange?: EventHandler<FormEvent>
   onsubmit?: EventHandler<FormEvent>
+  onreset?: EventHandler<FormEvent>
+  oninvalid?: EventHandler<FormEvent>
   onselect?: EventHandler<FormEvent>
+  onsearch?: EventHandler<FormEvent>
+  oncopy?: EventHandler<ClipboardEvent>
+  oncut?: EventHandler<ClipboardEvent>
+  onpaste?: EventHandler<ClipboardEvent>
+  ondrag?: EventHandler<DragEvent>
+  ondragstart?: EventHandler<DragEvent>
+  ondragend?: EventHandler<DragEvent>
+  ondragover?: EventHandler<DragEvent>
+  ondragenter?: EventHandler<DragEvent>
+  ondragleave?: EventHandler<DragEvent>
+  ondrop?: EventHandler<DragEvent>
+  onpointerdown?: EventHandler<PointerEvent>
+  onpointerup?: EventHandler<PointerEvent>
+  onpointermove?: EventHandler<PointerEvent>
+  onpointerenter?: EventHandler<PointerEvent>
+  onpointerleave?: EventHandler<PointerEvent>
+  ontouchstart?: EventHandler<TouchEvent>
+  ontouchend?: EventHandler<TouchEvent>
+  ontouchmove?: EventHandler<TouchEvent>
+  ontouchcancel?: EventHandler<TouchEvent>
   onscroll?: EventHandler<Event>
+  onwheel?: EventHandler<WheelEvent>
+  onload?: EventHandler<Event>
+  onerror?: EventHandler<Event>
+  onabort?: EventHandler<Event>
+  oncanplay?: EventHandler<Event>
+  onended?: EventHandler<Event>
+  onloadeddata?: EventHandler<Event>
+  onpause?: EventHandler<Event>
+  onplay?: EventHandler<Event>
+  onplaying?: EventHandler<Event>
+  onprogress?: EventHandler<Event>
+  ontimeupdate?: EventHandler<Event>
+  onvolumechange?: EventHandler<Event>
+  onwaiting?: EventHandler<Event>
+  onanimationstart?: EventHandler<AnimationEvent>
+  onanimationend?: EventHandler<AnimationEvent>
+  ontransitionend?: EventHandler<TransitionEvent>
 }
 
 // ============================================================
@@ -188,9 +243,19 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   hidden?: boolean
   draggable?: boolean | 'true' | 'false'
   tabIndex?: number
+  /** 小写别名（HTML 属性名；运行时 setProp 按 attribute 原样设置） */
+  tabindex?: number | string
   accessKey?: string
   contentEditable?: boolean | 'true' | 'false' | 'plaintext-only'
   spellCheck?: boolean
+  /** 全局属性 autocapitalize（HTML 小写） */
+  autocapitalize?: string
+  /** Safari 私有属性（HTML 小写） */
+  autocorrect?: string
+  /** 虚拟键盘动作提示（HTML 小写属性） */
+  enterkeyhint?: string
+  /** 小写别名（HTML 属性名） */
+  spellcheck?: boolean | string
   role?: string
   slot?: string
   translate?: 'yes' | 'no'
@@ -260,6 +325,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   maxLength?: number
   autoFocus?: boolean
   autoComplete?: string
+  /** 小写别名（HTML 属性名） */
+  autocomplete?: string
   pattern?: string
   size?: number
 }
@@ -315,6 +382,8 @@ export interface FormHTMLAttributes extends HTMLAttributes {
 
 export interface LabelHTMLAttributes extends HTMLAttributes {
   htmlFor?: string
+  /** 小写别名（HTML 属性名） */
+  for?: string
   form?: string
 }
 
@@ -399,6 +468,8 @@ export interface MeterHTMLAttributes extends HTMLAttributes {
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
   dateTime?: string
+  /** 小写别名（HTML 属性名） */
+  datetime?: string
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
