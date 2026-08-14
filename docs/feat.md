@@ -59,6 +59,6 @@
 
 ## 构建期与工程
 - `@actview/plugin-vite`：Vite 插件（defineComponent 转换接入）
-- `@actview/babel-plugin-actview`：组件自动 defineComponent 转换 + 具名插槽 + 组件名传递
+- `@actview/plugin-babel`：组件自动 defineComponent 转换 + 具名插槽 + 组件名传递
 - `@actview/plugin-scoped`：scoped CSS（`data-v` 哈希 + `:deep`/`:slotted`/`:global`）
 - TypeScript 支持（tsup 构建、d.ts 导出）

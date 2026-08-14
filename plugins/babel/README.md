@@ -1,4 +1,6 @@
-# @actview/babel-plugin-actview
+# @actview/plugin-babel
+
+> **迁移记录**：本包原为 `@actview/babel-plugin-actview`（目录 `plugins/babel-plugin-actview`），现更名为 `@actview/plugin-babel`（目录 `plugins/babel`），与 `@actview/plugin-vite` / `@actview/plugin-scoped` 统一为 `@actview/plugin-*` 命名。旧包名已弃用，请使用新包名安装与引用。
 
 **ActView 编译核心（Babel 插件）** —— 把 JSX 组件函数自动转换为 `defineComponent`，独立于 Vite 宿主。
 
@@ -17,13 +19,13 @@ Babel 插件 `defineComponentPlugin` 是 ActView 编译链的**核心**：将大
 ## 安装
 
 ```bash
-pnpm add -D @actview/babel-plugin-actview
+pnpm add -D @actview/plugin-babel
 ```
 
 ## 快速开始
 
 ```ts
-import { defineComponentPlugin } from '@actview/babel-plugin-actview'
+import { defineComponentPlugin } from '@actview/plugin-babel'
 import * as babel from '@babel/core'
 
 const result = babel.transformSync(code, {

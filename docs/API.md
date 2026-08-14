@@ -152,7 +152,7 @@
 
 ---
 
-## 六、工程化（@actview/plugin-vite + @actview/babel-plugin-actview）
+## 六、工程化（@actview/plugin-vite + @actview/plugin-babel）
 
 | 能力 | 说明 |
 |---|---|

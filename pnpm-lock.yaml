@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@actview/babel-plugin-actview':
-        specifier: workspace:*
-        version: link:plugins/babel-plugin-actview
       '@actview/core':
         specifier: workspace:*
         version: link:packages/core
@@ -20,12 +17,15 @@ importers:
       '@actview/jsx':
         specifier: workspace:*
         version: link:packages/jsx
+      '@actview/plugin-babel':
+        specifier: workspace:*
+        version: link:plugins/babel
       '@actview/plugin-scoped':
         specifier: workspace:*
-        version: link:plugins/plugin-scoped
+        version: link:plugins/scoped
       '@actview/plugin-vite':
         specifier: workspace:*
-        version: link:plugins/plugin-vite
+        version: link:plugins/vite
       '@actview/router':
         specifier: workspace:*
         version: link:packages/router
@@ -100,7 +100,7 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  plugins/babel-plugin-actview:
+  plugins/babel:
     dependencies:
       '@babel/core':
         specifier: ^8.0.1
@@ -109,11 +109,11 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0
 
-  plugins/plugin-scoped:
+  plugins/scoped:
     dependencies:
-      '@actview/babel-plugin-actview':
+      '@actview/plugin-babel':
         specifier: workspace:*
-        version: link:../babel-plugin-actview
+        version: link:../babel
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -131,11 +131,11 @@ importers:
         specifier: ^26.0.1
         version: 26.0.1
 
-  plugins/plugin-vite:
+  plugins/vite:
     dependencies:
-      '@actview/babel-plugin-actview':
+      '@actview/plugin-babel':
         specifier: workspace:*
-        version: link:../babel-plugin-actview
+        version: link:../babel
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1

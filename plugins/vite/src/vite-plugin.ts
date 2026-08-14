@@ -2,10 +2,10 @@
 // Vite 插件
 // .tsx 文件在 esbuild 之前过一遍 Babel，做 defineComponent 转换
 // 编译核心（defineComponentPlugin）与宿主壳（createBabelTransform）
-// 均见 @actview/babel-plugin-actview
+// 均见 @actview/plugin-babel
 // ============================================================
 
-import { createBabelTransform, defineComponentPlugin, solidPlugin } from '@actview/babel-plugin-actview'
+import { createBabelTransform, defineComponentPlugin, solidPlugin } from '@actview/plugin-babel'
 
 // 模块级只创建一次 Babel 转换器（内部缓存 ConfigItem，Babel 8 同步版本）
 const transform = createBabelTransform([defineComponentPlugin, solidPlugin])

@@ -1,12 +1,14 @@
 # @actview/plugin-vite
 
-**ActView 的 Vite 插件** —— `.tsx` / `.js` 在 esbuild 之前过一遍 Babel 做 `defineComponent` 转换（编译核心见 `@actview/babel-plugin-actview`）。
+> **迁移记录**：包名 `@actview/plugin-vite` 未变，源码目录由 `plugins/plugin-vite` 迁移至 `plugins/vite`（与 `@actview/plugin-*` 命名风格统一）。
+
+**ActView 的 Vite 插件** —— `.tsx` / `.js` 在 esbuild 之前过一遍 Babel 做 `defineComponent` 转换（编译核心见 `@actview/plugin-babel`）。
 
 `actviewPlugin()` 是一个薄壳 Vite 插件：`transform` hook 过滤 `.tsx` / `.js` 文件（剥掉 rolldown-vite 的 `?t=` HMR query），调用 Babel 执行 `defineComponentPlugin` 转换，返回代码与 sourcemap。
 
 ## 核心功能
 
-- **编译接入**：`defineComponentPlugin` 的 Vite 宿主壳（编译核心在 `@actview/babel-plugin-actview`）
+- **编译接入**：`defineComponentPlugin` 的 Vite 宿主壳（编译核心在 `@actview/plugin-babel`）
 - **`.tsx` / `.js` 双扩展**：`.js` 覆盖 tsc 降级产物（vitepress 等 dist/client 在 node_modules 下，**不按 node_modules 跳过**）
 - **性能**：模块级只创建一次 Babel `ConfigItem`（`createBabelTransform` 内部缓存）
 
@@ -40,7 +42,7 @@ export default defineConfig({
 
 ## 依赖关系
 
-- `@actview/babel-plugin-actview`（编译核心 + 宿主壳）
+- `@actview/plugin-babel`（编译核心 + 宿主壳）
 - `@babel/core`（^8）
 - `peerDependencies`：`vite ^6.0.0 || ^7.0.0 || ^8.0.0`（必需）
 

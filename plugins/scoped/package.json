@@ -1,14 +1,27 @@
 {
-  "name": "@actview/babel-plugin-actview",
-  "version": "1.0.2",
+  "name": "@actview/plugin-scoped",
+  "version": "1.0.1",
   "type": "module",
-  "description": "Babel 插件：JSX 组件自动 defineComponent 转换（ActView 编译核心，独立于 Vite 宿主）",
+  "description": "Vue-like scoped CSS for ActView — compile-time CSS isolation (import './x.css?scoped' 自动开启)",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@actview/plugin-babel": "workspace:*",
     "@babel/core": "^8.0.1",
-    "@babel/generator": "^8.0.0"
+    "postcss": "^8.5.0",
+    "postcss-selector-parser": "^7.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1"
   },
   "scripts": {
     "build": "tsup",

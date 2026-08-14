@@ -1,6 +1,6 @@
 # Babel 自动转换规则（defineComponent）
 
-> `@actview/babel-plugin-actview` 的 `defineComponentPlugin`（Babel 插件）在编译期把 **ActView 组件**自动包装为 `defineComponent`——tsx 源码**不需要手写** `defineComponent`，写裸函数即可。
+> `@actview/plugin-babel` 的 `defineComponentPlugin`（Babel 插件）在编译期把 **ActView 组件**自动包装为 `defineComponent`——tsx 源码**不需要手写** `defineComponent`，写裸函数即可。
 >
 > 运行时只认 `defineComponent` 产物（含 `__setup` 的对象）；未包装的函数被当 vnode.type 时会触发 `InvalidCharacterError: The tag name provided ('function X(...) {...}') is not a valid name`。
 
@@ -210,5 +210,5 @@ const List = defineComponent(() => { return () => <ListWrap slots={{ item: item 
 
 ## 验证
 
-- 插件转换测试：`plugins/babel-plugin-actview/test/plugin.test.ts`（30 用例，`npx vitest run plugins/babel-plugin-actview/test/plugin.test.ts`）
+- 插件转换测试：`plugins/babel/test/plugin.test.ts`（30 用例，`npx vitest run plugins/babel/test/plugin.test.ts`）
 - 全量回归：`pnpm test`（含 verify 场景 1-31 等全部用例）

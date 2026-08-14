@@ -2,7 +2,7 @@
 // defineComponentPlugin 转换测试（Babel transform 输出断言）
 // 覆盖：简写裸函数 / setup 风格 / 函数表达式 / 箭头函数 /
 //       expression body / 早退 return / default 导出 / 不误转非组件
-// 运行：npx vitest run plugins/babel-plugin-actview/test/plugin.test.ts
+// 运行：npx vitest run plugins/babel/test/plugin.test.ts
 // ============================================================
 
 import { describe, it, expect } from 'vitest'

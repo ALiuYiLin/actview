@@ -1,5 +1,7 @@
 # @actview/plugin-scoped
 
+> **迁移记录**：包名 `@actview/plugin-scoped` 未变，源码目录由 `plugins/plugin-scoped` 迁移至 `plugins/scoped`。
+
 **Vue-like scoped CSS for ActView** —— 纯编译期的 CSS 隔离方案。
 
 只需要在 CSS import 上带 `?scoped` query，该文件内所有 JSX 元素就会自动获得 scoped 属性，样式选择器同步追加属性选择器 —— 零运行时成本，`renderToString` 天然兼容。
@@ -124,7 +126,7 @@ import './x.css?scoped'   ──►   Babel 注入 data-v-xxxx   ──►   <di
 
 ## 依赖关系
 
-- `@actview/babel-plugin-actview`（复用共享 Babel 宿主壳 `createBabelItem` / `transformWithBabel`）
+- `@actview/plugin-babel`（复用共享 Babel 宿主壳 `createBabelItem` / `transformWithBabel`）
 - `@babel/core`（^8，`scopedBabelPlugin` 的 AST 工具）
 - `postcss`（^8.5）、`postcss-selector-parser`（^7，CSS 侧变换）
 - `peerDependencies`：`vite ^6.0.0 || ^7.0.0 || ^8.0.0`（必需）

@@ -6,7 +6,7 @@
 // ============================================================
 
 import path from 'node:path'
-import { createBabelItem, transformWithBabel } from '@actview/babel-plugin-actview'
+import { createBabelItem, transformWithBabel } from '@actview/plugin-babel'
 import { transformScopedCSS, getHash } from './css.ts'
 import { scopedBabelPlugin } from './babel.ts'
 import type { ScopedPluginOptions } from './types.d.ts'

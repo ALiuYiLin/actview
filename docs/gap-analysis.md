@@ -16,7 +16,7 @@
 - **路由**（`@actview/router`）：嵌套路由（`children` + 嵌套 `RouterView`）、守卫（`beforeEach`/`afterEach`/`beforeEnter`）、`redirect`/`meta`、懒加载（`component: () => import()` + `Suspense`）、`RouterLink`/`RouterView`
 - **类型系统**（`@actview/jsx`）：完整 `IntrinsicElements`（全量 HTML + SVG）、ARIA 属性、完整事件类型、组件 props 严格化（`LibraryManagedAttributes = P & HTMLAttributes`）
 - **生态**：`@actview/store`（状态管理）、`@actview/testing`（测试工具）、`@actview/devtools`（调试后端 + 面板）
-- **构建/工程**：`renderToString`（静态序列化）、`@actview/plugin-vite`、`@actview/babel-plugin-actview`、`@actview/plugin-scoped`
+- **构建/工程**：`renderToString`（静态序列化）、`@actview/plugin-vite`、`@actview/plugin-babel`、`@actview/plugin-scoped`
 
 ---
 

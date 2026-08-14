@@ -23,7 +23,7 @@ function App() {
   function inc() { count.value++ }
   return <div onClick={inc}>{count.value}</div>  // ② render：每次更新执行
 }
-// 编译后（@actview/babel-plugin-actview 自动转换）
+// 编译后（@actview/plugin-babel 自动转换）
 const App = defineComponent(function () {
   const count = ref(0)
   function inc() { count.value++ }
