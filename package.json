@@ -10,13 +10,9 @@
     "test": "vitest run",
     "release": "pnpm -r publish",
     "release:dry": "pnpm -r publish --dry-run",
-    "patch:actview": "cd packages/actview && npm version patch",
-    "patch:jsx": "cd packages/jsx && npm version patch",
-    "patch:core": "cd packages/core && npm version patch",
-    "patch:vite": "cd plugins/vite && npm version patch",
-    "patch:babel": "cd plugins/babel && npm version patch",
-    "patch:scoped": "cd plugins/scoped && npm version patch",
-    "patch:router": "cd packages/router && npm version patch"
+    "release:patch": "node scripts/bump.mjs patch && pnpm -r publish",
+    "release:minor": "node scripts/bump.mjs minor && pnpm -r publish",
+    "release:major": "node scripts/bump.mjs major && pnpm -r publish"
   },
   "devDependencies": {
     "@actview/core": "workspace:*",

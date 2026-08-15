@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@actview/core": "workspace:*"
+    "@actview/core": "workspace:^"
   },
   "scripts": {
     "build": "tsup",

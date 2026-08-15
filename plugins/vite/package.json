@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@actview/plugin-babel": "workspace:*",
+    "@actview/plugin-babel": "workspace:^",
     "@babel/core": "^8.0.1"
   },
   "peerDependencies": {
