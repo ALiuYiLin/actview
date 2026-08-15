@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-vite",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "type": "module",
   "description": "ActView 的 Vite 插件：.tsx/.js 过 Babel 做 defineComponent 转换（编译核心见 @actview/plugin-babel）",
   "exports": {

@@ -10,7 +10,7 @@
     "build": "tsup",
     "prepublishOnly": "pnpm build"
   },
-  "version": "1.0.16",
+  "version": "1.0.17",
   "publishConfig": {
     "access": "public",
     "exports": {
