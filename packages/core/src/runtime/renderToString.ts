@@ -1,5 +1,6 @@
 import type { VNode, VNodeChild } from '../vnode'
 import { setCurrentInstance } from './lifecycle'
+import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
 
 // ============================================================
 // renderToString — 构建期/SSR 前置：VNode 树 → HTML 字符串
@@ -133,13 +134,17 @@ function serializeNode(node: any): string {
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
+      // 组件边界 scoped 转换（与运行时 mountComponent 一致）：注入的 data-v-*
+      // 合并为 scopedId prop，子组件手动应用后经 serializeAttrs 翻译为真实属性
+      const ssrProps = { ...(props ?? {}) }
+      extractScopedIdProps(ssrProps)
       // setup(props, ctx)：SSR 无父子链（顶层递归无 parent），provide 落到
       // ssrInstance 自己的表（子孙串行化时不可见，已知限制）
       const ctx = { injects: ssrInstance.injects }
       render =
         typeof setup === 'function'
-          ? setup(props ?? {}, ctx)
-          : type(props ?? {})
+          ? setup(ssrProps, ctx)
+          : type(ssrProps)
     } finally {
       setCurrentInstance(null)
     }
@@ -170,6 +175,16 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
     if (key.startsWith('on')) continue // 事件不输出
     const value = props[key]
     if (value == null || value === false) continue
+    // scopedId 约定（@actview/plugin-scoped）：值为 scoped 属性名（可空格分隔
+    // 多个），翻译为真实属性输出 —— 与运行时 setProp/patchProps 语义一致
+    if (key === SCOPED_ID_PROP) {
+      if (typeof value === 'string') {
+        for (const attr of value.split(/\s+/).filter(Boolean)) {
+          out += ` ${attr}=""`
+        }
+      }
+      continue
+    }
     if (key === 'style') {
       const s = stringifyStyle(value)
       if (s) out += ` style="${escapeHtml(s)}"`

@@ -232,6 +232,12 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   children?: VNodeChildren
   key?: string | number | null
   ref?: any
+  /**
+   * scoped 标记 prop（@actview/plugin-scoped）：值为 scoped 属性名
+   * （如 "data-v-abc12345"，可空格分隔多个）。组件元素由插件自动注入，
+   * 子组件在 props 声明后手动应用到根元素，运行时翻译为真实属性。
+   */
+  scopedId?: string
   id?: string
   class?: string
   className?: string
@@ -496,6 +502,8 @@ export interface QuoteHTMLAttributes extends HTMLAttributes {
 
 export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   children?: VNodeChildren
+  /** scoped 标记 prop（@actview/plugin-scoped），语义见 HTMLAttributes.scopedId */
+  scopedId?: string
   viewBox?: string
   fill?: string
   stroke?: string

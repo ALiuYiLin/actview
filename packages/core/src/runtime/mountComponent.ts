@@ -16,6 +16,7 @@ import { getErrorBoundary } from './errorBoundary'
 import { getCurrentSuspense } from './suspense'
 import { getDevtoolsHook } from '../devtools'
 import { EffectScope } from '../reactivity/effectScope'
+import { extractScopedIdProps } from './scopedProps'
 import type { VNode } from '../vnode'
 
 let uid = 0
@@ -136,7 +137,11 @@ export function mountComponent(
   // computed(() => props.x) / watch(() => props.x) 可追踪 props 变化；
   // 父组件 patchComponent → updateProps 写代理触发依赖，自动重算重渲染。
   // 手动 instance.update() 保留为双保险（jobQueue Set 去重，不双渲染）。
-  const props = shallowReactive({ ...(vnode.props || {}) })
+  // 组件边界 scoped 转换：注入形态的 data-v-*（值为 ''）合并为 scopedId prop
+  // （ActView 无透传，子组件手动引用），代理创建前完成避免多余的响应式写入。
+  const rawProps = { ...(vnode.props || {}) }
+  extractScopedIdProps(rawProps)
+  const props = shallowReactive(rawProps)
   delete props.ref
   delete props.key
 

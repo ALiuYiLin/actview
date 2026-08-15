@@ -5,6 +5,7 @@
 // ============================================================
 
 import { mountComponent, invokeHooks } from './mountComponent'
+import { SCOPED_ID_PROP, splitScopedId, extractScopedIdProps } from './scopedProps'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import { pauseTracking, resetTracking } from '../reactivity/reactive-system'
 import {
@@ -348,6 +349,10 @@ function patchComponent(
     return
   }
 
+  // 组件边界 scoped 转换（更新路径）：每次父渲染产出的 props 都重新带注入的
+  // data-v-*（值为 ''），原地提取合并为 scopedId prop 后再与实例 props 比较/写入
+  extractScopedIdProps(newVnode.props)
+
   if (!isSameProps(oldVnode.props, newVnode.props)) {
     // 增量更新 props（key/ref 除外），有变化触发子组件更新
     if (updateProps(instance.props, newVnode.props)) {
@@ -577,13 +582,33 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 
+/**
+ * scopedId 约定（@actview/plugin-scoped，见 runtime/scopedProps.ts）：组件边界
+ * 注入形态的 data-v-* 已由 extractScopedIdProps 合并为 scopedId prop（值为 scoped
+ * 属性名，可空格分隔多个）；子组件手动应用到根元素（<div scopedId={props.scopedId}>
+ * 或 <div {...props}>），此处把 scopedId 翻译为真实 scoped 属性。
+ */
 function patchProps(oldProps: any, newProps: any, el: Element) {
   oldProps = oldProps || {}
   newProps = newProps || {}
 
+  // scopedId 翻译：值 = scoped 属性名（可空格分隔多个）；旧值变化时移除旧属性
+  const oldScopedAttrs = splitScopedId(oldProps[SCOPED_ID_PROP])
+  const newScopedAttrs = splitScopedId(newProps[SCOPED_ID_PROP])
+  if (oldScopedAttrs.length > 0 || newScopedAttrs.length > 0) {
+    const oldSet = new Set(oldScopedAttrs)
+    const newSet = new Set(newScopedAttrs)
+    for (const attr of oldScopedAttrs) {
+      if (!newSet.has(attr)) el.removeAttribute(attr)
+    }
+    for (const attr of newScopedAttrs) {
+      if (!oldSet.has(attr)) el.setAttribute(attr, '')
+    }
+  }
+
   // 删除旧 props 中已不存在的属性
   for (const key in oldProps) {
-    if (key === 'children' || key === 'ref') continue
+    if (key === 'children' || key === 'ref' || key === SCOPED_ID_PROP) continue
     if (!(key in newProps)) {
       setProp(el, key, undefined)
     }
@@ -591,7 +616,7 @@ function patchProps(oldProps: any, newProps: any, el: Element) {
   // 设置/更新新 props：值未变（Object.is）直接跳过，避免无条件写 DOM
   // （选中行高亮等场景：1000 行 props 每次重渲染都相同，只重写真正变化的行）
   for (const key in newProps) {
-    if (key === 'children' || key === 'ref') continue
+    if (key === 'children' || key === 'ref' || key === SCOPED_ID_PROP) continue
     if (Object.is(oldProps[key], newProps[key])) continue
     setProp(el, key, newProps[key])
   }

@@ -22,6 +22,9 @@ const aria = (
 // data-* 属性
 const data = <div data-testid="box" data-count={1} data-ok="yes" />
 
+// scopedId：scoped 标记 prop（@actview/plugin-scoped，原生元素手动引用可用）
+const scoped = <div scopedId="data-v-abc12345" />
+
 // 完整事件（pointer / animation / transition / clipboard / wheel 等）
 const events = (
   <div
@@ -64,6 +67,7 @@ export const __typesCheck = [
   svg,
   aria,
   data,
+  scoped,
   events,
   missingName,
   extraProp,

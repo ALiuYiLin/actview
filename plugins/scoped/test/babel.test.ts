@@ -60,6 +60,19 @@ function B() {
     expect(out).toContain(`<div id="b" ${attr}=""`)
   })
 
+  it('组件元素与原生元素一致注入 data-v-hash（组件边界转换在运行时完成）', () => {
+    const out = run(`
+import './App.css?scoped'
+function App() {
+  return <Card title="t"><div class="inner">x</div></Card>
+}
+`)
+    const attr = `data-v-${hash('./App.css?scoped')}`
+    expect(out).toContain(`<Card title="t" ${attr}="">`)
+    expect(out).toContain(`<div class="inner" ${attr}="">x</div>`)
+    expect(out).not.toContain('scopedId')
+  })
+
   it('插槽内容元素额外注入 data-v-hash-s（:slotted 语义）', () => {
     const out = run(`
 import './Card.css?scoped'
@@ -106,6 +119,18 @@ function App() {
 `)
     const attr = `data-v-${hash('./App.css?scoped')}`
     expect(out).toContain(`_jsx('div', { "${attr}": "" })`)
+  })
+
+  it('_jsx 形态的组件（非字符串 type）同样注入 data-v 属性（转换在运行时）', () => {
+    const out = run(`
+import './App.css?scoped'
+function App() {
+  return _jsx(Card, { title: 't' })
+}
+`)
+    const attr = `data-v-${hash('./App.css?scoped')}`
+    expect(out).toContain(`_jsx(Card, { title: 't', "${attr}": "" })`)
+    expect(out).not.toContain('scopedId')
   })
 
   it('_jsx 形态的插槽内容同样注入 -s 属性（:slotted 在 esbuild 先转管线可用）', () => {

@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest'
 import * as babel from '@babel/core'
-import { createApp, renderToString, defineComponent } from 'actview'
+import { createApp, renderToString, defineComponent, ref, nextTick } from 'actview'
 import {
   actviewScopedPlugin,
   scopedBabelPlugin,
@@ -86,6 +86,134 @@ function App() {
     const html = renderToString(<App />)
     expect(html).toContain(`class="box" ${attr}=""`)
     expect(html).toContain(`${attr}=""`)
+  })
+})
+
+describe('scoped 集成：组件边界 scopedId（无透传 → 运行时转 scopedId，子组件手动引用）', () => {
+  it('父传 data-v-hash 属性 → 运行时组件边界转 scopedId prop → 子组件手动应用 → DOM 得到 scoped 属性', () => {
+    // 父：插件对 <Card/> 与原生元素一致注入 data-v-<hash>=""；
+    // 运行时：组件边界（vnode.type.__setup）把注入形态的 data-v-* 合并为 scopedId；
+    // 子：props 声明 scopedId?: string，根元素手动引用并应用
+    const source = `
+import './App.css?scoped'
+function App() {
+  return <Card title="t" />
+}
+`
+    const out = transformSource(source)
+    const attr = out.match(/data-v-[a-f0-9]{8}/)?.[0]
+    expect(attr).toBeTruthy()
+    // 组件元素与原生一致注入 data-v-hash（输出为自闭合 <Card ... /> 形态）
+    expect(out).toContain(`<Card title="t" ${attr}=""`)
+
+    let capturedProps: any = null
+    interface CardProps {
+      title?: string
+      scopedId?: string
+    }
+    const Card = defineComponent(function (props: CardProps) {
+      capturedProps = props
+      return () => (
+        <div class="card" scopedId={props.scopedId}>
+          {props.title}
+        </div>
+      )
+    })
+    const App = defineComponent(function () {
+      // 模拟插件注入产物：组件元素与原生一致带 data-v-<hash>=""
+      return () => <Card title="t" {...{ [attr as string]: '' }} />
+    })
+    const host = document.createElement('div')
+    host.id = 'scopedid-host'
+    document.body.appendChild(host)
+    createApp(App).mount('#scopedid-host')
+
+    // 子组件 props：data-v-* 已转换为 scopedId prop（无透传，属性不会自动落 DOM）
+    expect(capturedProps.scopedId).toBe(attr)
+    expect(capturedProps[attr as string]).toBeUndefined()
+
+    // 子组件手动应用 scopedId 后，根元素带上真实 scoped 属性
+    const root = host.firstElementChild as HTMLElement
+    expect(root?.getAttribute(attr as string)).toBe('')
+    // scopedId 本身不落到 DOM
+    expect(root?.getAttribute('scopedId')).toBeNull()
+    document.body.removeChild(host)
+  })
+
+  it('组件 props 更新：data-v-* 每次渲染重新注入，patchComponent 增量转换为 scopedId', async () => {
+    let capturedProps: any = null
+    const Card = defineComponent(function (props: any) {
+      capturedProps = props
+      return () => <div class="card" scopedId={props.scopedId} />
+    })
+    const title = ref('a')
+    const App = defineComponent(function () {
+      return () => <Card title={title.value} {...{ 'data-v-abc12345': '' }} />
+    })
+    const host = document.createElement('div')
+    host.id = 'scopedid-patch-host'
+    document.body.appendChild(host)
+    createApp(App).mount('#scopedid-patch-host')
+    expect(capturedProps.scopedId).toBe('data-v-abc12345')
+
+    title.value = 'b'
+    await nextTick()
+    // 更新路径同样转换：data-v-* 仍被合并为 scopedId，不会残留在 props
+    expect(capturedProps.scopedId).toBe('data-v-abc12345')
+    expect(capturedProps['data-v-abc12345']).toBeUndefined()
+    document.body.removeChild(host)
+  })
+
+  it('scopedId 更新：旧 scoped 属性移除、新属性设置（patchProps 增量）', async () => {
+    const scopedId = ref('data-v-aaa11111')
+    const App = defineComponent(function () {
+      return () => <div class="card" scopedId={scopedId.value} />
+    })
+    const host = document.createElement('div')
+    host.id = 'scopedid-update-host'
+    document.body.appendChild(host)
+    createApp(App).mount('#scopedid-update-host')
+    const el = host.firstElementChild as HTMLElement
+    expect(el?.getAttribute('data-v-aaa11111')).toBe('')
+
+    scopedId.value = 'data-v-bbb22222'
+    await nextTick()
+    expect(el?.getAttribute('data-v-bbb22222')).toBe('')
+    expect(el?.getAttribute('data-v-aaa11111')).toBeNull()
+    document.body.removeChild(host)
+  })
+
+  it('scopedId 支持空格分隔多个 scoped 属性', () => {
+    const App = defineComponent(function () {
+      return () => <div scopedId="data-v-aaa11111 data-v-bbb22222" />
+    })
+    const host = document.createElement('div')
+    host.id = 'scopedid-multi-host'
+    document.body.appendChild(host)
+    createApp(App).mount('#scopedid-multi-host')
+    const el = host.firstElementChild as HTMLElement
+    expect(el?.getAttribute('data-v-aaa11111')).toBe('')
+    expect(el?.getAttribute('data-v-bbb22222')).toBe('')
+    expect(el?.getAttribute('scopedId')).toBeNull()
+    document.body.removeChild(host)
+  })
+
+  it('renderToString：scopedId 翻译为 scoped 属性输出（SSR 兼容）', () => {
+    const html = renderToString(<div class="card" scopedId="data-v-abc12345" />)
+    expect(html).toBe('<div class="card" data-v-abc12345=""></div>')
+  })
+
+  it('renderToString：组件边界同样转换 data-v-* → scopedId → 手动应用 → 输出 scoped 属性', () => {
+    interface CardProps {
+      title?: string
+      scopedId?: string
+    }
+    const Card = defineComponent(function (props: CardProps) {
+      return () => <div class="card" scopedId={props.scopedId} />
+    })
+    // 模拟插件注入产物：<Card data-v-abc12345="" /> 经组件边界转换为 scopedId
+    const html = renderToString(<Card title="t" data-v-abc12345="" />)
+    expect(html).toBe('<div class="card" data-v-abc12345=""></div>')
   })
 })
 

@@ -14,6 +14,10 @@
 // **所有** JSX 元素（含嵌套函数/条件渲染）都注入 data-v-<hash>；
 // 没有 ?scoped import 则不处理（等价于未开启 scoped）。
 // 多个 ?scoped import → 注入多个 hash（每个 hash 对应一个 css 文件）。
+// 组件/原生不做编译期区分（组件判定是运行时语义：vnode.type.__setup）：
+// 组件元素同样注入 data-v-<hash>=""，由运行时在组件边界把注入形态的
+// data-v-*（值为空）合并为 scopedId prop 传给子组件（ActView 无透传，
+// 子组件在 props 声明 scopedId?: string 后手动应用，见 core runtime/scopedProps）。
 // 兼容两种输入形态（rolldown 的 JSX 转换可能先于本插件执行）：
 //   1. 源码 JSX（<div className="x"/>）   → 注入 JSXAttribute
 //   2. 已降级 _jsx() 调用（_jsx("div", { className: "x" })）→ props 对象注入属性
