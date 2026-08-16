@@ -44,6 +44,8 @@ export {
   onRenderTriggered,
   provide,
   useInjects,
+  useProp,
+  useProps,
   renderToString,
   Teleport,
   Transition,
