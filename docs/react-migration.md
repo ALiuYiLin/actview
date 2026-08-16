@@ -98,6 +98,33 @@ function Child(props: { count: number }) {
 }
 ```
 
+**需要解构时用 `useProps` / `useProp`**（返回 ComputedRef 活引用，不丢响应性）：
+
+```tsx
+import { useProps, useProp } from 'actview'
+
+function Button(props: { variant?: string; size?: string; class?: string }) {
+  const { variant, size, rest } = useProps(props, {
+    class: undefined,                 // undefined = 裸透传：直接返回 props.class 原值
+    variant: (v) => v ?? 'default',   // normalize：默认值兜底 / 类型转换
+    size: (v) => v ?? 'default',
+  })
+  return (
+    <button {...rest.value} class={`btn btn-${variant.value} btn-${size.value}`}>
+      {props.children}
+    </button>
+  )
+}
+
+// 单个 prop：useProp(props, key, normalize?)
+const count = useProp(props, 'count', (v) => v ?? 0)
+```
+
+- 返回的都是 `ComputedRef`：render 里用 `.value` 读取，父组件改 prop 自动重算（等价 Vue 的 `toRefs(props)` + 默认值）
+- `rest.value` 是未在 map 中声明的 props 集合（值形态），可直接 `{...rest.value}` 透传；父组件新增的 prop 键会自动进入 rest
+- 别名键：map 用真实键（`class`），解构时重命名（`{ class: className }`）；不声明 normalize 的键用 `key: undefined` 裸透传，无需写 `(val) => val`
+- 纯透传场景（不剔除任何键）直接 `{...props}` 即可，无需 useProps
+
 ### 子组件更新时机
 
 父组件 re-render 时，子组件通过 `patchComponent` 判断 `propsChanged`（浅比较）：props 引用/值变了才 update 子组件，否则跳过。**这就是为什么大列表里"行组件 + 不可变数据"能短路**。
@@ -112,7 +139,7 @@ function Child(props: { count: number }) {
 | 组件函数体里写派生逻辑 `const d = a + b` | setup 只执行一次，d 永远旧值 | `computed(() => a + b)` 或写进 JSX |
 | `return function() {...}` | 渲染函数形态已废弃 | `return <JSX/>` |
 | 事件里改普通变量 | 不触发更新 | 改 `ref.value` / `reactive` 属性 |
-| `const {x} = props` 再渲染 | 闭包捕获旧 props | JSX 里读 `props.x` |
+| `const {x} = props` 再渲染 | 闭包捕获旧 props | JSX 里读 `props.x`，或 `useProps` 解构活引用 |
 | `useState/useEffect/useMemo` | 这些 Hooks 不存在 | 用 ref/reactive/watch/computed |
 | 数组 `map` 不加 `key` | 增删中间项会错位（无 key 走同索引 diff） | `items.map(x => <Row key={x.id} />)` |
 | `className` | 兼容，但非原生 | 用 `class`（`className` 也会被正确映射，建议统一 `class`） |
@@ -234,6 +261,7 @@ const theme = useInjects('theme')
 | `onBeforeMount`/`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted`/`onActivated`/`onDeactivated`/`onErrorCaptured`/`onServerPrefetch`/`onRenderTracked`/`onRenderTriggered` | 生命周期全套（子先父后） |
 | `getCurrentInstance()` | 当前组件实例 |
 | `provide(k, v)` / `useInjects(k?)` | 依赖注入 |
+| `useProp(props, key, fn?)` / `useProps(props, {key: fn})` | props 响应式解构：ComputedRef 活引用 + 默认值/转换 normalize；`key: undefined` 裸透传；批量版返回 `rest`（可 `{...rest.value}` 透传） |
 
 ### 渲染与更新
 
