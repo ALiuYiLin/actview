@@ -696,8 +696,17 @@ function setProp(el: any, key: string, value: any) {
     return
   }
   // class / style / value / checked 走 property
+  // 注意：SVGElement.prototype.className 是只读的 SVGAnimatedString（getter-only），
+  // 直接赋值在真实浏览器的严格模式下会抛
+  // TypeError: Cannot set property className of #<SVGElement> which has only a getter
+  // （happy-dom / jsdom 未实现该 getter-only 行为，单测环境不会复现）。
+  // 因此 SVG 元素的 class 必须走 setAttribute。
   if (key === 'class' || key === 'className') {
-    el.className = value ?? ''
+    if (el.namespaceURI === SVG_NS) {
+      el.setAttribute('class', value ?? '')
+    } else {
+      el.className = value ?? ''
+    }
     return
   }
   if (key === 'style') {

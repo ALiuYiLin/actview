@@ -413,6 +413,42 @@ describe('P0: SVG 命名空间渲染', () => {
     expect(circle.getAttribute('r')).toBe('40')
     expect(circle.getAttribute('fill')).toBe('red')
   })
+
+  it('svg 的 class 走 setAttribute（真实浏览器中 SVGElement.className 是 getter-only）', () => {
+    // 真实浏览器里 SVGElement.prototype.className 是只读的 SVGAnimatedString
+    // （只有 getter 没有 setter），直接赋值在严格模式下抛
+    // TypeError: Cannot set property className of #<SVGElement> which has only a getter。
+    // happy-dom 未实现该行为，这里临时在 SVGElement 原型上模拟只读 className，
+    // 回归验证 renderer 的 setProp 对 SVG class 走 setAttribute 而不是属性赋值。
+    const svgProto: any = Object.getPrototypeOf(
+      document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    )
+    const original = Object.getOwnPropertyDescriptor(svgProto, 'className')
+    Object.defineProperty(svgProto, 'className', {
+      configurable: true,
+      get(this: Element) {
+        return this.getAttribute('class') ?? ''
+      },
+    })
+    try {
+      function App() {
+        return (
+          <svg class="lucide lucide-icon" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" />
+          </svg>
+        )
+      }
+      const host = mount(App)
+      const svg = host.querySelector('svg')!
+      expect(svg.getAttribute('class')).toBe('lucide lucide-icon')
+    } finally {
+      if (original) {
+        Object.defineProperty(svgProto, 'className', original)
+      } else {
+        delete svgProto.className
+      }
+    }
+  })
 })
 
 // ------------------------------------------------------------
