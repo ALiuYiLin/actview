@@ -104,6 +104,29 @@ describe('useProps（批量 + rest）', () => {
     expect(className.value).toBe('btn small')
   })
 
+  it('裸透传：map 值为 undefined 直接返回 props 原值（无需 (val) => val）', () => {
+    const props = shallowReactive<any>({
+      class: 'btn',
+      className: 'legacy',
+      variant: undefined
+    })
+    const { class: className, className: legacyClassName, variant, rest } = useProps(props, {
+      class: undefined, // 裸透传：props.class 原值
+      className: undefined,
+      variant: (v: any) => v ?? 'default'
+    })
+    expect(className.value).toBe('btn')
+    expect(legacyClassName.value).toBe('legacy')
+    expect(variant.value).toBe('default') // 裸透传键不参与 normalize 兜底
+    expect(rest.value).toEqual({}) // 三个键均已消费
+
+    // 响应性：裸透传键同样跟随 props 更新
+    props.class = 'btn big'
+    expect(className.value).toBe('btn big')
+    props.variant = 'primary'
+    expect(variant.value).toBe('primary')
+  })
+
   it('normalize 内读其他 props：建立派生依赖（默认值联动）', () => {
     const props = shallowReactive<any>({ variant: 'primary' })
     const { size } = useProps(props, {
