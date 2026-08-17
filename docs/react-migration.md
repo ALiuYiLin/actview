@@ -44,7 +44,7 @@ const App = defineComponent(function () {
 | `setX(x + 1)` | `x.value++` | 直接改，自动触发更新 |
 | `useMemo(() => ..., [deps])` | `computed(() => ...)` | 惰性缓存 + 自动依赖追踪 |
 | `useEffect(() => {...}, [deps])` | `watch(src, cb)` / `watchEffect(fn)` | 见下方对照 |
-| `useRef()` | `ref(null)`（值引用）或模板引用 `props.ref` | DOM 引用用模板引用 |
+| `useRef()` | `ref(null)`（值引用）或模板引用 `props.ref`（函数 / `{value}` / `ref()` 均可） | DOM 引用用模板引用 |
 | `useCallback(fn, [])` | **不需要** | 闭包天然稳定 |
 | `useContext` | `provide` / `useInjects` | 见第五节 |
 
@@ -200,10 +200,13 @@ function List(props) { return <ul>{props.children({ item: 1 })}</ul> }
 ### 模板引用（DOM 引用）
 
 ```tsx
-function App() {
-  let el: HTMLElement | null = null
-  return <input ref={(n) => (el = n)} />   // 或 ref={ { value: ... } }
-}
+// ✅ Vue 风格：ref() 直接传（挂载后 inputRef.value = <input>，卸载自动置 null）
+const inputRef = ref<HTMLElement | null>(null)
+return <input ref={inputRef} />
+
+// ✅ 普通对象：ref={ { value: null } }（同上，`.value` 指向元素）
+// ✅ 函数回调：ref={(n) => (el = n)}
+// 组件引用：ref 指向组件实例（非 DOM）
 ```
 
 ---
