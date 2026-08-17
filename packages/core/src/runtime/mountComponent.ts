@@ -68,7 +68,7 @@ export interface ComponentInstance {
   /** 父组件实例（provide/inject 链） */
   parent: ComponentInstance | null
   /** 注入表：未调用 provide 时共享父引用（零拷贝）；首次 provide 时 copy-on-write */
-  injects: Record<string, any>
+  injects: Record<PropertyKey, any>
   render: () => any
   subTree: VNode | null
   update: () => void

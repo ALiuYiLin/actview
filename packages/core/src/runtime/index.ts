@@ -9,5 +9,6 @@ export * from './suspense'
 export * from './renderToString'
 export * from './transition'
 export * from './useProps'
+export * from './context'
 
 export { createSolidVNode, createEffect, mapArray, solidGet, SOLID_TYPE } from './solid'

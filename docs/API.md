@@ -105,7 +105,8 @@
 | Props 响应式取值 | `useProp(key, fn?)` / `useProps({ key: fn })`（组件内单参形式，自动取当前实例 props；也支持 `useProp(props, key, fn?)` / `useProps(props, { key: fn })` 显式传入）：返回 ComputedRef 活引用（解决 setup 解构快照），`fn` 做默认值/转换；map 值为 `undefined` 时该键裸透传（直接返回 props 原值）；批量版附带 `rest`（未声明键集合，可 `{...rest.value}` 透传，父新增 prop 键自动进入） |
 | 插槽 | 默认（children）/ 作用域（函数 children）/ 具名（`<template slot="name">`） |
 | 模板引用 | `props.ref`（函数 / `{value}` 对象 / `ref()`——Vue 风格直接传）指向 DOM/组件实例，卸载自动置 null |
-| 依赖注入 | `provide(key, value)` / `useInjects(key?)` |
+| 依赖注入 | `provide(key, value)` / `useInjects(key?)`（字符串键）；`createContext(default)`（React 风格：对象身份即键，无碰撞） |
+| Context | `createContext<T>(default)` → `<Ctx.Provider value={v}>` / `<Ctx value={v}>`（React 19 风格）/ `Ctx.use()`（返回 Ref，render 读 `.value`；value 变化消费方自动重渲染；就近覆盖；SSR 可用） |
 | 组件名 | `defineComponent(fn, name)` / Babel 从变量名传递（KeepAlive/DevTools 用） |
 
 ---

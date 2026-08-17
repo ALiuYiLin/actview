@@ -47,6 +47,7 @@ export {
   useInjects,
   useProp,
   useProps,
+  createContext,
   renderToString,
   Teleport,
   Transition,

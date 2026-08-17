@@ -46,7 +46,7 @@ const App = defineComponent(function () {
 | `useEffect(() => {...}, [deps])` | `watch(src, cb)` / `watchEffect(fn)` | 见下方对照 |
 | `useRef()` | `ref(null)`（值引用）或模板引用 `props.ref`（函数 / `{value}` / `ref()` 均可） | DOM 引用用模板引用 |
 | `useCallback(fn, [])` | **不需要** | 闭包天然稳定 |
-| `useContext` | `provide` / `useInjects` | 见第五节 |
+| `useContext` | `createContext(default)` + `<Ctx.Provider value>` / `<Ctx value>` + `Ctx.use()` | 见第六节（Context 对象身份即键，无碰撞） |
 
 ### useEffect → watch / 生命周期
 
@@ -227,6 +227,29 @@ const theme = useInjects('theme')
 ```
 
 `provide` 只能在组件 setup 中调用；`useInjects(key?)` 读注入表（`useInjects()` 读整表）。
+
+### Context（React 风格，推荐替代字符串键）
+
+`createContext` 用**对象身份作键**（内部 Symbol），无需手动防键名冲突，且是响应式的（value 变化 → 消费方自动重渲染）：
+
+```tsx
+import { createContext } from 'actview'
+
+const ThemeCtx = createContext('default')   // 默认值（无 Provider 时生效）
+
+// 提供（两种写法等价）：
+<ThemeCtx.Provider value="dark">...</ThemeCtx.Provider>
+<ThemeCtx value="dark">...</ThemeCtx>          // React 19 风格
+
+// 消费（setup 中取 ref，render 里读 .value 建立追踪）：
+function Toolbar() {
+  const theme = ThemeCtx.use()
+  return <div class={theme.value}>...</div>
+}
+```
+
+- **就近覆盖**：内层 Provider 覆盖外层；嵌套多层各自响应式互不影响
+- 无 Provider 时 `use()` 返回默认值 ref；SSR（`renderToString`）同样可用
 
 ---
 

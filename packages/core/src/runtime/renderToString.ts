@@ -85,20 +85,27 @@ function isVNode(node: any): node is VNode {
   return !!node && typeof node === 'object' && typeof node.$$typeof === 'symbol'
 }
 
-/** 递归序列化单个节点 */
-function serializeNode(node: any): string {
+/** 递归序列化单个节点；parentInjects 沿树向下传递（子组件共享父注入表引用，对齐运行时） */
+function serializeNode(
+  node: any,
+  parentInjects?: Record<PropertyKey, any>,
+): string {
   if (node == null || typeof node === 'boolean') return ''
   if (typeof node === 'string' || typeof node === 'number') {
     return escapeHtml(String(node))
   }
-  if (Array.isArray(node)) return node.map(serializeNode).join('')
+  if (Array.isArray(node)) {
+    return node.map((n) => serializeNode(n, parentInjects)).join('')
+  }
   if (!isVNode(node)) return ''
 
   const { type, props } = node
 
   // Fragment：拼接子节点
   if (type === Fragment) {
-    return toChildrenArray(props?.children).map(serializeNode).join('')
+    return toChildrenArray(props?.children)
+      .map((n) => serializeNode(n, parentInjects))
+      .join('')
   }
 
   // 组件：__setup(props) 拿 render =》 render() 递归（构建期静态，无响应式上下文）
@@ -119,6 +126,8 @@ function serializeNode(node: any): string {
     // currentInstance（否则警告「只能在组件 setup 中调用」并丢弃）。
     // 用轻量 instance（带钩子空数组即可注册），钩子注册后**不 flush**
     // （SSR/静态生成语义：setup + render，不执行 DOM 钩子，与 Vue SSR 一致）。
+    // injects 继承父注入表引用（对齐运行时：子组件共享父表，provide 时 COW），
+    // 使 provide/useInjects/createContext 在 SSR 下穿透可用。
     const ssrInstance = {
       props: ssrProps,
       beforeMount: [] as (() => void)[],
@@ -134,13 +143,12 @@ function serializeNode(node: any): string {
       renderTriggered: [] as ((e: any) => void)[],
       scope: null,
       parent: null,
-      injects: {} as Record<string, any>,
+      injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
     }
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
-      // setup(props, ctx)：SSR 无父子链（顶层递归无 parent），provide 落到
-      // ssrInstance 自己的表（子孙串行化时不可见，已知限制）
+      // setup(props, ctx)：ctx.injects 指向 ssrInstance 的注入表（继承父表引用）
       const ctx = { injects: ssrInstance.injects }
       render =
         typeof setup === 'function'
@@ -152,17 +160,19 @@ function serializeNode(node: any): string {
     // onServerPrefetch：SSR 阶段同步执行预取钩子（异步 Promise 无法等待，尽力而为）
     for (const hook of ssrInstance.serverPrefetch) hook()
     if (typeof render === 'function') {
-      return serializeNode(render())
+      return serializeNode(render(), ssrInstance.injects)
     }
     // setup 直接返回 vnode（兼容简写）
-    return serializeNode(render)
+    return serializeNode(render, ssrInstance.injects)
   }
 
   // 原生标签
   if (typeof type !== 'string') return ''
   const tag = type as string
   const attrs = serializeAttrs(props)
-  const children = toChildrenArray(props?.children).map(serializeNode).join('')
+  const children = toChildrenArray(props?.children)
+    .map((n) => serializeNode(n, parentInjects))
+    .join('')
   if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}>`
   return `<${tag}${attrs}>${children}</${tag}>`
 }

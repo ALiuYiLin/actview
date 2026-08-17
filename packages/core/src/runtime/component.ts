@@ -7,8 +7,9 @@
 
 /** setup 上下文：注入表（provide/inject） */
 export interface SetupContext {
-  /** 注入表：继承自最近提供方（未使用 provide 的组件共享父引用，零拷贝） */
-  injects: Record<string, any>
+  /** 注入表：继承自最近提供方（未使用 provide 的组件共享父引用，零拷贝）。
+   *  键可为 string（provide）或 symbol（createContext 上下文） */
+  injects: Record<PropertyKey, any>
 }
 
 /** options 形态的组件定义 */

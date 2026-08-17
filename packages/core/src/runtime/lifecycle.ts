@@ -111,7 +111,7 @@ function registerHook(type: HookType, fn: () => void) {
  * 性能：未调用 provide 的组件共享父注入表（零拷贝），首次调用时
  * copy-on-write 浅拷贝成自己的副本，之后 O(1) 写入。
  */
-export function provide(key: string, value: any) {
+export function provide(key: PropertyKey, value: any) {
   const instance = getCurrentInstance()
   if (!instance) {
     console.warn('[actview] provide 只能在组件 setup 中调用')
@@ -129,7 +129,7 @@ export function provide(key: string, value: any) {
  *   useInjects('theme')   → 注入值（未提供返回 undefined）
  * 只能在组件 setup 中调用；响应式需求提供/注入 ref 值。
  */
-export function useInjects(key?: string): any {
+export function useInjects(key?: PropertyKey): any {
   const instance = getCurrentInstance()
   if (!instance) {
     console.warn('[actview] useInjects 只能在组件 setup 中调用')
