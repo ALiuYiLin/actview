@@ -22,9 +22,15 @@ import generate from '@babel/generator'
 
 /** 从 JSXElement 提取 <template slot="name"> 子元素，生成 slots prop */
 function extractNamedSlots(el: any) {
-  // 仅组件（大写开头）接受具名插槽
+  // 仅组件接受具名插槽：大写开头的标识符（<Panel/>），或成员表达式
+  // （<Avatar.Root/> 等恒为组件，非原生标签）；其余（小写原生标签、
+  // 命名空间名）不处理
   const nameNode = el.openingElement.name
-  if (!t.isJSXIdentifier(nameNode) || !/^[A-Z]/.test(nameNode.name)) return
+  if (t.isJSXIdentifier(nameNode)) {
+    if (!/^[A-Z]/.test(nameNode.name)) return
+  } else if (!t.isJSXMemberExpression(nameNode)) {
+    return
+  }
 
   const children = el.children
   const slotProps: any[] = []

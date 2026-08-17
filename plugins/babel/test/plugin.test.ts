@@ -114,6 +114,41 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     // template 从 children 移除
     expect(out).not.toContain('template slot')
   })
+
+  it('具名插槽在成员表达式组件（Avatar.Root）中也提取', () => {
+    const out = transform(
+      [
+        `const Avatar = { Root: function (props) { return <div/> } }`,
+        `function Page() {`,
+        `  return <Avatar.Root>`,
+        `    <template slot="image"><img/></template>`,
+        `    <template slot="fallback"><div/></template>`,
+        `    <div>aaa</div>`,
+        `  </Avatar.Root>`,
+        `}`,
+      ].join('\n'),
+    )
+    // 两个具名插槽均被提取为 slots prop 成员
+    expect(out).toContain('"image": () =>')
+    expect(out).toContain('"fallback": () =>')
+    // template 从 children 移除
+    expect(out).not.toContain('template slot')
+    // 成员表达式组件本身正常编译
+    expect(out).toContain('_jsx(Avatar.Root,')
+  })
+
+  it('成员表达式组件的作用域插槽参数（<template slot="item" item>）也提取', () => {
+    const out = transform(
+      [
+        `const List = { Row: function (props) { return <div/> } }`,
+        `function Page() {`,
+        `  return <List.Row><template slot="item" item><b>{item.x}</b></template></List.Row>`,
+        `}`,
+      ].join('\n'),
+    )
+    expect(out).toContain('"item": item =>')
+    expect(out).not.toContain('template slot')
+  })
 })
 
 describe('defineComponentPlugin：补充场景', () => {
