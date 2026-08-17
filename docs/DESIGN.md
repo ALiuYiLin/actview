@@ -278,4 +278,4 @@ const effect = runEffect(update)                  // 立即跑一次（首屏挂
 7. `packages/core/src/runtime/renderer.ts` — patch / diff / mount / unmount
 8. `packages/core/src/runtime/createApp.ts` — 应用入口
 9. `src/main.tsx` — 功能检验页
-10. `scripts/verify.mjs` + `scripts/verify-entry.tsx` — DOM stub 下的端到端回归验证
+10. `test/verify.test.tsx` — 端到端回归验证（原 `scripts/verify.mjs` + `verify-entry.tsx` 迁移而来）

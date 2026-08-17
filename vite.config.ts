@@ -17,7 +17,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: ['scripts/**/*.test.{ts,tsx}', 'plugins/**/test/*.test.ts'],
+    include: ['test/**/*.test.{ts,tsx}', 'plugins/**/test/*.test.ts'],
   },
   server: {
     port: 3000,

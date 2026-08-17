@@ -2,7 +2,7 @@
 // 模板引用（props.ref）验收测试
 //   三种形态等效：ref(null)（Vue 风格）/ { value } 对象 / 函数回调
 //   挂载 → 指向 DOM（组件 → 组件实例）；卸载 → 置 null
-// 运行：pnpm vitest run scripts/template-ref.test.tsx
+// 运行：pnpm vitest run test/template-ref.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'

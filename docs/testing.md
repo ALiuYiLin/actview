@@ -7,7 +7,7 @@
 
 ## 1. 总览
 
-把散落在 `scripts/*.test.tsx` 里的手写测试模式（`mount` + `collectText` + `flush`）收敛成公共 API：
+把散落在 `test/*.test.tsx` 里的手写测试模式（`mount` + `collectText` + `flush`）收敛成公共 API：
 
 ```
 render(Component)        → 挂载 + 返回 DOM 查询辅助

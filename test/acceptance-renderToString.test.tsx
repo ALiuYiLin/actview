@@ -5,7 +5,7 @@
 //   "renderToString 能把 markdownToActView 生成的 createElement 树
 //    渲染成与浏览器 DOM 一致的 HTML 字符串"
 //
-// fixture（scripts/fixtures/actview-page.js）由 vitepress 的真实
+// fixture（test/fixtures/actview-page.js）由 vitepress 的真实
 // markdown 编译管线生成（含 <script setup>、实体、过滤 on* 等）。
 // ============================================================
 

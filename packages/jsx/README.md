@@ -65,7 +65,7 @@ export function App() {
 
 ```bash
 pnpm build   # tsup 打包 dist（多 entry：index / jsx-runtime / jsx-dev-runtime / global）
-pnpm test    # 走根目录 vitest（scripts/** 集成测试）
+pnpm test    # 走根目录 vitest（test/** 集成测试）
 ```
 
 ## License

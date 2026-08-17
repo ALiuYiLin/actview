@@ -5,7 +5,7 @@
 //   - useProps(props, { key: normalize })：批量 + rest（未声明键集合）
 //   覆盖：默认值 ?? 语义（falsy 保留）/ rest 透传 / 别名键 /
 //         normalize 内派生依赖 / 组件集成（父改 prop → DOM 更新）
-// 运行：pnpm vitest run scripts/useProps.test.tsx
+// 运行：pnpm vitest run test/useProps.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'

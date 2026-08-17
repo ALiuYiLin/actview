@@ -3,7 +3,7 @@
 //   <Ctx.Provider value>（经典）/ <Ctx value>（React 19 风格）/ ctx.use()
 //   覆盖：提供值/默认值 / 响应式（value 变化消费方自动重渲染）/
 //         就近覆盖 / 键隔离 / SSR
-// 运行：pnpm vitest run scripts/context.test.tsx
+// 运行：pnpm vitest run test/context.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'

@@ -83,7 +83,7 @@ src/
 
 ```bash
 pnpm build   # tsup 打包 dist
-pnpm test    # 走根目录 vitest（scripts/** 集成测试，含 verify/scoped/acceptance 场景）
+pnpm test    # 走根目录 vitest（test/** 集成测试，含 verify/scoped/acceptance 场景）
 ```
 
 ## License

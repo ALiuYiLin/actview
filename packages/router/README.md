@@ -60,7 +60,7 @@ export function App() {
 
 ```bash
 pnpm build   # tsup 打包 dist
-pnpm test    # 走根目录 vitest（scripts/verify.test.tsx 含路由版页面渲染与切换用例）
+pnpm test    # 走根目录 vitest（test/verify.test.tsx 含路由版页面渲染与切换用例）
 ```
 
 ## License

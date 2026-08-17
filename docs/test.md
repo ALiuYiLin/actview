@@ -1,6 +1,6 @@
 # 测试说明 — actview 测试覆盖与后续计划
 
-> 本文档说明 actview 的测试体系：`scripts/verify.test.tsx`（框架自研场景）+ `scripts/actview.test.tsx`（Vue 3 迁移用例）+ 插件层测试（babel / scoped / vite-plugin）+ 性能机制测试（`scripts/vmemo.test.tsx` / `scripts/solid.test.tsx`），以及**后续待执行的测试计划**。
+> 本文档说明 actview 的测试体系：`test/verify.test.tsx`（框架自研场景）+ `test/actview.test.tsx`（Vue 3 迁移用例）+ 插件层测试（babel / scoped / vite-plugin）+ 性能机制测试（`test/vmemo.test.tsx` / `test/solid.test.tsx`），以及**后续待执行的测试计划**。
 > 原 `scripts/verify.mjs` + `verify-entry.tsx`（手写 DOM stub）已迁移到 vitest，场景保留为用例。
 
 ---
@@ -16,7 +16,7 @@
 **运行方式**：
 
 ```bash
-pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
+pnpm test        # 即 vitest run（自动收集 test/**/*.test.{ts,tsx}）
 ```
 
 当前共 **295 个用例 / 19 个测试文件**，全部通过时退出码为 0（`pnpm test`）。构成：verify 自研场景 + actview 迁移用例 + 插件编译用例（babel/scoped/vite-plugin）+ 性能机制（`vmemo`/`solid`）+ P0 补齐（`p0`）+ 路由（`router`）+ 组件运行时增强（`runtime-enhance`）+ 生态（`store`/`testing`/`devtools`）。
@@ -25,7 +25,7 @@ pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
 
 ---
 
-## 2. 场景总览（scripts/verify.test.tsx，36 用例）
+## 2. 场景总览（test/verify.test.tsx，36 用例）
 
 | 场景 | 验证内容 |
 |---|---|
@@ -54,7 +54,7 @@ pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
 
 ---
 
-## 3. Vue 3 迁移测试（scripts/actview.test.tsx，45 用例）
+## 3. Vue 3 迁移测试（test/actview.test.tsx，45 用例）
 
 > 来源：`E:\code3\vue3\packages\reactivity\__tests__\`（effect / reactive / reactiveArray / computed / watch 核心用例）。
 > 适配：`effect` → `runEffect`、`stop` → `e.stop()`、watch 异步 flush 用 `await nextTick()`；跳过依赖未实现 API（Map/Set 代理、isReactive、toRaw、computed setter 等）的用例。
@@ -176,11 +176,11 @@ pnpm test        # 即 vitest run（自动收集 scripts/**/*.test.{ts,tsx}）
 
 新增场景三步走：
 
-1. 在 `scripts/verify.test.tsx` 的对应 `describe` 中新增一个 `it` 用例，组件与状态定义在用例内部，用 `mount('#xxx', Component)` 挂载；
+1. 在 `test/verify.test.tsx` 的对应 `describe` 中新增一个 `it` 用例，组件与状态定义在用例内部，用 `mount('#xxx', Component)` 挂载；
 2. 通过返回的宿主元素 + `expect(...).toBe(...)` 断言（文本/结构/计数等）；
 3. `pnpm test` 运行，保持全绿。
 
-> 注意：`scripts/*.test.tsx` 不在 `tsconfig` 的 `include` 之内，类型检查报错只出现在编辑器（inferred project），不影响 `tsc` 与 `vitest` 运行。
+> 注意：`test/*.test.tsx` 不在 `tsconfig` 的 `include` 之内，类型检查报错只出现在编辑器（inferred project），不影响 `tsc` 与 `vitest` 运行。
 
 ---
 
@@ -221,7 +221,7 @@ Vue 3 `packages/runtime-core/__tests__/` 覆盖渲染器/组件能力，最能�
 
 ### 4.5 迁移方法备忘
 
-1. 新建 `scripts/xxx.test.tsx`（不要改动 `verify.test.tsx` 现有用例）；
+1. 新建 `test/xxx.test.tsx`（不要改动 `verify.test.tsx` 现有用例）；
 2. 从 `E:\code3\vue3` 对应 spec 拷贝用例，替换 import 为 actview API；
 3. 适配规则：`effect` → `runEffect`（含 `stop`）、组件对象 → `defineComponent`、`h` → `createElement`、异步 flush 用 `await nextTick()`；
 4. 跳过依赖未实现 API 的用例，在文件头注释说明；

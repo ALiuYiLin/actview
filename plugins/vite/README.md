@@ -50,7 +50,7 @@ export default defineConfig({
 
 ```bash
 pnpm build   # tsup 打包 dist
-pnpm test    # 走根目录 vitest（集成测试经 scripts/**）
+pnpm test    # 走根目录 vitest（集成测试经 test/**）
 ```
 
 ## License

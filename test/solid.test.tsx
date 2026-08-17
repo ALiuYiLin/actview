@@ -4,7 +4,7 @@
 // 2. 行内容更新：label 变化只更新该行文本（细粒度直连）
 // 3. 结构变化：add/remove 项级复用
 // 4. 卸载：块内 effect 停止（响应式不再触发）
-// 运行：pnpm test scripts/solid.test.tsx
+// 运行：pnpm test test/solid.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'

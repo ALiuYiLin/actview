@@ -7,7 +7,7 @@
 //   - shallow 语义：嵌套对象不代理
 //   - toRaw(props) 可拿原始对象
 //   - 手动 instance.update() 双保险下不双渲染
-// 运行：pnpm vitest run scripts/props-reactive.test.tsx
+// 运行：pnpm vitest run test/props-reactive.test.tsx
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'

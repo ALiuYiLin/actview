@@ -3,7 +3,7 @@
 // 验证：deps 相同的子树 patch 时完全短路（不触碰 DOM）；
 //       deps 变化的子树正常 patch。
 // 短路证据：MutationObserver——未变化行零 DOM 变更，变化行有变更。
-// 运行：pnpm test scripts/vmemo.test.tsx
+// 运行：pnpm test test/vmemo.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
