@@ -180,4 +180,45 @@ describe('useProps 组件集成', () => {
     expect(btn().className).toBe('btn btn-secondary btn-md')
     expect(btn().getAttribute('data-state')).toBe('secondary')
   })
+
+  it('单参形式：组件内 useProps(map) / useProp(key) 自动取当前实例 props', async () => {
+    const state = reactive({ variant: 'default', label: 'Click' })
+    function Button() {
+      // 无 props 参数：getCurrentInstance().props
+      const { variant, size, rest } = useProps({
+        variant: (v: any) => v ?? 'default',
+        size: (v: any) => v ?? 'md'
+      })
+      const label = useProp('label', (v: any) => v ?? '')
+      return (
+        <button {...rest.value} class={`btn btn-${variant.value} btn-${size.value}`}>
+          {label.value}
+        </button>
+      )
+    }
+    function App() {
+      return (
+        <Button variant={state.variant} data-state={state.variant} label={state.label}>
+          ignore
+        </Button>
+      )
+    }
+    const host = mount(App)
+    const btn = () => host.querySelector('button')!
+    expect(btn().className).toBe('btn btn-default btn-md')
+    expect(btn().getAttribute('data-state')).toBe('default')
+    expect(btn().textContent).toBe('Click') // useProp 单参读取 props.label
+
+    state.variant = 'primary'
+    state.label = 'OK'
+    await flush()
+    expect(btn().className).toBe('btn btn-primary btn-md')
+    expect(btn().getAttribute('data-state')).toBe('primary')
+    expect(btn().textContent).toBe('OK')
+  })
+
+  it('单参形式在 setup 外调用报错', () => {
+    expect(() => useProps({ variant: (v: any) => v })).toThrow(/只能在组件 setup 中调用/)
+    expect(() => useProp('variant')).toThrow(/只能在组件 setup 中调用/)
+  })
 })

@@ -111,11 +111,16 @@ function serializeNode(node: any): string {
       typeof (type as any).__setup === 'function')
   if (isComponent) {
     const setup = (type as any).__setup
+    // 组件边界 scoped 转换（与运行时 mountComponent 一致）：注入的 data-v-*
+    // 合并为 scopedId prop，子组件手动应用后经 serializeAttrs 翻译为真实属性
+    const ssrProps = { ...(props ?? {}) }
+    extractScopedIdProps(ssrProps)
     // 静态生成上下文：setup 里调用 onMounted 等生命周期钩子时必须有
     // currentInstance（否则警告「只能在组件 setup 中调用」并丢弃）。
     // 用轻量 instance（带钩子空数组即可注册），钩子注册后**不 flush**
     // （SSR/静态生成语义：setup + render，不执行 DOM 钩子，与 Vue SSR 一致）。
     const ssrInstance = {
+      props: ssrProps,
       beforeMount: [] as (() => void)[],
       mounted: [] as (() => void)[],
       updated: [] as (() => void)[],
@@ -134,10 +139,6 @@ function serializeNode(node: any): string {
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
-      // 组件边界 scoped 转换（与运行时 mountComponent 一致）：注入的 data-v-*
-      // 合并为 scopedId prop，子组件手动应用后经 serializeAttrs 翻译为真实属性
-      const ssrProps = { ...(props ?? {}) }
-      extractScopedIdProps(ssrProps)
       // setup(props, ctx)：SSR 无父子链（顶层递归无 parent），provide 落到
       // ssrInstance 自己的表（子孙串行化时不可见，已知限制）
       const ctx = { injects: ssrInstance.injects }

@@ -103,8 +103,9 @@ function Child(props: { count: number }) {
 ```tsx
 import { useProps, useProp } from 'actview'
 
-function Button(props: { variant?: string; size?: string; class?: string }) {
-  const { variant, size, rest } = useProps(props, {
+function Button() {
+  // 组件内可省略 props 参数（自动取当前实例 props，等价 Vue 的 toRefs(props) + 默认值）
+  const { variant, size, rest } = useProps({
     class: undefined,                 // undefined = 裸透传：直接返回 props.class 原值
     variant: (v) => v ?? 'default',   // normalize：默认值兜底 / 类型转换
     size: (v) => v ?? 'default',
@@ -116,11 +117,12 @@ function Button(props: { variant?: string; size?: string; class?: string }) {
   )
 }
 
-// 单个 prop：useProp(props, key, normalize?)
-const count = useProp(props, 'count', (v) => v ?? 0)
+// 单键：useProp(key, normalize?)（组件内单参形式）
+const count = useProp('count', (v) => v ?? 0)
 ```
 
-- 返回的都是 `ComputedRef`：render 里用 `.value` 读取，父组件改 prop 自动重算（等价 Vue 的 `toRefs(props)` + 默认值）
+- 组件内**单参形式**（`useProps(map)` / `useProp(key, fn?)`）自动取当前实例的 props；setup 外或需显式指定时用双参形式（`useProps(props, map)` / `useProp(props, key, fn?)`）
+- 返回的都是 `ComputedRef`：render 里用 `.value` 读取，父组件改 prop 自动重算
 - `rest.value` 是未在 map 中声明的 props 集合（值形态），可直接 `{...rest.value}` 透传；父组件新增的 prop 键会自动进入 rest
 - 别名键：map 用真实键（`class`），解构时重命名（`{ class: className }`）；不声明 normalize 的键用 `key: undefined` 裸透传，无需写 `(val) => val`
 - 纯透传场景（不剔除任何键）直接 `{...props}` 即可，无需 useProps

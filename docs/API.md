@@ -102,7 +102,7 @@
 | 能力 | 说明 |
 |---|---|
 | Props | 全量进 setup（`key`/`ref` 除外），TS 类型保证形状；显式 `{...props}` 透传 |
-| Props 响应式取值 | `useProp(props, key, fn?)` / `useProps(props, { key: fn })`：返回 ComputedRef 活引用（解决 setup 解构快照），`fn` 做默认值/转换；map 值为 `undefined` 时该键裸透传（直接返回 props 原值）；批量版附带 `rest`（未声明键集合，可 `{...rest.value}` 透传，父新增 prop 键自动进入） |
+| Props 响应式取值 | `useProp(key, fn?)` / `useProps({ key: fn })`（组件内单参形式，自动取当前实例 props；也支持 `useProp(props, key, fn?)` / `useProps(props, { key: fn })` 显式传入）：返回 ComputedRef 活引用（解决 setup 解构快照），`fn` 做默认值/转换；map 值为 `undefined` 时该键裸透传（直接返回 props 原值）；批量版附带 `rest`（未声明键集合，可 `{...rest.value}` 透传，父新增 prop 键自动进入） |
 | 插槽 | 默认（children）/ 作用域（函数 children）/ 具名（`<template slot="name">`） |
 | 模板引用 | `props.ref`（函数 / `{value}` 对象 / `ref()`——Vue 风格直接传）指向 DOM/组件实例，卸载自动置 null |
 | 依赖注入 | `provide(key, value)` / `useInjects(key?)` |
