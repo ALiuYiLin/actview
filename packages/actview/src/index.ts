@@ -23,6 +23,7 @@ export {
   triggerRef,
   isRef,
   unref,
+  unrefs,
   toValue,
   toRef,
   toRefs,

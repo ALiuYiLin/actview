@@ -251,7 +251,7 @@ const theme = useInjects('theme')
 
 | API | 说明 |
 |---|---|
-| `ref(v)` / `isRef` / `unref` / `toRef` / `toRefs` | 单值响应式与工具 |
+| `ref(v)` / `isRef` / `unref` / `unrefs` / `toRef` / `toRefs` | 单值响应式与工具（`unrefs` 批量解包，配合 `toRefs` 解构 rest 透传） |
 | `reactive(obj)` / `shallowReactive` / `readonly` / `markRaw` | 对象/数组响应式 |
 | `computed(getter)` / `computed({get,set})` | 派生值（可写） |
 | `watch(src, cb, opts)` / `watchEffect(fn)` | 侦听（`immediate`、`onCleanup`、返回 stop） |

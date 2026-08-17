@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, useInjects, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, computed, ref, isRef, unref, unrefs, toRef, toRefs, watch, watchEffect, onMounted, onUpdated, onBeforeUnmount, onUnmounted, provide, useInjects, renderToString, Teleport, Transition, KeepAlive, ErrorBoundary, Suspense, lazy, defineComponent } from 'actview'
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
@@ -1316,6 +1316,22 @@ describe('场景 22：toRef / toRefs', () => {
     const r = ref(1)
     const state = reactive<{ n: typeof r }>({ n: r })
     expect(toRef(state, 'n')).toBe(r)
+  })
+
+  it('unrefs 批量解包：ref 取 .value，非 ref 原样返回（仅一层）', () => {
+    const state = reactive({ disabled: true, id: 'b1' })
+    const { disabled, id } = toRefs(state)
+    const plain = unrefs({ disabled, id, fixed: 'x' })
+    expect(plain).toEqual({ disabled: true, id: 'b1', fixed: 'x' })
+    expect(isRef(plain.disabled)).toBe(false) // 已解包为值
+
+    // 解包结果随源变化（在响应式上下文读取时追踪）
+    let dummy: any
+    const e = runEffect(() => (dummy = unrefs({ disabled }).disabled))
+    expect(dummy).toBe(true)
+    state.disabled = false
+    expect(dummy).toBe(false)
+    e.stop()
   })
 })
 

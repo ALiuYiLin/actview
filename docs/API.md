@@ -19,7 +19,7 @@
 | `ref(value)` | 单值响应式（`.value`） |
 | `shallowRef(value)` | 浅层 ref（对象值不包装） |
 | `triggerRef(ref)` | 手动触发 shallowRef 依赖 |
-| `isRef(v)` / `unref(v)` | ref 判断 / 解包 |
+| `isRef(v)` / `unref(v)` / `unrefs(obj)` | ref 判断 / 解包 / 批量解包（`{y: Ref}` → `{y: value}`，配合 `toRefs` 解构 rest 透传） |
 | `toValue(v)` | 取值统一（值/ref/getter） |
 | `toRef(obj, key)` / `toRefs(obj)` | 对象属性/整体转 ref |
 

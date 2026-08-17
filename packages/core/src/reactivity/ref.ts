@@ -26,6 +26,23 @@ export function unref<T>(ref: T | Ref<T>): T {
 }
 
 /**
+ * 批量解包：对象内每个 ref 取 .value，非 ref 原样返回（仅一层）。
+ * 典型用法：`const { x, ...ret } = toRefs(props)` 后
+ * `<div {...unrefs(ret)} />` —— spread 在 render 期执行，逐键读取
+ * 活引用 → 保持响应式（透传 rest 的简便写法）。
+ */
+export function unrefs<T extends Record<string, any>>(
+  obj: T
+): { [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K] } {
+  const out: any = {}
+  for (const key in obj) {
+    const v = obj[key]
+    out[key] = isRef(v) ? v.value : v
+  }
+  return out
+}
+
+/**
  * 取值统一：ref 取 .value，getter 函数调用，其余原样返回。
  * 与 unref 的区别：额外支持 getter（MaybeRefOrGetter 范式）。
  * 在响应式上下文里调用 getter 会建立依赖追踪（如 computed/watch 内）。
