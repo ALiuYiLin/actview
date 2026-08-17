@@ -36,7 +36,7 @@
 |---|---|
 | `computed(getter)` / `computed({ get, set })` | 惰性缓存派生值（脏标记）；选项形态支持 setter |
 | `watch(source, cb, opts?)` | 侦听（ref/函数/数组/对象；`deep`/`flush`/`once`/`immediate`；`onCleanup`；返回 stop） |
-| `watchEffect(fn, opts?)` | 立即执行并自动追踪依赖 |
+| `watchEffect(fn, opts?)` | 立即执行并自动追踪依赖（⚠️ 回调内早退前先读取要追踪的依赖，否则不会收集——见 `docs/reactivity.md` 4.3） |
 | `onWatcherCleanup(fn)` | 回调内注册清理 |
 
 ### 作用域

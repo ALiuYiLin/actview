@@ -137,6 +137,24 @@ nextTick(cb) 返回本轮 flush 结束的 Promise
 - `deep: true` 对 getter/ref 源 `traverse`；对象源默认 deep
 - `onCleanup` 第三参 + `onWatcherCleanup`（模块级 `currentWatcher`）两种清理注册
 - `once: true` 回调后自动 stop
+- ⚠️ **早退陷阱（watchEffect）**：依赖只在回调**本次执行路径**中收集（`ReactiveEffect.run` 先清依赖再执行）。若在读取某些响应式状态**之前**早退，这些依赖永远不会被追踪——后续变化不触发回调，直到早退条件本身翻转才自愈，期间更新全部错过：
+
+  ```ts
+  // ❌ 陷阱：flag=true 时早退，n 从未被读 → 不追踪 → n 变化不触发
+  watchEffect(() => {
+    if (state.flag) return
+    doSomething(state.n)
+  })
+
+  // ✅ 先读值（建立追踪），再早退：无论后续走哪个分支，n 变化都会触发
+  watchEffect(() => {
+    void state.n // 先读：建立依赖追踪
+    if (state.flag) return
+    doSomething(state.n)
+  })
+  ```
+
+  run-based 依赖收集的固有语义（与 Vue 3 一致）；`watch` 的 getter 同理——getter 内早退同样会漏依赖。
 
 ---
 
