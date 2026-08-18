@@ -74,6 +74,11 @@ export function watch<T>(
   const effect = new ReactiveEffect(getter)
 
   const runJob = () => {
+    // stop() 后跳过 stale 微任务：effect 已失效，effect.run() 会短路返回
+    // undefined，若继续执行会把 undefined 当 newValue 传给回调
+    // （deep/forceTrigger 场景无条件触发），并可能重复执行 cleanup。
+    // 对齐 Vue 3：job 开头有 !effect.active 守卫。
+    if (!effect.active) return
     pending = false
     if (cleanup) {
       cleanup()
