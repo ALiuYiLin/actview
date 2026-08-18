@@ -110,4 +110,33 @@ describe('模板引用（props.ref）', () => {
     expect(ready).not.toBeNull()
     expect(ready!.textContent).toBe('ready')
   })
+
+  it('ref 回调时整条祖先链已连接（前序插入，AI-002 修复）', () => {
+    // 修复前：子元素 ref 在父 appendChild 之前触发 → isConnected=false
+    // 修复后：前序插入 → 宿主元素先接入容器再挂子 → ref 触发时已连接
+    const logs: Array<{ tag: string; connected: boolean }> = []
+    function Deep() {
+      // 组件层跨层：ref 在子组件内，祖先链含父组件宿主元素
+      return (
+        <div class="inner">
+          <button ref={(n) => logs.push({ tag: 'button', connected: n.isConnected })}>
+            x
+          </button>
+        </div>
+      )
+    }
+    function App() {
+      return (
+        <div class="outer">
+          <Deep />
+          <span ref={(n) => logs.push({ tag: 'span', connected: n.isConnected })} />
+        </div>
+      )
+    }
+    mount(App)
+    expect(logs).toEqual([
+      { tag: 'button', connected: true },
+      { tag: 'span', connected: true },
+    ])
+  })
 })

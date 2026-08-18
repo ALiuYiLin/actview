@@ -207,12 +207,17 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   const el = createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
+  // 前序插入（AI-002）：先接入容器再挂载子元素——子元素 ref 回调触发时，
+  // 当前宿主元素及整条祖先链已连接（isConnected === true，对齐 React 的
+  // mutation 阶段先 placement 后挂子）。
+  // 注意语义：ref 仍 inline 触发，触发时该元素的后续兄弟/后代尚未挂载，
+  // 子树部分可见（与 React/Vue 的"整树完成后设 ref"不同，见 docs/issues/AI-002.md）。
+  container?.appendChild(el)
   // dangerouslySetInnerHTML：直接注入 HTML，忽略 children（React 语义）
   const hasDanger = vnode.props?.dangerouslySetInnerHTML != null
   vnode.__avChildren = hasDanger
     ? []
     : patchChildren(null, vnode.props?.children, el, undefined, parent)
-  container?.appendChild(el)
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
   return el

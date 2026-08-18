@@ -114,7 +114,8 @@ export function watch<T>(
   }
 
   if (immediate) {
-    runJob() // 首次：cb(newVal, undefined)
+    runJob() // 首次：cb(newVal, undefined)。Vue 3 语义：immediate 首次回调总是
+    // 同步执行（无论 flush），flush 只影响后续 trigger 的调度时机
   } else {
     oldValue = effect.run() // 首次求值：收集依赖、记录旧值，不回调
   }
@@ -218,7 +219,7 @@ export function watchEffect(
     }
   }
 
-  eff.run() // 立即执行一次，收集依赖
+  eff.run() // 立即执行一次，收集依赖（Vue 3 语义：首次同步执行，flush 只影响后续 trigger）
 
   return () => {
     eff.stop()
