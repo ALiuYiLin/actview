@@ -45,6 +45,7 @@ export {
   onRenderTriggered,
   provide,
   useInjects,
+  useId,
   useProp,
   useProps,
   createContext,
@@ -59,4 +60,15 @@ export {
   getCurrentScope
 } from '@actview/core'
 
-export type { App, SetupContext, ComponentOptions } from '@actview/core'
+export type {
+  App,
+  SetupContext,
+  ComponentOptions,
+  Ref,
+  ComputedRef,
+  WritableComputedRef,
+  ComputedOptions,
+  WatchSource,
+  WatchOptions,
+  Context
+} from '@actview/core'

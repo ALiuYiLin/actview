@@ -125,12 +125,14 @@ export function mountComponent(
   deps: RendererDeps
 ) {
   const options = vnode.type
-  if (
-    options == null ||
-    typeof options !== 'object' ||
-    typeof options.__setup !== 'function'
-  ) {
-    throw new Error('[actview] mountComponent: 无效的组件，缺少 __setup')
+  // 组件 setup：{ __setup } 对象，或裸函数（未经 Babel 转换的运行时兜底——
+  // 与 renderToString 判定一致；裸函数调用一次按 setup 语义执行）
+  const setup =
+    typeof options === 'function' ? options : (options?.__setup as any)
+  if (typeof setup !== 'function') {
+    throw new Error(
+      '[actview] mountComponent: 无效的组件，缺少 __setup（组件需经 Babel 插件转换或使用 defineComponent）',
+    )
   }
 
   // props 全量（key/ref 除外）：shallowReactive 代理（对齐 Vue 3）——
@@ -146,7 +148,7 @@ export function mountComponent(
   delete props.key
 
   const instance: ComponentInstance = {
-    setup: options.__setup,
+    setup: setup,
     id: ++uid,
     name: options.name || 'Anonymous',
     props,
@@ -187,7 +189,7 @@ export function mountComponent(
   pauseTracking()
   let setupResult: any
   try {
-    setupResult = options.__setup(props, {
+    setupResult = setup(props, {
       // live getter：provide 拷贝后 ctx.injects 实时指向最新注入表
       // （若传快照引用，组件自己 provide 后再读 ctx.injects 会拿到旧表）
       get injects() {
@@ -209,8 +211,19 @@ export function mountComponent(
       suspense?.suspenseCtx?.resolve()
       instance.update()
     })
-  } else {
+  } else if (typeof setupResult === 'function') {
     instance.render = setupResult
+  } else {
+    // setup 返回了 VNode 而非 render 函数：裸函数组件未经 Babel 转换的典型症状
+    // （融合式 setup+render 无法在运行时区分阶段，给出明确报错替代后续
+    // "instance.render is not a function"）
+    throw new Error(
+      '[actview] 组件 setup 必须返回 render 函数。' +
+        (typeof options === 'function'
+          ? '裸函数组件需经 Babel 插件转换（最后 return JSX），或手动返回 () => JSX。收到：' +
+            typeof setupResult
+          : 'defineComponent 的 setup 需返回 () => JSX（收到 ' + typeof setupResult + '）'),
+    )
   }
 
   // 更新函数：重新 render 并与旧子树 patch

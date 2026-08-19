@@ -59,14 +59,14 @@ function createTextVNode(text: string) {
   }
 }
 
-/** 组件 VNode：type 是 { __setup } 对象 */
+/** 组件 VNode：type 是 { __setup } 对象，或裸函数（未经 Babel 转换——运行时兜底，见 mountComponent） */
 export function isComponentVNode(vnode: any): boolean {
   return (
     vnode != null &&
     typeof vnode === 'object' &&
     vnode.type != null &&
-    typeof vnode.type === 'object' &&
-    '__setup' in vnode.type
+    (typeof vnode.type === 'function' ||
+      (typeof vnode.type === 'object' && '__setup' in vnode.type))
   )
 }
 
@@ -97,6 +97,9 @@ function resolveDynamicVNode(vnode: any): any {
     const is = vnode.props?.is
     vnode.type =
       is && typeof is === 'object' ? is : typeof is === 'string' ? is : 'div'
+    // 剥离 is 元键：避免残留进目标组件 props（对齐 React 动态组件语义）。
+    // keepAlive 在 render 期（本函数之前）读 props.is，每次渲染新 vnode，先读后删安全
+    if (vnode.props) delete vnode.props.is
   }
   return vnode
 }
@@ -716,15 +719,25 @@ function setProp(el: any, key: string, value: any) {
   }
   if (key === 'style') {
     if (typeof value === 'string') el.style.cssText = value
-    else if (value) Object.assign(el.style, value)
-    else el.removeAttribute('style')
+    else if (value) {
+      // CSS 变量（--*）走 setProperty（Object.assign 对 CSSStyleDeclaration
+      // 的自定义属性键无效）；其余 camelCase 键直接赋值
+      for (const k in value) {
+        if (k.startsWith('--')) el.style.setProperty(k, String(value[k]))
+        else el.style[k] = value[k]
+      }
+    } else el.removeAttribute('style')
     return
   }
   if (
     key === 'value' ||
     key === 'checked' ||
     key === 'disabled' ||
-    key === 'readonly'
+    key === 'readonly' ||
+    // defaultValue/defaultChecked 走 property（对齐 React：设置默认值属性，
+    // 不影响当前 value；当普通 attribute 会渲染成无效的 defaultvalue 属性）
+    key === 'defaultValue' ||
+    key === 'defaultChecked'
   ) {
     if (value == null || value === false) {
       el.removeAttribute(key)
@@ -734,6 +747,16 @@ function setProp(el: any, key: string, value: any) {
     } else {
       el[key] = value
     }
+    return
+  }
+  // aria-* / data-*：布尔值字符串化（true→"true"、false→"false" 不移除，
+  // 对齐 React/ARIA 规范——ARIA 要求 "true"/"false" 字符串；data-* 同 React 行为）
+  if (/^(aria|data)-/.test(key)) {
+    if (value == null) el.removeAttribute(key)
+    else el.setAttribute(
+      key,
+      value === true ? 'true' : value === false ? 'false' : String(value),
+    )
     return
   }
   // 其余走 attribute

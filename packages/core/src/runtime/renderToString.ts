@@ -185,6 +185,15 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
     if (key === 'children' || key === 'key' || key === 'ref') continue
     if (key.startsWith('on')) continue // 事件不输出
     const value = props[key]
+    // aria-* / data-*：布尔值字符串化（对齐运行时 setProp：true→"true"、
+    // false→"false" 不移除；null/undefined 不输出）
+    if (/^(aria|data)-/.test(key)) {
+      if (value == null) continue
+      out += ` ${key}="${escapeHtml(
+        value === true ? 'true' : value === false ? 'false' : String(value),
+      )}"`
+      continue
+    }
     if (value == null || value === false) continue
     // scopedId 约定（@actview/plugin-scoped）：值为 scoped 属性名（可空格分隔
     // 多个），翻译为真实属性输出 —— 与运行时 setProp/patchProps 语义一致
@@ -201,7 +210,14 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
       if (s) out += ` style="${escapeHtml(s)}"`
       continue
     }
-    const name = key === 'className' ? 'class' : key
+    const name =
+      key === 'className'
+        ? 'class'
+        : key === 'defaultValue'
+          ? 'value'
+          : key === 'defaultChecked'
+            ? 'checked'
+            : key
     if (value === true) {
       // 布尔属性：输出空属性（对齐 setAttribute(key, '')）
       out += ` ${name}${BOOLEAN_ATTRS.has(name) ? '' : '=""'}`

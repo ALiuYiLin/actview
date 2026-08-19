@@ -15,6 +15,7 @@ export type { ComputedRef, WritableComputedRef, ComputedOptions } from './comput
 export { ref, shallowRef, triggerRef, isRef, unref, unrefs, toValue, toRef, toRefs } from './ref'
 export type { Ref } from './ref'
 export { watch, watchEffect, onWatcherCleanup } from './watch'
+export type { WatchSource, WatchOptions, WatchCleanup } from './watch'
 
 export * from './reactive-system'
 export * from './effectScope'

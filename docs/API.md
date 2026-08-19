@@ -83,6 +83,7 @@
 | `onRenderTracked(fn)` | 依赖收集（调试） |
 | `onRenderTriggered(fn)` | 依赖触发（调试） |
 | `getCurrentInstance()` | 当前组件实例 |
+| `useId()` | 生成稳定的唯一 id（React useId 场景）：客户端基于组件实例自增 id（setup 只执行一次 → 重渲染间稳定）+ 调用计数；SSR/setup 外回退全局计数。无水合，服务端/客户端 id 无需一致 |
 
 ### 内置组件
 

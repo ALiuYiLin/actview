@@ -1,13 +1,14 @@
 // ============================================================
 // @actview/testing — 组件测试工具（对齐 testing-library，TSX 风格）
-//   render(component)：挂载 + 返回 DOM 查询辅助
+//   render(component, { props? })：挂载 + 返回 DOM 查询辅助
+//     - props 经 reactive 代理传入，rerender(props) 更新后组件响应式重渲染
 //   fireEvent(el, event)：触发事件
 //   waitFor(cb)：轮询等待异步更新
 //   screen：全局查询（作用于最近 render 的 container）
 //   cleanup：卸载全部挂载的组件
 // ============================================================
 
-import { createApp } from '@actview/core'
+import { createApp, defineComponent, reactive } from '@actview/core'
 
 const mountedContainers: HTMLElement[] = []
 
@@ -18,6 +19,8 @@ export interface RenderResult {
   container: HTMLElement
   /** 卸载：移除容器 DOM */
   unmount: () => void
+  /** 更新 props（经 reactive 代理写入，触发组件响应式重渲染；与 props 合并） */
+  rerender: (props: Record<string, any>) => void
   getByText: (text: string) => HTMLElement
   queryByText: (text: string) => HTMLElement | null
   getAllByText: (text: string) => HTMLElement[]
@@ -91,10 +94,12 @@ function buildQueries(root: HTMLElement) {
 /**
  * 挂载组件到自动创建的容器（append 到 body），返回查询辅助。
  * options.container 可指定已有容器（不自动清理）。
+ * options.props 为初始 props：经 reactive 代理传入，rerender(props) 更新
+ * （内部 Harness 包装，组件收到 props 后照常响应式更新）。
  */
 export function render(
   component: any,
-  options?: { container?: HTMLElement }
+  options?: { container?: HTMLElement; props?: Record<string, any> }
 ): RenderResult {
   const container = options?.container ?? document.createElement('div')
   const autoCreated = !options?.container
@@ -104,7 +109,20 @@ export function render(
     document.body.appendChild(container)
     mountedContainers.push(container)
   }
-  createApp(component).mount('#' + id)
+
+  // props 代理：rerender 合并写入 → Harness render 展开（追踪全部键）→
+  // 子组件收到新 props 后按 propsChanged 更新
+  const state = reactive<any>({ ...(options?.props ?? {}) })
+  const Harness = defineComponent(function () {
+    return () => ({
+      $$typeof: Symbol.for('react.element'),
+      type: component,
+      key: null,
+      ref: null,
+      props: { ...state }
+    })
+  })
+  createApp(Harness).mount('#' + id)
 
   const queries = buildQueries(container)
 
@@ -114,6 +132,9 @@ export function render(
       container.remove()
       const i = mountedContainers.indexOf(container)
       if (i >= 0) mountedContainers.splice(i, 1)
+    },
+    rerender: (props) => {
+      Object.assign(state, props)
     },
     ...queries
   }

@@ -7,7 +7,7 @@
 // 运行：pnpm exec vitest run test/renderer/create-element-children.test.tsx
 // ============================================================
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createApp, defineComponent } from 'actview'
 import { render as testingRender } from '@actview/testing'
 import { createElement } from '@actview/jsx'
@@ -75,11 +75,11 @@ describe('createElement 组件 children', () => {
     expect(host.querySelector('.control')!.textContent).toBe('ctrl')
   })
 
-  it('E: 裸函数 return createElement 树 → 插件不转换（只包 JSX/_jsx/null 返回）', () => {
-    // AppE 的 return 是 createElement 调用，不是 JSX → wrapComponentFn 不识别 →
-    // 保持裸函数 → isComponentVNode 不识别 → 渲染失败（与 G 同类，非 createElement 特有）
-    const host = mount(AppE)
-    expect(host.querySelector('.control')).toBeNull()
+  it('E: 裸函数 return createElement 树 → PD-07 运行时兜底明确报错', () => {
+    // AppE 的 return 是 createElement 调用，不是 JSX → 插件不转换 → 保持裸函数；
+    // PD-07 后运行时识别函数组件，调一次发现返回 VNode 而非 render 函数 →
+    // 抛出明确报错（替代旧的 InvalidCharacterError/静默失败）
+    expect(() => mount(AppE)).toThrow(/必须返回 render 函数/)
   })
 
   it('E2: 写法规避——defineComponent 手动包 render，createElement 树正常渲染', () => {
@@ -99,14 +99,23 @@ describe('createElement 组件 children', () => {
     expect(container.querySelector('.slider')!.textContent).toBe('')
   })
 
-  it('G: 未转换的组件（小写变量，babel 插件不处理）经 createElement 作为 children → 不渲染', () => {
+  it('G: 未转换组件（小写变量）→ PD-07 兜底识别后经错误链上报，不再当原生元素', () => {
     // 插件只转换大写开头的具名函数/const；小写变量保留为裸函数 →
-    // isComponentVNode 不识别 → 被当原生元素处理 → 渲染失败
+    // PD-07 后按组件分支处理（调用一次返回 VNode）→ 明确报错走 handleError 链
     const sliderControl = () => <div class="control">ctrl</div>
     function AppG() {
       return <SliderRoot>{createElement(sliderControl, {})}</SliderRoot>
     }
-    const host = mount(AppG)
-    expect(host.querySelector('.control')).toBeNull()
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const host = mount(AppG)
+      expect(host.querySelector('.control')).toBeNull()
+      expect(errSpy).toHaveBeenCalledWith(
+        expect.stringContaining('组件渲染错误'),
+        expect.any(Error),
+      )
+    } finally {
+      errSpy.mockRestore()
+    }
   })
 })

@@ -459,6 +459,51 @@ function List(props) { return <ul>{props.children({ item: 1 })}</ul> }
 </Layout>
 ```
 
+### 无头组件 render-prop（默认实现 + 用户可覆盖）
+
+无头组件库（Headless UI）的常见模式：组件提供**默认渲染**，用户通过 `render` 函数 prop **自行重实现**。ActView 完全支持，且 render prop 不经 defineComponent 转换（它是普通函数 prop，返回 VNode）：
+
+```tsx
+// 库侧：默认实现 + 用户覆盖
+function Combobox(props) {
+  return !props.render ? (
+    <div class="combobox-default">...</div>
+  ) : (
+    <>{props.render({ open: true })}</>   // 渲染期调用，返回 VNode
+  )
+}
+
+// 用户侧：传 render 覆盖
+<Combobox render={(state) => <div class="my-combobox">{state.open ? '开' : '关'}</div>} />
+```
+
+- **响应式成立**：`props.render(...)` 在 Combobox 的 render effect 里调用，render 箭头内读取的响应式状态会追踪到 Combobox 的 render——状态变化自动重渲染、重新调用 render prop
+- `!props.render ? A : B` 三元在 render 函数内部求值（每次渲染重判），props.render 的增删是响应式的
+- 等价写法对照：函数 children（`<Combobox>{(s) => <div/>}</Combobox>`，需判断 children 是函数还是 VNode）、具名插槽（`<template slot="render" state>` → `props.slots.render({})`）
+
+#### 推荐：用具名插槽替代 render prop（无类型歧义）
+
+功能与 render prop 完全等价，但推荐优先用**具名插槽**——编译期提取、无 children 类型歧义、作用域参数显式声明：
+
+```tsx
+// 库侧：插槽回退默认实现（slots 一定有函数形态，无需判空分支）
+function Combobox(props) {
+  return props.slots?.render?.({ open: true }) ?? (
+    <div class="combobox-default">...</div>
+  )
+}
+
+// 用户侧：具名插槽覆盖（`state` 为作用域参数，接收库侧传入的状态）
+<Combobox>
+  <template slot="render" state>
+    <div class="my-combobox">{state.open ? '开' : '关'}</div>
+  </template>
+</Combobox>
+```
+
+- 编译产物：`slots: { render: (state) => <><div class="my-combobox">...</div></> }`——与 render prop 同一机制，`props.slots.render(...)` 在库组件 render effect 中调用，响应式追踪同样成立
+- 优势：作用域参数（`state`）在 JSX 上显式声明，`slot="render"` 语义即"渲染接口"，用户不需要写内联箭头闭包；多个渲染出口（`slot="label"` / `slot="icon"` / `slot="render"`）并列清晰
+
 ### 模板引用（DOM 引用）
 
 ```tsx

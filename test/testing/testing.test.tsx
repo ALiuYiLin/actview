@@ -85,6 +85,21 @@ describe('@actview/testing', () => {
     expect(screen.queryByText('A content')).toBeNull() // screen 只作用于最近 render
   })
 
+  it('render 支持 props + rerender 更新（PD-16）', async () => {
+    function Greeting(props: any) {
+      return <div class="g">{props.name ?? 'anon'}</div>
+    }
+    const { getByClass, rerender } = render(Greeting, {
+      props: { name: 'alice' }
+    })
+    expect(getByClass('g').textContent).toBe('alice')
+    rerender({ name: 'bob' })
+    await waitFor(() => expect(getByClass('g').textContent).toBe('bob'))
+    // 未声明键合并保留
+    rerender({ extra: 1 })
+    expect(getByClass('g').textContent).toBe('bob')
+  })
+
   it('cleanup 卸载全部组件', () => {
     function App() {
       return <div class="x">x</div>

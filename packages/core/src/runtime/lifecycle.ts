@@ -13,6 +13,22 @@ export function getCurrentInstance(): ComponentInstance | null {
   return currentInstance
 }
 
+// ============================================================
+// useId — 生成稳定的唯一 id（React useId 的可用场景）
+//   客户端：基于组件实例自增 id（mountComponent uid；setup 只执行一次 →
+//   每次重渲染间 id 稳定）+ 调用计数（同组件多次调用不冲突）
+//   SSR / setup 外：回退全局计数（静态序列化树内唯一即可）。
+//   ActView 无水合 → 服务端/客户端 id 无需一致，无需 hydration 对齐。
+// ============================================================
+
+let useIdSeq = 0
+
+export function useId(): string {
+  const instance = getCurrentInstance()
+  const base = instance?.id != null ? instance.id : 's'
+  return `actview-id-${base}-${++useIdSeq}`
+}
+
 export function setCurrentInstance(instance: ComponentInstance | null) {
   // 离开上一个实例：恢复其 scope 的上游
   if (currentInstance) currentInstance.scope?.off()

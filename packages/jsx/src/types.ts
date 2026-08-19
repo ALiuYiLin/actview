@@ -60,8 +60,16 @@ export interface FormEvent extends Event {
   }
 }
 
-/** 事件处理器通用形状（原生 DOM 事件，无合成事件包装） */
-export type EventHandler<E extends Event = Event> = (e: E) => void
+/**
+ * 事件处理器通用形状（原生 DOM 事件，无合成事件包装）。
+ * 用「方法双变」技巧（bivarianceHack，对齐 React）：TS 函数参数逆变检查下
+ * `(e: MouseEvent) => void` 不能赋给 `(e: Event) => void`；方法参数按双变
+ * 检查，放宽容器的赋值方向、保留 E 的精确类型（窄事件 handler 可赋给宽事件
+ * prop；运行时 DOM 派发保证事件与声明元素匹配，实践中安全）。
+ */
+export type EventHandler<E extends Event = Event> = {
+  bivarianceHack(event: E): void
+}['bivarianceHack']
 
 // ============================================================
 // DOM 事件（全量常用，含 capture 变体）

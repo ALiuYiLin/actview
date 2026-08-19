@@ -1,6 +1,6 @@
 // ============================================================
 // Vite 插件
-// .tsx 文件在 esbuild 之前过一遍 Babel，做 defineComponent 转换
+// .tsx/.ts 文件在 esbuild 之前过一遍 Babel，做 defineComponent 转换
 // 编译核心（defineComponentPlugin）与宿主壳（createBabelTransform）
 // 均见 @actview/plugin-babel
 // ============================================================
@@ -21,8 +21,16 @@ export function actviewPlugin() {
       const cleanId = id.split('?')[0]
       // 也处理 .js：vitepress 的 dist/client 是 tsc 编译产物（.js，JSX 已降级为
       // _jsx() 调用，位于 node_modules 下），浏览器加载的是这些 .js 而非源码
-      // .tsx——不能按 node_modules 跳过，否则函数组件以裸函数进入运行时崩溃
-      if (!cleanId.endsWith('.tsx') && !cleanId.endsWith('.js')) return null
+      // .tsx——不能按 node_modules 跳过，否则函数组件以裸函数进入运行时崩溃。
+      // 也处理 .ts：esbuild/oxc 默认不解析 .ts 里的 JSX，含 JSX 的 .ts 需经本
+      // 插件（无 JSX 的 .ts 经 babel 原样再生，语义不变）
+      if (
+        !cleanId.endsWith('.tsx') &&
+        !cleanId.endsWith('.ts') &&
+        !cleanId.endsWith('.js')
+      ) {
+        return null
+      }
 
       const result = transform(code, id)
       if (!result) return null
