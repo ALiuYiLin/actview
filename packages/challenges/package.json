@@ -2,13 +2,21 @@
   "name": "@actview/challenges",
   "version": "0.0.1",
   "type": "module",
+  "description": "ActView 挑战系统：题目库内置 + CLI 取题/做题/交验（LeetCode 式框架练习）",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "bin": {
+    "challenges": "./dist/cli.js"
   },
   "dependencies": {
     "@actview/core": "workspace:^",
     "@actview/jsx": "workspace:^",
-    "@actview/testing": "workspace:^"
+    "@actview/plugin-babel": "workspace:^",
+    "@actview/testing": "workspace:^",
+    "@babel/core": "^8.0.1",
+    "@babel/preset-typescript": "^8.0.1",
+    "happy-dom": "^20.11.1"
   },
   "scripts": {
     "build": "tsup",
@@ -24,9 +32,13 @@
     },
     "main": "./dist/index.js",
     "module": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    "types": "./dist/index.d.ts",
+    "bin": {
+      "challenges": "./dist/cli.js"
+    }
   },
   "files": [
-    "dist"
+    "dist",
+    "challenges"
   ]
 }

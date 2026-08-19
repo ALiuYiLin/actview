@@ -7,6 +7,10 @@
 export { defineChallenge } from './define'
 export { runChallenge, renderChallenge, createAssert } from './runner'
 export { formatResult } from './format'
+export { compileTsx } from './compile'
+export { setupDom, executeCompiled } from './sandbox'
+// CLI 命令（new/verify/verify-all/list），供测试或程序化调用
+export { cmdNew, cmdVerify, cmdVerifyAll, cmdList, usageText } from './cli'
 export type {
   Challenge,
   ChallengeResult,
