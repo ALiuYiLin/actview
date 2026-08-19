@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@actview/challenges':
+        specifier: workspace:*
+        version: link:packages/challenges
       '@actview/core':
         specifier: workspace:*
         version: link:packages/core
@@ -71,6 +74,18 @@ importers:
       '@actview/jsx':
         specifier: workspace:^
         version: link:../jsx
+
+  packages/challenges:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:^
+        version: link:../core
+      '@actview/jsx':
+        specifier: workspace:^
+        version: link:../jsx
+      '@actview/testing':
+        specifier: workspace:^
+        version: link:../testing
 
   packages/core: {}
 

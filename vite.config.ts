@@ -17,7 +17,11 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: ['test/**/*.test.{ts,tsx}', 'plugins/**/test/*.test.ts'],
+    include: [
+      'test/**/*.test.{ts,tsx}',
+      'plugins/**/test/*.test.ts',
+      'challenges/**/*.test.ts'
+    ],
   },
   server: {
     port: 3000,
