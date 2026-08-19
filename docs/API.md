@@ -86,16 +86,16 @@
 
 ### 内置组件
 
-| 组件 | 说明 |
-|---|---|
-| `<KeepAlive include/exclude/max>` | 缓存实例/DOM（组件名过滤 + LRU 上限） |
-| `<ErrorBoundary fallback={...}>` | 捕获渲染错误 |
-| `<Suspense fallback={...}>` | 异步 setup / lazy 加载期间显示 fallback |
-| `<Teleport to="#target">` | 传送门 |
-| `<Transition name mode appear onEnter/onLeave...>` | 单子节点过渡（mode out-in + JS 钩子） |
-| `<TransitionGroup name>` | 列表增删过渡 |
-| `<component is={Comp}>` | 动态组件 |
-| `lazy(() => import(...))` | 异步组件 |
+| 组件 | 说明 | 详细参考 |
+|---|---|---|
+| `<KeepAlive include/exclude/max>` | 缓存实例/DOM（组件名过滤 + LRU 上限） | [→ components.md](./components.md#4-keepalive--组件实例缓存) |
+| `<ErrorBoundary fallback={...}>` | 捕获渲染错误 | [→ components.md](./components.md#5-errorboundary--渲染错误边界) |
+| `<Suspense fallback={...}>` | 异步 setup / lazy 加载期间显示 fallback | [→ components.md](./components.md#6-suspense--异步加载占位) |
+| `<Teleport to="#target">` | 传送门 | [→ components.md](./components.md#3-teleport--dom-传送门) |
+| `<Transition name mode appear onEnter/onLeave...>` | 单子节点过渡（mode out-in + JS 钩子） | [→ components.md](./components.md#1-transition--单子节点过渡动画) |
+| `<TransitionGroup name>` | 列表增删过渡 | [→ components.md](./components.md#2-transitiongroup--列表过渡动画) |
+| `<component is={Comp}>` | 动态组件 | [→ components.md](./components.md#9-component--动态组件) |
+| `lazy(() => import(...))` | 异步组件 | [→ components.md](./components.md#7-lazy--异步组件工厂) |
 
 ### 组件特性
 

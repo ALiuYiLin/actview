@@ -37,33 +37,293 @@ const App = defineComponent(function () {
 
 ## 二、状态管理迁移对照
 
-| React | ActView | 说明 |
-|---|---|---|
-| `const [x, setX] = useState(0)` | `const x = ref(0)`；读 `x.value`、写 `x.value = 1` | 基本类型必须包 `ref` |
-| `const [obj, setObj] = useState({...})` | `const obj = reactive({...})` | 对象/数组用 `reactive`，属性直接改 |
-| `setX(x + 1)` | `x.value++` | 直接改，自动触发更新 |
-| `useMemo(() => ..., [deps])` | `computed(() => ...)` | 惰性缓存 + 自动依赖追踪 |
-| `useEffect(() => {...}, [deps])` | `watch(src, cb)` / `watchEffect(fn)` | 见下方对照 |
-| `useRef()` | `ref(null)`（值引用）或模板引用 `props.ref`（函数 / `{value}` / `ref()` 均可） | DOM 引用用模板引用 |
-| `useCallback(fn, [])` | **不需要** | 闭包天然稳定 |
-| `useContext` | `createContext(default)` + `<Ctx.Provider value>` / `<Ctx value>` + `Ctx.use()` | 见第六节（Context 对象身份即键，无碰撞） |
+### 1. `useState` → `ref` / `reactive`
 
-### useEffect → watch / 生命周期
+```tsx
+// ─── React ───
+const [count, setCount] = useState(0)
+const [user, setUser] = useState({ name: 'a', age: 20 })
+
+// ─── ActView ───
+const count = ref(0)                         // 基本类型 → ref
+const user  = reactive({ name: 'a', age: 20 }) // 对象/数组 → reactive
+
+// 读取
+count.value                // → 相当于 React 的 count
+user.name                  // → 相当于 React 的 user.name
+
+// 修改
+count.value++              // → 相当于 setCount(c => c + 1)
+user.name = 'b'            // → 相当于 setUser(u => ({...u, name: 'b'}))
+```
+
+**要点**
+- **基本类型**（`number`/`string`/`boolean`）必须用 `ref`，通过 `.value` 读写
+- **对象/数组**用 `reactive`，属性直接修改即触发更新，无需创建新对象
+- `ref` 的对象值自动深层响应式（`ref({ a: 1 })` 等价于 `reactive({ a: 1 })` 包了一层 `.value`）
+
+---
+
+### 2. `useMemo` → `computed`
+
+```tsx
+// ─── React ───
+const doubled = useMemo(() => count * 2, [count])
+
+// ─── ActView ───
+const doubled = computed(() => count.value * 2)
+```
+
+- **惰性缓存**：依赖未变时不重算（React 是缓存结果，ActView 是脏标记判断）
+- **自动依赖追踪**：`computed` 回调中读取哪些响应式变量，就自动订阅哪些，无需写依赖数组
+- 返回 `ComputedRef`，用 `.value` 读取（和 `ref` 一样）
+
+---
+
+### 3. `useRef` → `ref`（值引用 / DOM 引用）
+
+```tsx
+// ─── 场景 A：可变引用（不触发渲染）───
+
+// React
+const intervalRef = useRef<number>(0)
+intervalRef.current = setInterval(...)
+
+// ActView
+const intervalRef = ref<number>(0)   // ref 本身不触发渲染——值变化只影响 .value
+// 或用普通变量（组件函数只跑一次，闭包天然稳定）
+let intervalId: number | undefined
+```
+
+对于「不需要触发渲染的跨渲染期存储」，ActView 中可以直接用 **普通局部变量**（因为组件函数只执行一次，不存在 React 那种每次 render 重置的问题）：
+
+```tsx
+function Timer() {
+  let intervalId: number | undefined   // ✅ 天然稳定，无需 useRef 包装
+
+  onMounted(() => { intervalId = setInterval(...) })
+  onUnmounted(() => { clearInterval(intervalId) })
+  // ...
+}
+```
+
+```tsx
+// ─── 场景 B：DOM 引用（模板引用）───
+
+// React
+const inputRef = useRef<HTMLInputElement>(null)
+return <input ref={inputRef} />
+
+// ActView（三种方式均可）
+const inputRef = ref<HTMLInputElement | null>(null)  // ① ref() 对象
+// const inputRef = { value: null }                  // ② 普通对象
+return <input ref={inputRef} />                      // 挂载后 inputRef.value = <input>
+
+// ③ 函数形式
+let inputEl: HTMLInputElement | null = null
+return <input ref={(el) => { inputEl = el }} />
+```
+
+---
+
+### 4. `useCallback` → **不需要**
+
+```tsx
+// React：需要 useCallback 保持闭包引用稳定
+const handleClick = useCallback(() => { doSomething(dep) }, [dep])
+
+// ActView：闭包天然稳定（组件函数只执行一次），直接写即可
+function MyComp() {
+  const dep = ref(0)
+  const handleClick = () => { doSomething(dep.value) }  // ✅ 始终保持同一引用
+  return <button onClick={handleClick}>click</button>
+}
+```
+
+**原因**：React 的组组件函数每次 render 重新执行，需要用 `useCallback` 保持子组件 `memo` 判断时的引用稳定。ActView 的组件函数只执行一次，闭包在 setup 阶段创建后永不变化，不存在此问题。
+
+---
+
+### 5. `useContext` → `createContext`
+
+```tsx
+// ─── React ───
+const ThemeCtx = createContext('default')
+<ThemeCtx.Provider value="dark">
+  <Toolbar />
+</ThemeCtx.Provider>
+const theme = useContext(ThemeCtx)   // "dark"
+
+// ─── ActView ───
+const ThemeCtx = createContext('default')   // import from 'actview'
+
+// 提供（两种写法等价）
+<ThemeCtx.Provider value="dark">...</ThemeCtx.Provider>
+<ThemeCtx value="dark">...</ThemeCtx>            // React 19 风格
+
+// 消费
+function Toolbar() {
+  const theme = ThemeCtx.use()          // 返回 Ref
+  return <div class={theme.value}>...</div>  // render 里 .value 读取
+}
+```
+
+**差异**
+| | React Context | ActView Context |
+|---|---|---|
+| 消费返回值 | 裸值 | `Ref`（`render` 中 `.value` 读取，建立响应式追踪） |
+| 更新驱动 | `setState` 导致 Provider 重渲染 | value 变化自动触发消费方重渲染 |
+| 就近覆盖 | 同 | 同 |
+| SSR | 需手动处理 | 自动支持（`renderToString` 线程注入） |
+
+---
+
+### 6. `useEffect` → `watch` / 生命周期
+
+React 的 `useEffect` 承担了三种不同的职责，ActView 中需要分别对应：
+
+#### 场景 A：侦听依赖变化 → `watch`
 
 ```tsx
 // React
-useEffect(() => { sideEffect(); return cleanup }, [dep])
+useEffect(() => {
+  saveToStorage(count)
+  return () => cleanup()
+}, [count])
 
-// ActView：依赖明确用 watch
-watch(dep, (newV, oldV, onCleanup) => {
-  sideEffect()
-  onCleanup(cleanup)
+// ActView
+watch(count, (newVal, oldVal, onCleanup) => {
+  saveToStorage(newVal)
+  onCleanup(() => cleanup())          // 清理函数注册（下次运行或停止时调用）
+})
+```
+
+- `watch` 需要显式指定侦听的源（ref / getter 函数 / 数组）
+- 回调参数 `(newValue, oldValue, onCleanup)` 与 Vue 3 一致
+- `onCleanup` 注册的清理函数在下次运行前或 `watch` 停止时自动调用（等价于 React useEffect cleanup）
+
+#### 场景 B：只跑一次的副作用（挂载/卸载）→ 生命周期钩子
+
+```tsx
+// React
+useEffect(() => {
+  fetchData()
+  return () => cancelRequest()
+}, [])          // 空依赖数组
+
+// ActView
+onMounted(() => {
+  fetchData()
+})
+onUnmounted(() => {
+  cancelRequest()
+})
+```
+
+#### 场景 C：自动追踪副作用的响应式依赖 → `watchEffect`
+
+```tsx
+// React（需要手动列出所有依赖）
+useEffect(() => {
+  console.log(count, name)
+}, [count, name])
+
+// ActView（自动追踪回调中读取的所有响应式依赖）
+watchEffect(() => {
+  console.log(count.value, name.value)
+})
+```
+
+- `watchEffect` 立即执行一次回调，过程中读取了哪些 ref/reactive 就自动订阅哪些
+- 无需写依赖数组（与 React `useEffect` 需手动列出依赖形成对比）
+- ⚠️ **注意**：回调中如果条件早退（在读取任何响应式值之前 `return`），后续依赖不会收集——与 Vue 3 一致
+
+#### 对照一览
+
+| React `useEffect` 用法 | ActView 对应 | 说明 |
+|---|---|---|
+| `useEffect(fn, [dep1, dep2])` | `watch([dep1, dep2], fn)` | 依赖变化时触发回调 |
+| `useEffect(fn, [])` | `onMounted(fn)` + `onUnmounted(cleanup)` | 仅挂载/卸载 |
+| `useEffect(fn)`（无依赖数组） | `watchEffect(fn)` | 自动追踪 + 立即执行 |
+| `useLayoutEffect` | 用 `queueJob` 机制（默认同步微任务，等价） | 无需特殊 API |
+
+---
+
+### 7. `useReducer` → `reactive` + 函数
+
+```tsx
+// ─── React ───
+const [state, dispatch] = useReducer(reducer, initialState)
+
+// ─── ActView ───
+const state = reactive(initialState)
+function dispatch(action: { type: string; payload?: any }) {
+  switch (action.type) {
+    case 'inc': state.count++; break
+    case 'set': state.count = action.payload; break
+  }
+}
+```
+
+对于复杂状态逻辑，`reactive` 直接修改属性比 reducer 更简洁。如果确实需要 reducer 模式（如 Redux 迁移），可以封装：
+
+```tsx
+function useReducer(reducer: Function, initial: any) {
+  const state = reactive(initial)
+  const dispatch = (action: any) => {
+    const next = reducer({ ...state }, action)
+    Object.assign(state, next)
+  }
+  return [state, dispatch]
+}
+```
+
+---
+
+### 8. 状态管理库：Pinia / Zustand / Redux → `@actview/store`
+
+```tsx
+// ─── Zustand / Redux ───
+const useStore = create((set) => ({
+  count: 0,
+  inc: () => set((s) => ({ count: s.count + 1 })),
+}))
+
+// ─── Pinia ───
+export const useCounterStore = defineStore('counter', {
+  state: () => ({ count: 0 }),
+  actions: { inc() { this.count++ } },
+})
+```
+
+```tsx
+// ─── ActView（@actview/store，setup 语法与 Pinia 一致）───
+import { defineStore } from '@actview/store'
+
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+  const doubled = computed(() => count.value * 2)
+
+  function inc() { count.value++ }
+
+  return { count, doubled, inc }
 })
 
-// ActView：只挂载/卸载一次用生命周期
-onMounted(() => sideEffect())
-onUnmounted(() => cleanup())
+// 组件中使用
+function App() {
+  const store = useCounterStore()
+  return <div onClick={store.inc}>{store.count}</div>
+}
 ```
+
+| | Zustand / Redux | Pinia | `@actview/store` |
+|---|---|---|---|
+| 定义 | `create((set) => ...)` | `defineStore(id, options/setup)` | `defineStore(id, setupFn)` |
+| 状态 | 不可变更新（`set`/`dispatch`） | 直接改（`this.count++`） | 直接改（`count.value++`） |
+| 派生 | `useMemo` / selector | `getters` | `computed` |
+| 响应式 | 手动订阅 | Vue 响应式 | ActView 响应式 |
+
+> `@actview/store` 的 `defineStore` 接受 setup 函数（与 Pinia setup 语法完全一致）。详细 API 见 `docs/API.md`。
 
 ---
 
@@ -255,64 +515,42 @@ function Toolbar() {
 
 ## 七、内置组件一览
 
-| 组件 | 用途 |
-|---|---|
-| `<Fragment>` / `<>...</>` | 多根片段 |
-| `<KeepAlive>` | 缓存组件实例/DOM，切换不销毁、状态保留 |
-| `<ErrorBoundary fallback={...}>` | 捕获子树渲染错误，fallback 可为函数（接收 error） |
-| `<Suspense fallback={...}>` | 异步组件加载期间显示 fallback |
-| `lazy(() => import('./X'))` | 异步组件（配合 Suspense） |
-| `<Teleport to="#target">` | children 渲染到指定容器 |
-| `<Transition name="fade" duration={300}>` | 单子节点进入/离开过渡类 |
-| `<component is={Comp}>` | 动态组件 |
+| 组件 | 用途 | 详细参考 |
+|---|---|---|
+| `<Fragment>` / `<>...</>` | 多根片段 | [→ components.md](./components.md#8-fragment--多根节点片段) |
+| `<KeepAlive>` | 缓存组件实例/DOM，切换不销毁、状态保留 | [→ components.md](./components.md#4-keepalive--组件实例缓存) |
+| `<ErrorBoundary fallback={...}>` | 捕获子树渲染错误，fallback 可为函数（接收 error） | [→ components.md](./components.md#5-errorboundary--渲染错误边界) |
+| `<Suspense fallback={...}>` | 异步组件加载期间显示 fallback | [→ components.md](./components.md#6-suspense--异步加载占位) |
+| `lazy(() => import('./X'))` | 异步组件（配合 Suspense） | [→ components.md](./components.md#7-lazy--异步组件工厂) |
+| `<Teleport to="#target">` | children 渲染到指定容器 | [→ components.md](./components.md#3-teleport--dom-传送门) |
+| `<Transition name="fade" duration={300}>` | 单子节点进入/离开过渡类 | [→ components.md](./components.md#1-transition--单子节点过渡动画) |
+| `<component is={Comp}>` | 动态组件 | [→ components.md](./components.md#9-component--动态组件) |
+
+> 每个内置组件的完整 Props API、代码示例、生命周期关联、注意事项见 `docs/components.md`。
 
 ---
 
 ## 八、API 能力清单
 
-### 响应式
-
-| API | 说明 |
-|---|---|
-| `ref(v)` / `isRef` / `unref` / `unrefs` / `toRef` / `toRefs` | 单值响应式与工具（`unrefs` 批量解包，配合 `toRefs` 解构 rest 透传） |
-| `reactive(obj)` / `shallowReactive` / `readonly` / `markRaw` | 对象/数组响应式 |
-| `computed(getter)` / `computed({get,set})` | 派生值（可写） |
-| `watch(src, cb, opts)` / `watchEffect(fn)` | 侦听（`immediate`、`onCleanup`、返回 stop） |
-| `nextTick(cb?)` | 下次 DOM 更新后回调 |
+> 完整 API 清单见 `docs/API.md`。以下仅列迁移相关的关键对照。
 
 ### 组件与生命周期
 
 | API | 说明 |
 |---|---|
-| `createApp(Component).mount('#app')` | 应用入口 |
-| `defineComponent` | 函数形态（+ 组件名） |
-| `onBeforeMount`/`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted`/`onActivated`/`onDeactivated`/`onErrorCaptured`/`onServerPrefetch`/`onRenderTracked`/`onRenderTriggered` | 生命周期全套（子先父后） |
-| `getCurrentInstance()` | 当前组件实例 |
-| `provide(k, v)` / `useInjects(k?)` | 依赖注入 |
-| `useProp(props, key, fn?)` / `useProps(props, {key: fn})` | props 响应式解构：ComputedRef 活引用 + 默认值/转换 normalize；`key: undefined` 裸透传；批量版返回 `rest`（可 `{...rest.value}` 透传） |
+| `defineComponent` | 函数形态（+ 组件名），`setup` 只执行一次、返回 render 函数 |
+| 生命周期（`onMounted`/`onUpdated`/`onBeforeUnmount`/`onUnmounted` 等） | React 迁移对照见第二节「useEffect → 生命周期」 |
+| `provide(k, v)` / `useInjects(k?)` | 依赖注入（`createContext` 推荐替代，防止 string key 碰撞） |
+| `useProp(key, fn?)` / `useProps({key: fn})` | props 响应式解构 + 默认值/rest 透传（见第三节「props 访问与响应式」示例） |
 
 ### 渲染与更新
 
-| API | 说明 |
+| 能力 | 说明 |
 |---|---|
 | keyed diff | 带 key 列表 LIS 最小移动 |
-| `renderToString(vnode)` | SSR 静态序列化 |
-| `v-memo={[deps]}` | 行级显式依赖短路（deps 未变整棵子树复用） |
-| `<solid>` | 双模细粒度作用域（见第九节） |
+| `v-memo={[deps]}` / `<solid>` | 行级 / 细粒度更新（见第九节） |
 
-### 路由（`@actview/router`）
-
-| API | 说明 |
-|---|---|
-| `createRouter({ routes, history })` | 创建路由 |
-| `createWebHistory()` / `createMemoryHistory()` | 历史模式 |
-| `<RouterLink>` / `<RouterView>` | 链接 / 出口 |
-
-### scoped CSS（`@actview/plugin-scoped`）
-
-```ts
-import './style.css?scoped'   // 编译期 data-v-hash 注入 + :deep/:slotted/:global
-```
+> 响应式 API（`ref`/`reactive`/`computed`/`watch`/`watchEffect`）详见 `docs/API.md` 第一节 `docs/reactivity.md`。
 
 ---
 
