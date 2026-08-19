@@ -48,6 +48,7 @@ export {
   useId,
   useProp,
   useProps,
+  getCurrentInstance,
   createContext,
   renderToString,
   Teleport,

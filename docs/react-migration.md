@@ -504,6 +504,8 @@ function Combobox(props) {
 - 编译产物：`slots: { render: (state) => <><div class="my-combobox">...</div></> }`——与 render prop 同一机制，`props.slots.render(...)` 在库组件 render effect 中调用，响应式追踪同样成立
 - 优势：作用域参数（`state`）在 JSX 上显式声明，`slot="render"` 语义即"渲染接口"，用户不需要写内联箭头闭包；多个渲染出口（`slot="label"` / `slot="icon"` / `slot="render"`）并列清晰
 
+> 📖 **无头组件库（Base UI 风格）整体迁移**（forwardRef / useRenderElement / state 注入的转换规则 + Separator 完整示例）见 [`docs/headless-components.md`](./headless-components.md)
+
 ### 模板引用（DOM 引用）
 
 ```tsx
