@@ -24,7 +24,7 @@
 - **状态**：已记录，待执行方案 B（规范化）或保持（测试按存在性断言，见 issue #20）
 
 ### PD-02 组件级 ref 指向组件实例
-// TODO 框架侧（可选）：组件实例暴露根 DOM 访问器（如 instance.rootEl = subTree.el）或 Vue 式 expose() 等价物，减少"拿根元素需内部 ref/DOM 查询"的负担；保持 ref→组件实例语义
+// 🟡 部分实施：新增 useRootElement()——无头组件内部拿"最终根 DOM"（封装 subTree.el 推导 + 生命周期同步，根为组件时也指向根 DOM）；未做：组件实例 rootEl getter（instance.subTree.el 已够用，暂缓）
 - **标题**：组件的 `ref` prop 指向**组件实例**而非根 DOM 元素
 - **场景**：用户给组件传 `ref`（如 `<Button ref={el => ...}/>`）；actview 的 mountComponent 在 setup 执行**前** `delete props.ref`，并把 ref 回调以**组件实例**调用
 - **代码示例**：

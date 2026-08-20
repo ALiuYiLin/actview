@@ -6,26 +6,12 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import {
-  createApp,
-  defineComponent,
-  ref,
-  onMounted,
-  onUpdated,
-  getCurrentInstance
-} from 'actview'
+import { createApp, defineComponent, useRootElement } from 'actview'
 
-// 方案：ref 不挂模板（不再强制覆盖），rootRef 由 subTree.el 推导 →
+// 方案：rootRef 由 useRootElement 推导（subTree.el + 生命周期同步）→
 // 无论默认元素 / VNode 元素 / 组件 VNode，ref 恒为根 DOM
 function Headless(props: any) {
-  const self = getCurrentInstance() as any
-  const rootRef = ref<any>(null)
-  onMounted(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
-  onUpdated(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
+  const rootRef = useRootElement()
 
   return () => {
     const { render, ...elementProps } = props

@@ -84,6 +84,7 @@
 | `onRenderTriggered(fn)` | 依赖触发（调试） |
 | `getCurrentInstance()` | 当前组件实例 |
 | `useId()` | 生成稳定的唯一 id（React useId 场景）：客户端基于组件实例自增 id（setup 只执行一次 → 重渲染间稳定）+ 调用计数；SSR/setup 外回退全局计数。无水合，服务端/客户端 id 无需一致 |
+| `useRootElement()` | 组件**根 DOM** 引用（无头组件/Base UI 风格）：封装 `subTree.el` 推导 + onMounted/onUpdated 同步——根是元素/组件/用户 JSX 分支时都指向**最终根 DOM**（组件 VNode 时也非实例，实例用 `getCurrentInstance()`）；只能在 setup 调用 |
 
 ### 内置组件
 

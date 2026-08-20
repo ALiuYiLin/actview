@@ -1,4 +1,5 @@
 import type { ComponentInstance } from './mountComponent'
+import { ref, type Ref } from '../reactivity/ref'
 
 // ============================================================
 // 生命周期钩子 — 模块级 currentInstance 上下文
@@ -27,6 +28,27 @@ export function useId(): string {
   const instance = getCurrentInstance()
   const base = instance?.id != null ? instance.id : 's'
   return `actview-id-${base}-${++useIdSeq}`
+}
+
+// ============================================================
+// useRootElement — 组件根 DOM 引用（ref 契约恒为根 DOM）
+//   无头组件（Base UI 风格）在 render 分支可变时（元素/组件/用户 JSX），
+//   模板 ref 在"根是组件"时会给组件实例（PD-02 语义）而非 DOM；
+//   subTree.el 沿挂载链传播到最终根 DOM（组件 vnode.el = 子树根 el），
+//   对任意嵌套深度都收敛——本 API 封装该推导 + 生命周期同步。
+//   返回**可变 ref**：用户 {…props} 展开成模板 ref 时要写 .value，
+//   只读 getter 伪 ref 会在严格模式抛错，故必须可变。
+// ============================================================
+
+export function useRootElement(): Ref<HTMLElement | null> {
+  const self = getCurrentInstance() as (ComponentInstance & { subTree?: any }) | null
+  const rootRef = ref<HTMLElement | null>(null)
+  const sync = () => {
+    rootRef.value = self?.subTree?.el ?? null
+  }
+  onMounted(sync)
+  onUpdated(sync)
+  return rootRef
 }
 
 export function setCurrentInstance(instance: ComponentInstance | null) {

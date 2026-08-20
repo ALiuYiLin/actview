@@ -7,24 +7,10 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import {
-  createApp,
-  defineComponent,
-  ref,
-  onMounted,
-  onUpdated,
-  getCurrentInstance
-} from 'actview'
+import { createApp, defineComponent, useRootElement } from 'actview'
 
 function Headless(props: any) {
-  const self = getCurrentInstance() as any
-  const rootRef = ref<any>(null)
-  onMounted(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
-  onUpdated(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
+  const rootRef = useRootElement()
   return () => {
     const { render, orientation = 'horizontal', ...elementProps } = props
     const state = { orientation }

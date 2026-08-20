@@ -46,6 +46,7 @@ export {
   provide,
   useInjects,
   useId,
+  useRootElement,
   useProp,
   useProps,
   getCurrentInstance,

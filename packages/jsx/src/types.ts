@@ -343,6 +343,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   autocomplete?: string
   pattern?: string
   size?: number
+  /** 表单关联属性（<input form="..."> 合法） */
+  form?: string
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -358,6 +360,8 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   minLength?: number
   autoFocus?: boolean
   wrap?: string
+  /** 表单关联属性（<textarea form="..."> 合法） */
+  form?: string
 }
 
 export interface SelectHTMLAttributes extends HTMLAttributes {
@@ -368,6 +372,8 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   size?: number
   autoFocus?: boolean
+  /** 表单关联属性（<select form="..."> 合法） */
+  form?: string
 }
 
 export interface OptionHTMLAttributes extends HTMLAttributes {
@@ -383,6 +389,16 @@ export interface ButtonHTMLAttributes extends HTMLAttributes {
   name?: string
   value?: string
   autoFocus?: boolean
+  // 表单关联属性（对齐 React ButtonHTMLAttributes：<button form="..."> 合法）
+  form?: string
+  formAction?: string
+  formEncType?: string
+  formMethod?: string
+  formNoValidate?: boolean
+  formTarget?: string
+  // Popover API（现代按钮属性）
+  popoverTarget?: string
+  popoverTargetAction?: 'toggle' | 'show' | 'hide'
 }
 
 export interface FormHTMLAttributes extends HTMLAttributes {

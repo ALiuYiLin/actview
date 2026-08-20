@@ -6,27 +6,12 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import {
-  createApp,
-  defineComponent,
-  ref,
-  reactive,
-  onMounted,
-  onUpdated,
-  getCurrentInstance
-} from 'actview'
+import { createApp, defineComponent, reactive, useRootElement } from 'actview'
 
 export const Separator = defineComponent(function (componentProps: any) {
-  // ref 契约恒为根 DOM：不挂模板 ref，rootRef 由 subTree.el 推导
+  // ref 契约恒为根 DOM：useRootElement 封装 subTree.el 推导 + 生命周期同步
   // （组件 VNode 时也指向组件根 DOM 而非实例；实例用 getCurrentInstance）
-  const self = getCurrentInstance() as any
-  const rootRef = ref<HTMLElement | null>(null)
-  onMounted(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
-  onUpdated(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
+  const rootRef = useRootElement()
 
   return () => {
     const { render, orientation = 'horizontal', ...elementProps } = componentProps

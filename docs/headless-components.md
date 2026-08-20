@@ -64,19 +64,12 @@ export const Separator = React.forwardRef(function SeparatorComponent(
 ### ActView 转换
 
 ```tsx
-import { defineComponent, ref } from 'actview'
+import { defineComponent, useRootElement } from 'actview'
 
 export const Separator = defineComponent(function (componentProps: any) {
-  // ref 契约恒为根 DOM：不挂模板 ref，rootRef 由 subTree.el 推导
+  // ref 契约恒为根 DOM：useRootElement 封装 subTree.el 推导 + 生命周期同步
   // （组件 VNode 时也指向组件根 DOM 而非实例；实例用 getCurrentInstance）
-  const self = getCurrentInstance() as any
-  const rootRef = ref<HTMLElement | null>(null)
-  onMounted(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
-  onUpdated(() => {
-    rootRef.value = self?.subTree?.el ?? null
-  })
+  const rootRef = useRootElement()
 
   return () => {
     // ⚠️ 解构放渲染期——setup 层解构会冻结旧值（PD-15）
@@ -139,8 +132,8 @@ return <div {...merged} />
 > `render={null}` / 未传 → 走默认实现。类型：`render?: VNode | ComponentRenderFn<RenderFunctionProps, State>`，
 > `ComponentRenderFn = (props: RenderFunctionProps & State & { ref?: RefValue }) => VNode | null | undefined`
 > （单 props 对象，state 合并进 props——与组件 setup 收单个 props 对象的心智模型一致）。
-> `ref` 契约恒为**根 DOM**（`RefValue` 指向 `HTMLElement`）：rootRef 由 `subTree.el` 推导，
-> 组件 VNode 时也指向组件根 DOM；组件实例经 `getCurrentInstance()` 获取。
+> `ref` 契约恒为**根 DOM**（`RefValue` 指向 `HTMLElement`）：用 `useRootElement()`（封装 `subTree.el` 推导 +
+> onMounted/onUpdated 同步，根为组件时也指向最终根 DOM），组件实例经 `getCurrentInstance()` 获取。
 
 ## 五、响应式机制（为什么这样写能自动更新）
 
@@ -153,7 +146,7 @@ return <div {...merged} />
 | 坑 | 说明 | 条目 |
 |---|---|---|
 | setup 层解构冻结 | 解构出的 `orientation` 是旧值，父更新不生效 | PD-15（已解决：渲染期解构 / useProps） |
-| ref 拿到组件实例 | 用户 `<Separator ref={x}/>` 的 x 是实例不是 DOM | PD-02（待升级：实例根 DOM 访问器）；无头组件内部用 `subTree.el` 推导 rootRef，**ref 契约恒为根 DOM**，实例经 `getCurrentInstance()` |
+| ref 拿到组件实例 | 用户 `<Separator ref={x}/>` 的 x 是实例不是 DOM | PD-02（待升级：实例根 DOM 访问器）；无头组件内部用 **`useRootElement()`**（封装 subTree.el 推导），**ref 契约恒为根 DOM**，实例经 `getCurrentInstance()` |
 | aria-* 布尔输出 | `aria-disabled={true}` 输出 `"true"`（已规范化） | PD-01（已实施） |
 | onChange 语义 | 原生 change 事件；受控文本输入用 onInput | PD-03 |
 | 组件函数只执行一次 | setup 只跑一次，派生逻辑放 computed / 渲染期 | PD-06 |
