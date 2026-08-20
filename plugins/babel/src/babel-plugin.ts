@@ -190,6 +190,9 @@ export default function defineComponentPlugin() {
         // ---------- 2. 包装为 defineComponent（含 setup 风格 / 具名插槽） ----------
         // 组件名从变量名传递（内层函数匿名，避免 Babel 重命名内层函数）
         const fn = t.functionExpression(null, node.params, node.body, false, false)
+        // 泛型组件（function Toggle<Value extends string>(props)）：
+        // 保留 typeParameters，否则参数注解里的 Value 变成未声明标识符 → 坏 TS
+        if (node.typeParameters) fn.typeParameters = node.typeParameters
         const wrapped = wrapComponentFn(fn, name)
         if (!wrapped) return
         const call = wrapped
@@ -255,6 +258,10 @@ export default function defineComponentPlugin() {
         const fn = t.isFunctionDeclaration(decl)
           ? t.functionExpression(null, decl.params, decl.body, false, false)
           : decl
+        // 保留泛型 typeParameters（export default function Toggle<Value>()）
+        if (t.isFunctionDeclaration(decl) && decl.typeParameters) {
+          ;(fn as any).typeParameters = decl.typeParameters
+        }
         const wrapped = wrapComponentFn(fn)
         if (!wrapped) return
         const call = wrapped

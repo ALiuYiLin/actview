@@ -243,8 +243,15 @@ declare global {
      * 声明内属性（如 { name: string }）做必填/类型检查；
      * 额外仅允许 HTML 属性（class/style/id/title/on* / data-* / aria-* 等），
      * 任意自定义属性会报错（对齐 React 严格语义）。
+     *
+     * 用 `Omit<HTMLAttributes, keyof P>` 而非 `P & HTMLAttributes` 全量交集：
+     * 组件已声明的键（如 className: string | ((state) => ...)）不再与
+     * HTMLAttributes 同名键交集——否则 `(string | fn) & (string | undefined)`
+     * 会展开出不可满足的 `fn & string` 成员，函数形态的 className/style
+     * 永远无法通过 JSX 类型检查。组件自身声明的类型优先，未声明的键
+     * 仍从 HTMLAttributes 放行。
      */
-    type LibraryManagedAttributes<C, P> = P & HTMLAttributes
+    type LibraryManagedAttributes<C, P> = P & Omit<HTMLAttributes, keyof P>
   }
 }
 

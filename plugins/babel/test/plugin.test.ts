@@ -152,6 +152,23 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
 })
 
 describe('defineComponentPlugin：补充场景', () => {
+  it('泛型组件（function Toggle<Value extends string>）保留 typeParameters', () => {
+    // 回归：typeParameters 不复制会生成坏 TS（参数注解引用未声明的 Value）
+    const out = transform(`function Toggle<Value extends string>(props: { value?: Value }) {
+  return <button>{props.value}</button>
+}`)
+    expect(out).toContain('function <Value extends string>(props: {')
+    expect(out).toContain('const Toggle = defineComponent(')
+  })
+
+  it('export default 泛型函数声明也保留 typeParameters', () => {
+    const out = transform(`export default function Toggle<Value extends string>(props: { value?: Value }) {
+  return <button>{props.value}</button>
+}`)
+    expect(out).toContain('function <Value extends string>(props: {')
+    expect(out).toContain('export default defineComponent(')
+  })
+
   it('export default function() {...}（匿名函数声明）也转换', () => {
     const out = transform(`export default function () { return <div>anon</div> }`)
     expect(out).toContain('export default defineComponent(function () {')
