@@ -48,6 +48,12 @@ export function useRootElement(): Ref<HTMLElement | null> {
   }
   onMounted(sync)
   onUpdated(sync)
+  // 卸载置 null（对齐模板 ref 语义：卸载 → null）。
+  // 让 watch(rootRef) 能观察完整生命周期：null→元素（挂载）/ 元素→元素（换根）/
+  // 元素→null（卸载）——注册类副作用（composite listRef 等）可直接 watch 桥接
+  onBeforeUnmount(() => {
+    rootRef.value = null
+  })
   return rootRef
 }
 

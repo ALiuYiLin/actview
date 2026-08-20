@@ -471,6 +471,15 @@ function patchKeyedChildren(
   oldList.forEach((vnode, i) => {
     if (vnode && vnode.key != null) oldKeyToIndex.set(vnode.key, i)
   })
+  // 无 key 旧节点按相对顺序索引（对齐 React：keyed/unkeyed 混用时，
+  // 无 key 新节点按序复用无 key 旧节点——否则带 key 兄弟触发 keyed diff
+  // 时无 key 子节点每次都被重新挂载，DOM 元素被替换（RadioGroup + Legend
+  // key 的测试场景）
+  const oldUnkeyed: number[] = []
+  oldList.forEach((vnode, i) => {
+    if (vnode && vnode.key == null) oldUnkeyed.push(i)
+  })
+  let nextOldUnkeyed = 0
 
   const newLen = newList.length
   // source[i]：新列表第 i 项对应旧列表下标 +1；0 = 新创建节点
@@ -482,6 +491,11 @@ function patchKeyedChildren(
     if (newVNode == null) continue
     if (newVNode.key != null && oldKeyToIndex.has(newVNode.key)) {
       const oldIndex = oldKeyToIndex.get(newVNode.key)!
+      patch(oldList[oldIndex], newVNode, container, undefined, parent)
+      source[i] = oldIndex + 1
+    } else if (newVNode.key == null && nextOldUnkeyed < oldUnkeyed.length) {
+      // 无 key 新节点 → 按序复用无 key 旧节点（React 语义：位置匹配）
+      const oldIndex = oldUnkeyed[nextOldUnkeyed++]
       patch(oldList[oldIndex], newVNode, container, undefined, parent)
       source[i] = oldIndex + 1
     } else {
@@ -806,23 +820,31 @@ function replace(
   index?: number,
   parent?: any
 ) {
-  const oldEl =
-    oldVnode.el ?? (index != null ? container.childNodes[index] : null)
-  const domParent = oldEl?.parentNode
-  const anchor = oldEl?.nextSibling ?? null
+  // 旧子树所有真实 DOM：组件根可能是 Fragment（vnode.el 为 null，无法定位），
+  // 取首个节点的父节点 + 最后一个节点的 nextSibling 作为插入锚点——
+  // 否则 Fragment 根组件被替换时新元素会留在容器末尾（兄弟顺序错乱）
+  const oldEls = collectDomEls(oldVnode)
+  const firstEl =
+    oldEls[0] ?? oldVnode.el ?? (index != null ? container.childNodes[index] : null)
+  const lastEl = oldEls[oldEls.length - 1] ?? firstEl
+  const domParent = firstEl?.parentNode
+  const anchor = lastEl?.nextSibling ?? null
   // 先卸载旧节点：keep-alive 缓存的组件走缓存分支（DOM 移入隐藏容器、实例保留），
   // 否则组件停止 effect 并触发 beforeUnmount、元素移除 DOM
   unmount(oldVnode, container, index)
-  // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）
+  // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）。
+  // 新节点可能是 Fragment 根组件（组件 vnode.el 为 null），取全部真实 DOM
+  // 逐一插到 anchor 前——否则 Fragment 新根会留在容器末尾（兄弟顺序错乱）
   const newEl = mountVNode(newVnode, container, parent)
+  const newEls = collectDomEls(newVnode)
   if (
     domParent &&
-    newEl &&
-    newEl.parentNode === domParent &&
+    newEls.length > 0 &&
     anchor &&
-    anchor.parentNode === domParent
+    anchor.parentNode === domParent &&
+    newEls[0].parentNode === domParent
   ) {
-    domParent.insertBefore(newEl, anchor)
+    newEls.forEach((el) => domParent.insertBefore(el, anchor))
   }
 }
 
