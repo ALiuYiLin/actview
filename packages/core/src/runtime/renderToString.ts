@@ -1,6 +1,7 @@
 import type { VNode, VNodeChild } from '../vnode'
 import { setCurrentInstance } from './lifecycle'
 import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
+import { HTML_ATTR_OVERRIDES } from './attr-map'
 
 // ============================================================
 // renderToString — 构建期/SSR 前置：VNode 树 → HTML 字符串
@@ -211,13 +212,14 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
       continue
     }
     const name =
-      key === 'className'
+      HTML_ATTR_OVERRIDES[key] ??
+      (key === 'className'
         ? 'class'
         : key === 'defaultValue'
           ? 'value'
           : key === 'defaultChecked'
             ? 'checked'
-            : key
+            : key)
     if (value === true) {
       // 布尔属性：输出空属性（对齐 setAttribute(key, '')）
       out += ` ${name}${BOOLEAN_ATTRS.has(name) ? '' : '=""'}`

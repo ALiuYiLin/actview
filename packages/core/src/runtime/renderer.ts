@@ -6,6 +6,7 @@
 
 import { mountComponent, invokeHooks } from './mountComponent'
 import { SCOPED_ID_PROP, splitScopedId, extractScopedIdProps } from './scopedProps'
+import { HTML_ATTR_OVERRIDES } from './attr-map'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import { pauseTracking, resetTracking } from '../reactivity/reactive-system'
 import {
@@ -694,6 +695,16 @@ function patchEvent(el: any, key: string, value: any) {
     }
     invoker = vei[key] = ((e: Event) => {
       invoker.value(e)
+      // React 受控还原（value tracker 语义）：受控元素（渲染时带 value/checked
+      // prop）事件后，DOM 被用户交互改动会在微任务里拉回渲染时的受控值。
+      // 延迟到微任务：同一派发中后续监听器先跑完，且 handler 内 state 变化
+      // 触发的 render/校验 job 先于还原入队 → 还原比较的是最新受控值。
+      // ⚠️ click 不还原：checkbox/radio 的激活由 click 表达（激活后 change 才
+      // 携带新值）——click 阶段还原会先于 change 把 checked 拉回旧受控值，
+      // 导致 onChange 读到的 DOM 值与激活状态不一致（校验读到 false）。
+      if (el.__avControlled && eventName !== 'click') {
+        queueMicrotask(() => restoreControlledState(el))
+      }
     }) as unknown as Invoker
     invoker.value = value
     invoker.attached = Date.now()
@@ -702,6 +713,24 @@ function patchEvent(el: any, key: string, value: any) {
     // 解绑（removeEventListener 只需 capture 匹配，passive 忽略）
     el.removeEventListener(eventName, invoker, capture)
     delete vei[key]
+  }
+}
+
+/**
+ * React 受控还原（value tracker 语义）：事件批处理后，若 DOM 值被用户交互
+ * 改变且偏离渲染时的受控值（value/checked），拉回受控值。
+ * 在微任务里执行（见 patchEvent 的调用）：同一派发中后续监听器先跑完，
+ * 且 handler 里 state 变化触发的 render job 先于还原入队 → 还原比较的是
+ * 最新受控值，最终 DOM 与 state 一致（中间态在微任务内，浏览器不绘制）。
+ */
+function restoreControlledState(el: any) {
+  const controlled = el.__avControlled
+  if (!controlled) return
+  if ('checked' in controlled && el.checked !== controlled.checked) {
+    el.checked = controlled.checked
+  }
+  if ('value' in controlled && el.value !== controlled.value) {
+    setInputValue(el, controlled.value)
   }
 }
 
@@ -753,6 +782,19 @@ function setProp(el: any, key: string, value: any) {
     key === 'defaultValue' ||
     key === 'defaultChecked'
   ) {
+    // 受控标记（React 受控语义）：value/checked 由渲染值驱动 → 事件后 DOM
+    // 被用户交互改动时在微任务里拉回（restoreControlledState，见 patchEvent）。
+    // value/checked 为 null/undefined = 非受控（删标记）；checked=false 仍是
+    // 受控（还原用 false）；default* 不参与受控还原。
+    if (key === 'value' || key === 'checked') {
+      const controlled = (el.__avControlled ??= {})
+      if (value == null) {
+        delete controlled[key]
+        if (Object.keys(controlled).length === 0) delete el.__avControlled
+      } else {
+        controlled[key] = value
+      }
+    }
     if (value == null || value === false) {
       el.removeAttribute(key)
     } else if (key === 'value') {
@@ -774,12 +816,14 @@ function setProp(el: any, key: string, value: any) {
     return
   }
   // 其余走 attribute
+  // React camelCase prop → 真实 HTML 属性名（htmlFor→for、tabIndex→tabindex…）
+  const attrName = HTML_ATTR_OVERRIDES[key] ?? key
   if (value == null || value === false) {
-    el.removeAttribute(key)
+    el.removeAttribute(attrName)
   } else if (value === true) {
-    el.setAttribute(key, '')
+    el.setAttribute(attrName, '')
   } else {
-    el.setAttribute(key, String(value))
+    el.setAttribute(attrName, String(value))
   }
 }
 

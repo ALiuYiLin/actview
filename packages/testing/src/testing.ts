@@ -42,11 +42,21 @@ function walkElements(root: Element, cb: (el: HTMLElement) => void) {
   visit(root)
 }
 
-/** 查询全部文本匹配（textContent 包含 text）的元素 */
+/** 元素的直接文本（仅 childNodes 中的文本节点，不含后代元素文本——对齐
+ * testing-library getNodeText 语义：getByText 不匹配"容器祖先"） */
+function getNodeText(node: Element): string {
+  let text = ''
+  for (const child of node.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE) text += child.textContent ?? ''
+  }
+  return text
+}
+
+/** 查询全部直接文本匹配（getNodeText 包含 text）的元素 */
 function queryAllByText(root: Element, text: string): HTMLElement[] {
   const out: HTMLElement[] = []
   walkElements(root, (el) => {
-    if (el.textContent != null && el.textContent.includes(text)) out.push(el)
+    if (getNodeText(el).includes(text)) out.push(el)
   })
   return out
 }

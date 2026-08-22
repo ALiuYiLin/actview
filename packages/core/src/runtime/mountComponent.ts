@@ -114,6 +114,10 @@ export function handleError(instance: ComponentInstance, err: any) {
     boundary.update?.()
   } else {
     console.error('[actview] 组件渲染错误:', err)
+    // React 语义：无 ErrorBoundary 处理时渲染错误向上抛出（对齐 React 18
+    // 根渲染错误抛给挂载调用者；Vue 默认吞掉，但 Base UI 移植测试依赖
+    // render 的 Promise reject 才能捕获 setup/render 抛错）
+    throw err
   }
 }
 

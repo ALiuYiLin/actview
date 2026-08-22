@@ -101,15 +101,16 @@ describe('createElement 组件 children', () => {
 
   it('G: 未转换组件（小写变量）→ PD-07 兜底识别后经错误链上报，不再当原生元素', () => {
     // 插件只转换大写开头的具名函数/const；小写变量保留为裸函数 →
-    // PD-07 后按组件分支处理（调用一次返回 VNode）→ 明确报错走 handleError 链
+    // PD-07 后按组件分支处理（调用一次返回 VNode）→ 明确报错走 handleError 链。
+    // 无 ErrorBoundary 时渲染错误向上抛出（React 语义，对齐 React 18 根渲染错误），
+    // console.error 在抛出前上报（错误链 + 抛出双通道）。
     const sliderControl = () => <div class="control">ctrl</div>
     function AppG() {
       return <SliderRoot>{createElement(sliderControl, {})}</SliderRoot>
     }
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const host = mount(AppG)
-      expect(host.querySelector('.control')).toBeNull()
+      expect(() => mount(AppG)).toThrow()
       expect(errSpy).toHaveBeenCalledWith(
         expect.stringContaining('组件渲染错误'),
         expect.any(Error),
