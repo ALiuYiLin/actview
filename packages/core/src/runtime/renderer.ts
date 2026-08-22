@@ -683,7 +683,16 @@ function parseEventKey(
 function patchEvent(el: any, key: string, value: any) {
   const parsed = parseEventKey(key)
   if (!parsed) return
-  const { eventName, capture, passive } = parsed
+  let { eventName, capture, passive } = parsed
+  // React 兼容：受控 input/textarea 的 onChange 监听 'input' 事件
+  // （React 的 onChange 合成事件对 input/textarea 绑定 input，select 用 change；
+  // 用户交互（userEvent/浏览器）只派发 input，若统一监听 change 则回调不触发）。
+  if (
+    key === 'onChange' &&
+    (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')
+  ) {
+    eventName = 'input'
+  }
   const vei = (el._vei ??= {}) as Record<string, Invoker>
   let invoker = vei[key]
 
@@ -879,7 +888,7 @@ function replace(
   // 挂载新节点，再移动到旧节点的原位置（保持兄弟顺序）。
   // 新节点可能是 Fragment 根组件（组件 vnode.el 为 null），取全部真实 DOM
   // 逐一插到 anchor 前——否则 Fragment 新根会留在容器末尾（兄弟顺序错乱）
-  const newEl = mountVNode(newVnode, container, parent)
+  mountVNode(newVnode, container, parent)
   const newEls = collectDomEls(newVnode)
   if (
     domParent &&
@@ -946,6 +955,14 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   // 组件：先停止其更新 effect，防止响应式变化操作已移除的 DOM
   if (isComponentVNode(vnode)) {
     vnode.component?.unmount?.()
+    // 递归卸载子树：停止子组件 effect 并触发其生命周期钩子（onUnmounted 等），
+    // 否则嵌套组件（例如浮动层的 document 监听、focus trap 等）无法执行清理，
+    // 导致跨测试/跨实例的监听泄漏。子 DOM 由下方 collectDomEls 统一移除
+    // （幂等：已移除的元素 parentNode 为 null 会跳过）。
+    const subTree = vnode.component?.subTree
+    if (subTree && subTree !== vnode) {
+      unmount(subTree, container, index)
+    }
   }
   // 移除 vnode 子树的所有真实 DOM：组件 render 返回 Fragment 时组件 vnode.el
   // 为 null（Fragment 无自身 DOM），按 childNodes[index] 恢复会取错/漏删节点，

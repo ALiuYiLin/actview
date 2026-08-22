@@ -148,7 +148,10 @@ export function mountComponent(
   const rawProps = { ...(vnode.props || {}) }
   extractScopedIdProps(rawProps)
   const props = shallowReactive(rawProps)
-  delete props.ref
+  // 保留 props.ref：React 19 风格 ref-as-prop——函数式组件（defineComponent）可
+  // 从 props 解构 ref 并手动转发到底层元素（等价 React.forwardRef）。
+  // 同时 mountComponent 仍执行 applyRef(props.ref, instance)（Vue 语义兜底），
+  // 组件内部转发回调会在子树渲染时覆盖为真实 DOM。
   delete props.key
 
   const instance: ComponentInstance = {
@@ -235,10 +238,22 @@ export function mountComponent(
     const wasMounted = instance.isMounted
     try {
       const newSubTree = instance.render()
+      // 组件渲染返回数组（多 children / slot 数组，如 <Provider>{props.children}</Provider>
+      // 且 children 为多个子元素）时包装为 Fragment——否则 mountVNode(数组) 会把数组
+      // 当元素类型渲染出 <undefined> 占位（对齐 React：组件返回数组等价于 Fragment）
+      const normalizedSubTree = Array.isArray(newSubTree)
+        ? {
+            $$typeof: Symbol.for('react.element'),
+            type: Symbol.for('react.fragment'),
+            key: null,
+            ref: null,
+            props: {children: newSubTree},
+          }
+        : newSubTree
       const oldSubTree = instance.subTree
-      instance.subTree = newSubTree
+      instance.subTree = normalizedSubTree
       // 子树 children 的父实例 = 本组件实例（子组件 provide/inject 继承来源）
-      deps.patch(oldSubTree, newSubTree, container as Element, undefined, instance)
+      deps.patch(oldSubTree, normalizedSubTree, container as Element, undefined, instance)
       // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
       vnode.el = instance.subTree ? instance.subTree.el : null
       // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated
