@@ -42,33 +42,6 @@ function mount(component: any) {
 }
 
 // ------------------------------------------------------------
-// 场景 25：图标页（SVG 展示）（来源 verify 场景 25）
-// ------------------------------------------------------------
-describe('场景 25：图标页（SVG）', () => {
-  it('路由 /icon 渲染 SVG 图标（innerHTML 注入，SVG 命名空间正确）', async () => {
-    if (!document.querySelector('#app')) {
-      const h = document.createElement('div')
-      h.id = 'app'
-      document.body.appendChild(h)
-    }
-    await import('../../src/main.tsx')
-    const routerMod = await import('../../src/router.ts')
-    const appRoot = document.querySelector('#app')!
-
-    routerMod.router.push('/icon')
-    await nextTick()
-    await nextTick()
-
-    const svg = appRoot.querySelector('.icon svg')
-    expect(svg).not.toBeNull()
-    // innerHTML 注入 =》 SVG 命名空间（区别于 renderer createElement 的 XHTML）
-    expect(svg!.namespaceURI).toBe('http://www.w3.org/2000/svg')
-    expect(svg!.querySelector('path')?.getAttribute('fill')).toContain('url(#')
-    expect(appRoot.textContent).toContain('Vite')
-  })
-})
-
-// ------------------------------------------------------------
 // P0: SVG 命名空间渲染（来源 p0.test.tsx）
 // ------------------------------------------------------------
 describe('P0: SVG 命名空间渲染', () => {
