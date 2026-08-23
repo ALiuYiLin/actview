@@ -1,31 +1,27 @@
 // @vitest-environment jsdom
 // ============================================================
-// 受控还原（restoreControlledState）时序缺陷复现
-// 背景：patchEvent（renderer.ts ~L714）在 input 事件后
-//   queueMicrotask(restoreControlledState)，而 handler 内 state 变化
-//   触发的渲染 job 也走微任务（Promise.resolve().then(flushJobs)）。
-//   若 restore 先于渲染 job 执行 → 拿渲染前旧受控值（''）把用户刚输入的
-//   'a' 拉回 ''，随后渲染才设回 'a' → 光标被重置到 0 → 逐字符输入错乱
-//   （'pa' → 'ppa' → 'ppla'）。
+// 受控还原（restoreControlledState）时序缺陷 —— 回归用例
 //
-// 触发条件（用例 E，缺陷复现）：
-//   - 受控 input 作为「可输入 combobox reference」（useListNavigation 的
-//     typeable combobox 场景——input 的 keydown 由 hook 处理）
-//   - input 的 value 渲染依赖 computed 链（如搜索过滤列表），使受控值变化
-//     的渲染 flush 晚于 restore 的微任务 → restore 先用旧值拉回 → 光标归 0
-//   - 用例 A/B/D 是基线：裸受控 input（无 combobox/hook）不触发（jsdom 下
-//     通过），证明缺陷不是受控语义本身，而是上面两条组合。
+// 历史缺陷（已修复 fa3959c）：
+//   旧 patchEvent 在每个事件 handler（含 useInteractions 绑定的
+//   onPointerDown/onMouseDown/onFocus/onKeyDown/onChange）后都无条件
+//   queueMicrotask(restoreControlledState)。userEvent 输入 'a' 的事件序列
+//   （pointerdown→focus→keydown→input）里，前序事件的 restore 裸微任务先
+//   入队（此时渲染 flush 尚未入队），input 事件才把 DOM 改成 'a' → 前序
+//   restore 用旧受控值（''）把 value 拉回、光标归 0 → 之后渲染才设回 'a'，
+//   jsdom 中 selection 截断 → 逐字符输入错乱（'pa'→'ppa'→'ppla'）。
+//   修复：restore 只挂 input/change 事件，且用 nextTick 延迟到渲染提交后。
 //
-// ⚠️ 必须用 jsdom 环境：该缺陷的用户可见症状依赖「设置 input.value 后
-//   selection 截断到新值长度内」的浏览器行为（jsdom 与真实浏览器一致）。
-//   happy-dom 设置 value 不截断 selection，症状被掩盖，用例会误通过。
-//   （vitest 全局环境为 happy-dom，见 vite.config.ts；本文件用
-//   @vitest-environment jsdom 覆盖。）
+// 用例分工：
+//   - E：combobox 受控输入框（useListNavigation typeable + computed 过滤链）
+//     —— 修复前稳定失败（'ppla'），修复后通过（回归保护）。
+//   - A/B/D：裸受控 input 基线（无 useInteractions 事件，本就不触发缺陷）。
+//
+// ⚠️ 本文件用 jsdom 环境：缺陷症状依赖「设置 input.value 后 selection
+//   truncation」的浏览器行为（jsdom 与真实浏览器一致，happy-dom 会掩盖）。
 //
 // 运行：pnpm exec vitest run test/renderer/controlled-input-restore.test.tsx
-//   —— 期望：E 失败（'ppla'），A/B/D 通过。修复 renderer.ts 中
-//   restoreControlledState 的执行时机（应晚于受控值渲染提交，对齐 React）
-//   后 E 应通过。
+//   —— 期望：4 个用例全部通过。
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
@@ -220,8 +216,8 @@ describe('受控 input 逐字符输入（还原时序）', () => {
     const user = userEvent.setup()
     await user.keyboard('appl')
 
-    // 缺陷表现：restore 先于受控值渲染把 value 拉回旧值、光标重置到 0，
-    // 逐字符输入错乱 → 'ppla'。修复 restoreControlledState 时序后应为 'appl'。
+    // 回归断言（fa3959c 修复后）：restore 不再先于受控值渲染执行，
+    // 逐字符输入保持顺序 'appl'、光标在末尾。
     expect(input.value).toBe('appl')
     expect(input.selectionStart).toBe(4)
   })
