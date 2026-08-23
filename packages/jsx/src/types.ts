@@ -251,7 +251,7 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   id?: string
   class?: string
   className?: string
-  style?: string | Record<string, string | number>
+  style?: string | Record<string, string | number | undefined>
   title?: string
   // 全局属性
   dir?: string
@@ -335,6 +335,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   required?: boolean
   name?: string
   accept?: string
+  /** React 语义：defaultChecked 走 property（非受控默认选中，对齐 React InputHTMLAttributes） */
+  defaultChecked?: boolean
   multiple?: boolean
   min?: number | string
   max?: number | string
@@ -351,6 +353,23 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   form?: string
   /** React 语义：defaultValue 走 property（PD-23） */
   defaultValue?: string | number | readonly string[]
+  /** type=image 的资源地址 */
+  src?: string
+  /** type=image 的替代文本 */
+  alt?: string
+  /** type=image 的渲染尺寸 */
+  height?: number | string
+  width?: number | string
+  /** 移动端媒体捕获（https://www.w3.org/TR/html-media-capture/） */
+  capture?: boolean | 'user' | 'environment'
+  /** 关联 <datalist> 的 id */
+  list?: string
+  /** form* 覆盖属性（对齐 React InputHTMLAttributes） */
+  formAction?: string
+  formEncType?: string
+  formMethod?: string
+  formNoValidate?: boolean
+  formTarget?: string
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -360,12 +379,15 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   placeholder?: string
   disabled?: boolean
   readonly?: boolean
+  readOnly?: boolean
   required?: boolean
   name?: string
   maxLength?: number
   minLength?: number
   autoFocus?: boolean
   wrap?: string
+  /** React 语义：defaultValue 走 property（非受控默认值） */
+  defaultValue?: string
   /** 表单关联属性（<textarea form="..."> 合法） */
   form?: string
 }
@@ -378,6 +400,8 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   size?: number
   autoFocus?: boolean
+  /** React 语义：defaultValue 走 property（非受控默认值） */
+  defaultValue?: string | readonly string[]
   /** 表单关联属性（<select form="..."> 合法） */
   form?: string
 }
