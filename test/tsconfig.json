@@ -1,0 +1,8 @@
+{
+  // 薄壳：让编辑器（TS server 向上查找最近的 tsconfig.json）对 test/*.tsx
+  // 使用 tsconfig.test.json 的配置（JSX 指向 @actview/jsx + 测试宽松项）。
+  // 没有这个文件时，编辑器会回退到根 tsconfig.json（include 不含 test），
+  // 用推断配置检查 test，报"react/jsx-runtime 不存在"。
+  "extends": "../tsconfig.test.json",
+  "include": ["**/*.ts", "**/*.tsx"]
+}

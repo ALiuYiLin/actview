@@ -1,0 +1,21 @@
+{
+  // ============================================================
+  // 测试环境 TS 配置（test/*.test.tsx）
+  // 继承 tsconfig.base.json 的 JSX（@actview/jsx）与 paths；
+  // include 只含 test，让编辑器 / tsc -p tsconfig.test.json
+  // 用正确 JSX runtime 检查测试文件（默认 react-jsx 会找
+  // react/jsx-runtime 报"找不到模块路径"）。
+  // ============================================================
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // 测试代码类型不严谨（未使用 import、implicit any、Ref vs 值等）属
+    // 既有状态：显式关闭 strict 系与未使用检查，让 tsc -p tsconfig.test.json
+    // 与编辑器只对 test 文件做基础检查（app 的 tsconfig.json 不受影响）
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["test"]
+}
