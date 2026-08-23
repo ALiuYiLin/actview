@@ -14,7 +14,7 @@ import {
   useRootElement
 } from 'actview'
 
-function isButtonElement(el: any): boolean {
+function isButtonElement(el: any): el is HTMLButtonElement {
   return !!el && el.tagName === 'BUTTON'
 }
 
@@ -45,7 +45,7 @@ function TriggerToggle(props: any) {
 
   // render 期同步一次（等同 useRootElement 的 onUpdated；此处验证值）
   const sync = () => {
-    if (elementRef.value?.tagName === 'BUTTON' && elementRef.value.disabled) {
+    if (isButtonElement(elementRef.value) && elementRef.value.disabled) {
       updateDisabled()
     }
   }
@@ -73,6 +73,6 @@ describe('useButton elementRef = useRootElement', () => {
     const btn = host.querySelector('.trigger-btn')!
     expect(btn.tagName).toBe('BUTTON')
     // disabled 穿透：composite + disabled + 根是 button → DOM disabled 被删
-    expect(btn.disabled).toBe(false)
+    expect((btn as HTMLButtonElement).disabled).toBe(false)
   })
 })

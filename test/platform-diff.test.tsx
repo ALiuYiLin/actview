@@ -80,6 +80,7 @@ describe('PD-24：<component is> 剥离 is 键', () => {
       return <span class="t">{props.msg}</span>
     }
     function App() {
+      // @ts-expect-error msg 未在 props 参数声明：运行时 props 全量进 setup（is 被剥离）
       return <component is={Target} msg="hi" />
     }
     const host = mount(App)

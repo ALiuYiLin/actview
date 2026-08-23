@@ -94,6 +94,7 @@ describe('createElement 组件 children', () => {
     // @actview/testing 的 render(component, options?)：第二参只读 options.container，
     // 不是 props —— children 被整体忽略，两种写法表现完全一致（都不传 props）
     const { container } = testingRender(SliderRoot, {
+      // @ts-expect-error testingRender 第二参是 options 不含 children（测试故意传，运行时被忽略）
       children: <div>plain</div>,
     })
     expect(container.querySelector('.slider')!.textContent).toBe('')

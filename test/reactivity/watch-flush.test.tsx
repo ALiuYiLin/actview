@@ -36,7 +36,7 @@ describe('watch immediate + flush（Vue 3 语义）', () => {
 
   it('immediate 首次回调时 DOM refs 尚未就绪（AI-001 场景证据）', () => {
     const elRef = ref<HTMLElement | null>(null)
-    const seen: Array<string | null> = []
+    const seen: Array<HTMLElement | string | null> = []
     const state = reactive({ disabled: true })
 
     function App() {

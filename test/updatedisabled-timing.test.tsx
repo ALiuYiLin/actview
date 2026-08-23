@@ -17,7 +17,7 @@ import {
   useRootElement
 } from 'actview'
 
-function isButtonElement(el: any): boolean {
+function isButtonElement(el: any): el is HTMLButtonElement {
   return !!el && el.tagName === 'BUTTON'
 }
 

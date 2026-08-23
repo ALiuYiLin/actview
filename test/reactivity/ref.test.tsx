@@ -91,6 +91,7 @@ describe('P0: shallowRef / triggerRef / shallowReadonly', () => {
   it('shallowReadonly 仅第一层只读', () => {
     const obj = shallowReadonly({ a: 1, nested: { b: 2 } })
     expect(obj.a).toBe(1)
+    // @ts-expect-error 第一层只读：赋值被拦截（运行时静默失败）
     obj.a = 2 // 第一层只读：赋值被拦截
     expect(obj.a).toBe(1)
     obj.nested.b = 3 // 嵌套可写（浅只读）

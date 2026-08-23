@@ -95,7 +95,10 @@ describe('场景 20：具名插槽', () => {
     function App() {
       return (
         <List items={['a', 'b']}>
+          {/* babel 插槽方言：slot="item" 是具名插槽声明，item/i 是作用域参数名（非 JSX 属性） */}
+          {/* @ts-expect-error 插槽方言：slot="item" 不是标准 JSX 属性 */}
           <template slot="item" item i>
+            {/* @ts-expect-error 插槽方言：item/i 是作用域参数声明，JSX 作用域无此变量 */}
             <b>{i}:{item}</b>
           </template>
         </List>

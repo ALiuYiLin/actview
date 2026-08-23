@@ -1,6 +1,6 @@
 // ============================================================
 // 场景 16：类型泛型化（编译期验证）
-//   @ts-expect-error 反向断言：若下一行没有类型错误，tsc 会报
+//   ts-expect-error 反向断言：若下一行没有类型错误，tsc 会报
 //   "Unused @ts-expect-error directive" → 编译失败，
 //   从而在编译期验证 JSX props 推导与事件类型检查确实生效
 // 拆分自 test/verify.test.tsx

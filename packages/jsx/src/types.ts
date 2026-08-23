@@ -129,6 +129,8 @@ export interface DOMAttributes {
   onTouchCancel?: EventHandler<TouchEvent>
   // 滚动 / 滚轮
   onScroll?: EventHandler<Event>
+  /** passive 修饰符（actview 事件系统小写后缀解析） */
+  onScrollPassive?: EventHandler<Event>
   onWheel?: EventHandler<WheelEvent>
   // 媒体 / 资源
   onLoad?: EventHandler<Event>
@@ -273,6 +275,8 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   role?: string
   slot?: string
   translate?: 'yes' | 'no'
+  /** React 语义：dangerouslySetInnerHTML（渲染层 setProp 透传） */
+  dangerouslySetInnerHTML?: {__html: string}
   [key: `data-${string}`]: unknown
 }
 
@@ -345,6 +349,8 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   size?: number
   /** 表单关联属性（<input form="..."> 合法） */
   form?: string
+  /** React 语义：defaultValue 走 property（PD-23） */
+  defaultValue?: string | number | readonly string[]
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -407,6 +413,8 @@ export interface FormHTMLAttributes extends HTMLAttributes {
   target?: string
   noValidate?: boolean
   encType?: string
+  /** React 语义：acceptCharset（HTML 属性 accept-charset） */
+  acceptCharset?: string
   name?: string
 }
 
@@ -528,6 +536,8 @@ export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   children?: VNodeChildren
   /** scoped 标记 prop（@actview/plugin-scoped），语义见 HTMLAttributes.scopedId */
   scopedId?: string
+  /** SVG 元素同样接受 class（className 别名语义） */
+  class?: string
   viewBox?: string
   fill?: string
   stroke?: string

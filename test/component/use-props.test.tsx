@@ -198,6 +198,7 @@ describe('useProps 组件集成', () => {
     }
     function App() {
       return (
+        // @ts-expect-error Button 无 props 参数：useProps 特性 = 运行时 props 全量进 setup
         <Button variant={state.variant} data-state={state.variant} label={state.label}>
           ignore
         </Button>
