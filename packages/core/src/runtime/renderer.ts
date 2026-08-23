@@ -901,6 +901,21 @@ function replace(
   }
 }
 
+/**
+ * 递归卸载 vnode 的 children：触发嵌套组件 onUnmounted（DOM 移除由各层
+ * collectDomEls 幂等完成）。__avChildren 是 patchChildren 缓存的真实 vnode
+ * 列表（含文本包装）；缺失时（如手动构造的 vnode）从 props.children 归一化兜底。
+ * 组件 vnode 不在此处理（其 subTree 由 unmount 组件分支递归）。
+ */
+function unmountChildren(vnode: any) {
+  const children = vnode.__avChildren?.length
+    ? vnode.__avChildren
+    : normalizeChildren(vnode.props?.children).map(toVNode)
+  for (const child of children) {
+    if (child != null) unmount(child)
+  }
+}
+
 export function unmount(vnode: any, container?: Element, index?: number) {
   if (vnode == null) return
   // <solid> 块：停止块内全部 effect + 移除 DOM
@@ -945,10 +960,14 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   }
   // 内置组件：Teleport =》 从目标容器移除；Transition =》 直接卸载子节点（无动画）
   if (vnode.type?.__builtin === 'teleport') {
+    // 先递归 children（触发 Teleport 内容里嵌套组件的 onUnmounted），
+    // 再移除目标容器 DOM——unmountTeleport 会清空 __avChildren
+    unmountChildren(vnode)
     unmountTeleport(vnode)
     return
   }
   if (vnode.type?.__builtin === 'transition') {
+    unmountChildren(vnode)
     unmountTransition(vnode)
     return
   }
@@ -963,6 +982,11 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     if (subTree && subTree !== vnode) {
       unmount(subTree, container, index)
     }
+  } else {
+    // 原生元素 / Fragment / 文本：递归 children——嵌套在元素/Fragment 里的
+    // 组件同样要触发 onUnmounted。此前只递归组件 subTree 一层，会漏掉更深层
+    // 组件（例如渲到 body 的 FloatingPortal 无法执行 portalNode 清理）。
+    unmountChildren(vnode)
   }
   // 移除 vnode 子树的所有真实 DOM：组件 render 返回 Fragment 时组件 vnode.el
   // 为 null（Fragment 无自身 DOM），按 childNodes[index] 恢复会取错/漏删节点，

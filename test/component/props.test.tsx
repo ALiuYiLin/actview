@@ -373,7 +373,7 @@ describe('场景 27：props 全量 + 显式透传', () => {
     expect(clicked).toBe(1)
   })
 
-  it('key/ref 不进 props（React 语义）', () => {
+  it('key 不进 props、ref 进 props（React 19 ref-as-prop）', () => {
     let captured: any
     let refVal: any = null
     function Item(props: any) {
@@ -384,8 +384,11 @@ describe('场景 27：props 全量 + 显式透传', () => {
       return <Item key="k1" ref={(el: any) => (refVal = el)}>文本</Item>
     }
     const host = mountId('#s27g', App)
+    // key 是协调键，永不进 props（React/Vue 一致，babel 编译抽成 _jsx 第三参）
     expect(captured.key).toBeUndefined()
-    expect(captured.ref).toBeUndefined()
+    // ref 进 props（React 19 ref-as-prop：函数组件可直接解构 props.ref 转发到元素，
+    // 无需 forwardRef）；同时 applyRef 仍以组件实例调用（Vue 语义兜底）
+    expect(captured.ref).toBeTypeOf('function')
     expect(host.querySelector('.item')!.textContent).toBe('文本')
     expect(refVal).not.toBeNull()
   })
