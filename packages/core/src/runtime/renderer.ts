@@ -8,7 +8,7 @@ import { mountComponent, invokeHooks } from './mountComponent'
 import { SCOPED_ID_PROP, splitScopedId, extractScopedIdProps } from './scopedProps'
 import { HTML_ATTR_OVERRIDES } from './attr-map'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
-import { pauseTracking, resetTracking } from '../reactivity/reactive-system'
+import { pauseTracking, resetTracking, nextTick } from '../reactivity/reactive-system'
 import {
   mountTeleport,
   patchTeleport,
@@ -705,14 +705,25 @@ function patchEvent(el: any, key: string, value: any) {
     invoker = vei[key] = ((e: Event) => {
       invoker.value(e)
       // React 受控还原（value tracker 语义）：受控元素（渲染时带 value/checked
-      // prop）事件后，DOM 被用户交互改动会在微任务里拉回渲染时的受控值。
-      // 延迟到微任务：同一派发中后续监听器先跑完，且 handler 内 state 变化
-      // 触发的 render/校验 job 先于还原入队 → 还原比较的是最新受控值。
+      // prop）事件后，DOM 被用户交互改动会拉回渲染时的受控值。
+      //
+      // ⚠️ 两个时序约束（缺一不可）：
+      // 1) 只挂在 input/change 事件后（真正可能改 value/checked 的事件）。
+      //    pointerdown/mousedown/focus/keydown 等 handler（useInteractions 的
+      //    onPointerDown/onFocus/onKeyDown…）不还原：它们不改值，但会在
+      //    「用户输入（input 事件）→ 渲染」之前把 restore 微任务排入队列，
+      //    拿到旧受控值把用户刚输入的内容拉回、光标重置（逐字符错乱）。
+      // 2) 延迟到渲染提交之后（nextTick = 当前渲染 flush 完成后，对齐 React
+      //    commit 阶段 restore）：比较的是「最新受控值」，用户输入与 state
+      //    一致时不拉回（光标不受影响）；仅当 DOM 真的偏离受控值才拉回。
       // ⚠️ click 不还原：checkbox/radio 的激活由 click 表达（激活后 change 才
       // 携带新值）——click 阶段还原会先于 change 把 checked 拉回旧受控值，
       // 导致 onChange 读到的 DOM 值与激活状态不一致（校验读到 false）。
-      if (el.__avControlled && eventName !== 'click') {
-        queueMicrotask(() => restoreControlledState(el))
+      if (
+        el.__avControlled &&
+        (eventName === 'input' || eventName === 'change')
+      ) {
+        nextTick(() => restoreControlledState(el))
       }
     }) as unknown as Invoker
     invoker.value = value
@@ -726,11 +737,11 @@ function patchEvent(el: any, key: string, value: any) {
 }
 
 /**
- * React 受控还原（value tracker 语义）：事件批处理后，若 DOM 值被用户交互
+ * React 受控还原（value tracker 语义）：事件处理后，若 DOM 值被用户交互
  * 改变且偏离渲染时的受控值（value/checked），拉回受控值。
- * 在微任务里执行（见 patchEvent 的调用）：同一派发中后续监听器先跑完，
- * 且 handler 里 state 变化触发的 render job 先于还原入队 → 还原比较的是
- * 最新受控值，最终 DOM 与 state 一致（中间态在微任务内，浏览器不绘制）。
+ * 执行时机：渲染提交之后（见 patchEvent 的调用——nextTick 绑定渲染 flush）：
+ * 比较的是「最新受控值」，用户输入与 state 一致时不拉回（光标不受影响），
+ * 仅当 DOM 真的偏离受控值（如 state 未同步变化）才拉回。
  */
 function restoreControlledState(el: any) {
   const controlled = el.__avControlled
