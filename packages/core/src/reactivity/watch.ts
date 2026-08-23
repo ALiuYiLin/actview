@@ -36,6 +36,11 @@ export type WatchSource<T> = T | Ref<T> | (() => T)
 
 let currentWatcher: { cleanup: (() => void) | null } | null = null
 
+/** 初始 oldValue 哨兵（Vue 3 INITIAL_WATCHER_VALUE）：immediate 首次回调
+ *  无条件执行——即使首次求值结果恰好是 undefined（undefined === 裸初始
+ *  值会令 hasChanged 判等跳过回调）。首次回调的 oldVal 参数显示为 undefined。 */
+const INITIAL_WATCHER_VALUE: any = Symbol('initial-watcher-value')
+
 /**
  * 在 watch 回调执行期间注册清理函数：下次回调前（或 stop 时）执行。
  * 与回调第三参 onCleanup 等价；只能在 watch 回调内调用。
@@ -65,7 +70,9 @@ export function watch<T>(
     deep === true ||
     (source != null && typeof source === 'object' && !isRef(source) && deep !== false)
 
-  let oldValue: any
+  let oldValue: any = Array.isArray(source)
+    ? new Array((source as any[]).length).fill(INITIAL_WATCHER_VALUE)
+    : INITIAL_WATCHER_VALUE
   let cleanup: (() => void) | null = null
   const onCleanup: WatchCleanup = (fn) => {
     cleanup = fn
@@ -88,7 +95,20 @@ export function watch<T>(
     if (forceTrigger || hasChanged(newValue, oldValue)) {
       const watcher = { cleanup: null as (() => void) | null }
       currentWatcher = watcher
-      cb(newValue, oldValue, onCleanup)
+      // 首次回调（oldValue 仍含哨兵）：oldVal 显示为 undefined——
+      // 单值源直接 undefined；数组源逐元素显示（Vue 3 语义）
+      cb(
+        newValue,
+        oldValue === INITIAL_WATCHER_VALUE
+          ? undefined
+          : Array.isArray(oldValue) &&
+              oldValue.some((v: any) => v === INITIAL_WATCHER_VALUE)
+            ? oldValue.map((v: any) =>
+                v === INITIAL_WATCHER_VALUE ? undefined : v,
+              )
+            : oldValue,
+        onCleanup,
+      )
       currentWatcher = null
       if (watcher.cleanup) cleanup = watcher.cleanup
       oldValue = newValue
