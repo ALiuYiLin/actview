@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref, computed, shallowRef, isRef, nextTick } from 'actview'
+import { createApp, ref, computed, shallowRef, isRef, nextTick, toRefs, reactive } from 'actview'
 import { jsx, createElement } from '@actview/jsx'
 
 let mountSeq = 0
@@ -167,5 +167,29 @@ describe('JSX props 解包（渲染链路）', () => {
     }
     const host = mount(App)
     expect(inputRef.value).toBe(host.querySelector('input'))
+  })
+
+  it('toRefs(props) 解构 rest 展开透传：ref 集合自动解包并响应更新', async () => {
+    function Panel(props: any) {
+      const { id, ...rest } = toRefs(props)
+      // id 是 Ref，可直接传给 data-id（自动解包）；{...rest} 的每个键
+      // 都是 Ref，展开后由 unwrapProps 顶层解包
+      return <div class="panel" data-id={id} {...rest}>P</div>
+    }
+    const state = reactive({ title: 't', hidden: false })
+    function App() {
+      return <Panel id="p1" title={state.title} hidden={state.hidden} />
+    }
+    const host = mount(App)
+    const div = host.querySelector('.panel')!
+    expect(div.getAttribute('data-id')).toBe('p1')
+    expect(div.getAttribute('title')).toBe('t')
+    expect(div.hidden).toBe(false)
+
+    state.title = 'T2'
+    state.hidden = true
+    await nextTick()
+    expect(div.getAttribute('title')).toBe('T2')
+    expect(div.hidden).toBe(true)
   })
 })
