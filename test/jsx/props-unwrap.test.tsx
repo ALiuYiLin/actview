@@ -1,0 +1,171 @@
+// ============================================================
+// JSX props 自动解包（jsxFactory unwrapProps）
+//   属性值为 ref/computedRef（带 __v_isRef 标记）时，创建 vnode 时读取
+//   .value，消费方收到解包后的普通值；解包发生在 JSX 表达式求值处
+//   （组件 render effect 内），读 ref.value 会 track 渲染 effect →
+//   ref 变化 → 重渲染 → 新值传递（响应式 props）。
+// 运行：pnpm exec vitest run test/jsx/props-unwrap.test.tsx
+// ============================================================
+
+import { describe, it, expect } from 'vitest'
+import { createApp, ref, computed, shallowRef, isRef, nextTick } from 'actview'
+import { jsx, createElement } from '@actview/jsx'
+
+let mountSeq = 0
+function mount(component: any) {
+  const host = document.createElement('div')
+  host.id = 'unwrap-host-' + mountSeq++
+  document.body.appendChild(host)
+  createApp(component).mount('#' + host.id)
+  return host
+}
+
+// ============================================================
+// 单元级：jsxFactory 解包行为
+// ============================================================
+describe('jsxFactory props 自动解包（单元级）', () => {
+  it('非 ref 值原样透传，props 对象引用不变（零拷贝）', () => {
+    const config = { title: 't', n: 1 }
+    const vnode = jsx('div', config)
+    expect(vnode.props).toBe(config)
+    expect(vnode.props.title).toBe('t')
+  })
+
+  it('ref 属性自动解包为 .value', () => {
+    const count = ref(1)
+    const vnode = jsx('div', { count })
+    expect(vnode.props.count).toBe(1)
+    expect(isRef(vnode.props.count)).toBe(false)
+  })
+
+  it('computedRef / shallowRef 同样解包', () => {
+    const base = ref(2)
+    const doubled = computed(() => base.value * 2)
+    const s = shallowRef({ a: 1 })
+    const vnode = jsx('div', { doubled, s })
+    expect(vnode.props.doubled).toBe(4)
+    expect(vnode.props.s).toEqual({ a: 1 })
+  })
+
+  it('ref 键排除：模板引用语义不受解包影响', () => {
+    const inputRef = ref<HTMLInputElement | null>(null)
+    const vnode = jsx('input', { ref: inputRef })
+    expect(vnode.props.ref).toBe(inputRef)
+    expect(isRef(vnode.props.ref)).toBe(true)
+  })
+
+  it('已解包的 vnode 是快照，重新渲染才取新值', () => {
+    const count = ref(1)
+    const v1 = jsx('div', { count })
+    count.value = 5
+    const v2 = jsx('div', { count })
+    expect(v1.props.count).toBe(1)
+    expect(v2.props.count).toBe(5)
+  })
+
+  it('createElement 同样解包', () => {
+    const count = ref(3)
+    const vnode = createElement('div', { count })
+    expect(vnode.props.count).toBe(3)
+  })
+})
+
+// ============================================================
+// 渲染链路：响应式传递（核心：解包必须发生在 render effect 内）
+// ============================================================
+describe('JSX props 解包（渲染链路）', () => {
+  it('组件 props 传 ref：setup 收到解包值，ref 变化自动更新', async () => {
+    const count = ref(1)
+    let captured: any
+    function Child(props: any) {
+      captured = props
+      return <span>{props.count}</span>
+    }
+    function App() {
+      return <Child count={count} />
+    }
+    const host = mount(App)
+    // 组件收到的是解包后的普通值，不是 ref 对象
+    expect(isRef(captured.count)).toBe(false)
+    expect(captured.count).toBe(1)
+    expect(host.querySelector('span')!.textContent).toBe('1')
+
+    // 解包读 count.value track 了 App 的 render effect → 变化自动重渲染
+    count.value = 2
+    await nextTick()
+    expect(host.querySelector('span')!.textContent).toBe('2')
+  })
+
+  it('computedRef 传 props：依赖链变化驱动更新', async () => {
+    const base = ref(2)
+    const doubled = computed(() => base.value * 2)
+    function Child(props: any) {
+      return <span>{props.n}</span>
+    }
+    function App() {
+      return <Child n={doubled} />
+    }
+    const host = mount(App)
+    expect(host.querySelector('span')!.textContent).toBe('4')
+
+    base.value = 10
+    await nextTick()
+    expect(host.querySelector('span')!.textContent).toBe('20')
+  })
+
+  it('setup 内 ref 传子树：事件驱动更新生效（解包 track 到组件 render effect）', async () => {
+    function Child(props: any) {
+      return <span>{props.n}</span>
+    }
+    function App() {
+      const n = ref(1) // setup 阶段声明
+      return (
+        <button class="btn" onclick={() => (n.value = n.value + 1)}>
+          <Child n={n} />
+        </button>
+      )
+    }
+    const host = mount(App)
+    expect(host.querySelector('span')!.textContent).toBe('1')
+
+    // 若解包发生在 setup 阶段（track 被吞），点击后子组件不会更新
+    host.querySelector('.btn')!.dispatchEvent(new Event('click'))
+    await nextTick()
+    expect(host.querySelector('span')!.textContent).toBe('2')
+  })
+
+  it('原生元素 props 传 ref：DOM 属性响应式更新', async () => {
+    const value = ref('a')
+    function App() {
+      return <input value={value} />
+    }
+    const host = mount(App)
+    expect((host.querySelector('input') as HTMLInputElement).value).toBe('a')
+
+    value.value = 'b'
+    await nextTick()
+    expect((host.querySelector('input') as HTMLInputElement).value).toBe('b')
+  })
+
+  it('children 传 ref：文本子节点自动解包并响应更新', async () => {
+    const text = ref('hello')
+    function App() {
+      return <div>{text}</div>
+    }
+    const host = mount(App)
+    expect(host.querySelector('div')!.textContent).toBe('hello')
+
+    text.value = 'world'
+    await nextTick()
+    expect(host.querySelector('div')!.textContent).toBe('world')
+  })
+
+  it('ref 键仍按模板引用语义写入（不被解包破坏）', async () => {
+    const inputRef = ref<HTMLInputElement | null>(null)
+    function App() {
+      return <input ref={inputRef} />
+    }
+    const host = mount(App)
+    expect(inputRef.value).toBe(host.querySelector('input'))
+  })
+})
