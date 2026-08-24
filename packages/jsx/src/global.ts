@@ -31,7 +31,8 @@ import type {
   InsHTMLAttributes,
   BlockquoteHTMLAttributes,
   QuoteHTMLAttributes,
-  ComponentType
+  ComponentType,
+  MaybeRefProps
 } from './types.js'
 
 declare global {
@@ -244,6 +245,8 @@ declare global {
      * 额外仅允许 HTML 属性（class/style/id/title/on* / data-* / aria-* 等），
      * 任意自定义属性会报错（对齐 React 严格语义）。
      *
+     * 经 MaybeRefProps 映射：顶层属性接受 Ref 形态（运行时 unwrapProps 解包）。
+     *
      * 用 `Omit<HTMLAttributes, keyof P>` 而非 `P & HTMLAttributes` 全量交集：
      * 组件已声明的键（如 className: string | ((state) => ...)）不再与
      * HTMLAttributes 同名键交集——否则 `(string | fn) & (string | undefined)`
@@ -251,7 +254,8 @@ declare global {
      * 永远无法通过 JSX 类型检查。组件自身声明的类型优先，未声明的键
      * 仍从 HTMLAttributes 放行。
      */
-    type LibraryManagedAttributes<C, P> = P & Omit<HTMLAttributes, keyof P>
+    type LibraryManagedAttributes<C, P> = MaybeRefProps<P> &
+      Omit<HTMLAttributes, keyof P>
   }
 }
 

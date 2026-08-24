@@ -33,8 +33,31 @@ export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
     ? P
     : {}
 
-/** children 递归：允许任意嵌套数组（map/数组变量混入 children 场景） */
-export type VNodeChild =
+/**
+ * ref 最小结构（与 core reactivity/ref.ts 结构互认；jsx 包保持零依赖底座，
+ * 不 import core——core 的 Ref/ComputedRef 均满足本结构，可互相赋值）。
+ */
+export interface Ref<T = any> {
+  value: T
+  readonly __v_isRef?: true
+}
+
+/**
+ * 值或 ref——JSX 属性（props/children/原生元素属性）接受解包前（Ref）与
+ * 解包后（值）两种形态，运行时由 jsxFactory.unwrapProps 统一顶层解包。
+ */
+export type MaybeRef<T> = T | Ref<T>
+
+/**
+ * 组件/元素 props 的 JSX 消费形态：顶层属性接受 Ref。
+ * 与运行时 unwrapProps 一致：只解包顶层，嵌套对象内不解包。
+ *   type Props = { count: number }
+ *   MaybeRefProps<Props> = { count: number | Ref<number> }
+ */
+export type MaybeRefProps<P> = { [K in keyof P]: MaybeRef<P[K]> }
+
+/** children 原子节点（不含 ref、不含数组——两者单独表达，精确对齐运行时解包边界） */
+export type VNodeChildLeaf =
   | VNode
   | string
   | number
@@ -42,8 +65,19 @@ export type VNodeChild =
   | null
   | undefined
   | void
-  | VNodeChild[]
-export type VNodeChildren = VNodeChild
+
+/** 单个子节点：顶层允许 ref（jsxFactory unwrapProps 顶层解包 → 值/文本） */
+export type VNodeChild = VNodeChildLeaf | Ref<any>
+
+/**
+ * children：原子节点 | 顶层 ref | 递归数组。
+ * 数组内不允许 ref：运行时只解包 children 顶层，数组内 ref 不会解包、
+ * 会作为无效 vnode 挂载失败——编译期即拦截（与运行时行为精确一致）。
+ */
+export type VNodeChildren = VNodeChildLeaf | Ref<any> | VNodeArrayChildren
+
+/** 数组子节点：元素为原子节点或嵌套数组（不含 ref） */
+export type VNodeArrayChildren = Array<VNodeChildLeaf | VNodeArrayChildren>
 
 /** 组件 setup 返回的 render 函数类型 */
 export type LazyVNode = () => VNode

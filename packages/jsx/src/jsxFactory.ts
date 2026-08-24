@@ -6,7 +6,12 @@
 export const REACT_ELEMENT_TYPE = Symbol.for('react.element')
 export const REACT_FRAGMENT_TYPE = Symbol.for('react.fragment')
 
-import type { VNode, VNodeChildren, ComponentType } from './types.js'
+import type {
+  VNode,
+  VNodeChildren,
+  ComponentType,
+  MaybeRefProps
+} from './types.js'
 
 // 内联 isRef（与 core reactivity/ref.ts 同一判定：__v_isRef 标记），
 // jsx 包保持零依赖底座，不能 import core。
@@ -60,14 +65,15 @@ function createVNode(type: any, key: any, props: any): any {
 //   字符串标签 → JSX.IntrinsicElements（div → HtmlProps，input → InputProps）
 //   组件（defineComponent 产物）→ PropsOf 推导 props（含事件类型）
 //   Fragment（symbol）→ 仅 children
+//   config 属性经 MaybeRefProps 映射：接受 Ref 形态（运行时 unwrapProps 顶层解包）
 function jsxImpl<K extends keyof JSX.IntrinsicElements>(
   type: K,
-  config: JSX.IntrinsicElements[K] & { children?: VNodeChildren },
+  config: MaybeRefProps<JSX.IntrinsicElements[K]> & { children?: VNodeChildren },
   maybeKey?: any
 ): VNode
 function jsxImpl<P>(
   type: ComponentType<P>,
-  config: P & { children?: VNodeChildren },
+  config: MaybeRefProps<P> & { children?: VNodeChildren },
   maybeKey?: any
 ): VNode
 function jsxImpl(
