@@ -34,7 +34,9 @@ function mount(component: any) {
 // 单元级：jsxFactory 解包行为
 // ============================================================
 describe('jsxFactory props 自动解包（单元级）', () => {
-  it('非 ref 值原样透传，props 对象引用不变（零拷贝）', () => {
+  it('非 ref 值原样透传，props 对象引用不变（零拷贝，仅 jsxImpl 路径）', () => {
+    // createElement 内部无条件 {...config} 拷贝（引用必不等），
+    // 零拷贝是 jsxImpl（props = config || {}）的特性
     const config = { title: 't', n: 1 }
     const vnode = jsx('div', config)
     expect(vnode.props).toBe(config)
@@ -43,7 +45,7 @@ describe('jsxFactory props 自动解包（单元级）', () => {
 
   it('ref 属性自动解包为 .value', () => {
     const count = ref(1)
-    const vnode = jsx('div', { count })
+    const vnode = createElement('div', { count })
     expect(vnode.props.count).toBe(1)
     expect(isRef(vnode.props.count)).toBe(false)
   })
@@ -52,23 +54,23 @@ describe('jsxFactory props 自动解包（单元级）', () => {
     const base = ref(2)
     const doubled = computed(() => base.value * 2)
     const s = shallowRef({ a: 1 })
-    const vnode = jsx('div', { doubled, s })
+    const vnode = createElement('div', { doubled, s })
     expect(vnode.props.doubled).toBe(4)
     expect(vnode.props.s).toEqual({ a: 1 })
   })
 
   it('ref 键排除：模板引用语义不受解包影响', () => {
     const inputRef = ref<HTMLInputElement | null>(null)
-    const vnode = jsx('input', { ref: inputRef })
+    const vnode = createElement('input', { ref: inputRef })
     expect(vnode.props.ref).toBe(inputRef)
     expect(isRef(vnode.props.ref)).toBe(true)
   })
 
   it('已解包的 vnode 是快照，重新渲染才取新值', () => {
     const count = ref(1)
-    const v1 = jsx('div', { count })
+    const v1 = createElement('div', { count })
     count.value = 5
-    const v2 = jsx('div', { count })
+    const v2 = createElement('div', { count })
     expect(v1.props.count).toBe(1)
     expect(v2.props.count).toBe(5)
   })
@@ -86,7 +88,7 @@ describe('jsxFactory props 自动解包（单元级）', () => {
 describe('rawRef 逃逸口（不解包标记）', () => {
   it('rawRef 包装的 ref 不被解包：组件收到 ref 本体', () => {
     const myRef = ref<HTMLElement | null>(null)
-    const vnode = jsx('div', { inputRef: rawRef(myRef) })
+    const vnode = createElement('div', { inputRef: rawRef(myRef) })
     expect(isRef(vnode.props.inputRef)).toBe(true)
     expect((vnode.props.inputRef as any).__av_raw).toBe(true)
   })
@@ -101,7 +103,7 @@ describe('rawRef 逃逸口（不解包标记）', () => {
     raw.value = 9
     expect(count.value).toBe(9)
     // 原 ref 无 __av_raw 标记 → 其他 props 位置照常解包
-    const vnode = jsx('div', { n: count })
+    const vnode = createElement('div', { n: count })
     expect(vnode.props.n).toBe(9)
   })
 })

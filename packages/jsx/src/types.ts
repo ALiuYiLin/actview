@@ -56,6 +56,16 @@ export type MaybeRef<T> = T | Ref<T>
  */
 export type MaybeRefProps<P> = { [K in keyof P]: MaybeRef<P[K]> }
 
+/**
+ * 原生元素属性 MaybeRef 化（IntrinsicElements 的元素类型统一包装）：
+ * TS 对 intrinsic 元素（<input>）的 props 检查直接读 JSX.IntrinsicElements[K]，
+ * 不经 jsx 函数签名——因此元素属性类型本身必须接受 Ref。
+ *   MaybeRefAttrs<InputHTMLAttributes> = { value: string | number | readonly string[] | Ref<...>, ... }
+ */
+export type MaybeRefAttrs<A extends Record<string, any>> = {
+  [K in keyof A]: MaybeRef<A[K]>
+}
+
 /** children 原子节点（不含 ref、不含数组——两者单独表达，精确对齐运行时解包边界） */
 export type VNodeChildLeaf =
   | VNode

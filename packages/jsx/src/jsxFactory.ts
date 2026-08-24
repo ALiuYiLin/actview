@@ -69,10 +69,11 @@ function createVNode(type: any, key: any, props: any): any {
 //   字符串标签 → JSX.IntrinsicElements（div → HtmlProps，input → InputProps）
 //   组件（defineComponent 产物）→ PropsOf 推导 props（含事件类型）
 //   Fragment（symbol）→ 仅 children
-//   config 属性经 MaybeRefProps 映射：接受 Ref 形态（运行时 unwrapProps 顶层解包）
+//   IntrinsicElements 的元素属性已 MaybeRef 化（MaybeRefAttrs，见 global.ts）；
+//   组件 config 经 MaybeRefProps 映射——均接受 Ref 形态（运行时 unwrapProps 顶层解包）
 function jsxImpl<K extends keyof JSX.IntrinsicElements>(
   type: K,
-  config: MaybeRefProps<JSX.IntrinsicElements[K]> & { children?: VNodeChildren },
+  config: JSX.IntrinsicElements[K] & { children?: VNodeChildren },
   maybeKey?: any
 ): VNode
 function jsxImpl<P>(

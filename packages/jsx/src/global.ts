@@ -32,7 +32,8 @@ import type {
   BlockquoteHTMLAttributes,
   QuoteHTMLAttributes,
   ComponentType,
-  MaybeRefProps
+  MaybeRefProps,
+  MaybeRefAttrs
 } from './types.js'
 
 declare global {
@@ -50,7 +51,7 @@ declare global {
       ref?: any
     }
 
-    interface IntrinsicElements {
+    interface IntrinsicElementsBase {
       // ---------- HTML 元素（通用） ----------
       abbr: HTMLAttributes
       address: HTMLAttributes
@@ -234,6 +235,18 @@ declare global {
       /** 未知标签兜底：按 HTML 属性处理 */
       [tag: string]: HTMLAttributes
     }
+
+    /**
+     * IntrinsicElements 的元素属性统一 MaybeRef 化：
+     * TS 对 intrinsic 元素（<input value={ref} />）的 props 检查直接读
+     * JSX.IntrinsicElements[K]，不经 jsx 函数签名——元素属性类型本身
+     * 必须接受 Ref（运行时 jsxFactory.unwrapProps 顶层解包）。
+     */
+    type MaybeRefIntrinsic<T extends Record<string, any>> = {
+      [K in keyof T]: MaybeRefAttrs<T[K]>
+    }
+
+    interface IntrinsicElements extends MaybeRefIntrinsic<IntrinsicElementsBase> {}
 
     interface ElementChildrenAttribute {
       children: unknown
