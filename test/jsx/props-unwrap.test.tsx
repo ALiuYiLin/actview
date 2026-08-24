@@ -8,7 +8,17 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref, computed, shallowRef, isRef, nextTick, toRefs, reactive } from 'actview'
+import {
+  createApp,
+  ref,
+  computed,
+  shallowRef,
+  isRef,
+  nextTick,
+  toRefs,
+  reactive,
+  rawRef
+} from 'actview'
 import { jsx, createElement } from '@actview/jsx'
 
 let mountSeq = 0
@@ -67,6 +77,32 @@ describe('jsxFactory props 自动解包（单元级）', () => {
     const count = ref(3)
     const vnode = createElement('div', { count })
     expect(vnode.props.count).toBe(3)
+  })
+})
+
+// ============================================================
+// rawRef 逃逸口：显式传 ref 本体（跳过自动解包）
+// ============================================================
+describe('rawRef 逃逸口（不解包标记）', () => {
+  it('rawRef 包装的 ref 不被解包：组件收到 ref 本体', () => {
+    const myRef = ref<HTMLElement | null>(null)
+    const vnode = jsx('div', { inputRef: rawRef(myRef) })
+    expect(isRef(vnode.props.inputRef)).toBe(true)
+    expect((vnode.props.inputRef as any).__av_raw).toBe(true)
+  })
+
+  it('不污染原 ref：委托读写生效，别处照常解包', () => {
+    const count = ref(1)
+    const raw = rawRef(count)
+    // getter/setter 委托原 ref
+    expect(raw.value).toBe(1)
+    count.value = 5
+    expect(raw.value).toBe(5)
+    raw.value = 9
+    expect(count.value).toBe(9)
+    // 原 ref 无 __av_raw 标记 → 其他 props 位置照常解包
+    const vnode = jsx('div', { n: count })
+    expect(vnode.props.n).toBe(9)
   })
 })
 
@@ -191,5 +227,21 @@ describe('JSX props 解包（渲染链路）', () => {
     await nextTick()
     expect(div.getAttribute('title')).toBe('T2')
     expect(div.hidden).toBe(true)
+  })
+
+  it('rawRef 渲染链路：组件收 ref 本体，写 .value 回原 ref（useMergedRefs 场景）', async () => {
+    const myInputRef = ref<HTMLInputElement | null>(null)
+    function SwitchRoot(props: any) {
+      // props.inputRef 是 rawRef 包装（ref 本体，未解包）——
+      // 模拟 useMergedRefs 合并后写 .value，等价 <input ref={merged}>
+      const merged = props.inputRef
+      return <input ref={(el: any) => { if (merged) merged.value = el }} />
+    }
+    function App() {
+      return <SwitchRoot inputRef={rawRef(myInputRef)} />
+    }
+    const host = mount(App)
+    // 原 ref 通过包装的 setter 拿到真实 input 元素
+    expect(myInputRef.value).toBe(host.querySelector('input'))
   })
 })

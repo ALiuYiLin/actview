@@ -166,3 +166,30 @@ export function toRefs<T extends object>(
   }
   return ret
 }
+
+// ============================================================
+// rawRef — 跳过 JSX props 自动解包的 ref 标记
+//   jsxFactory.unwrapProps 对带 __av_raw 标记的 ref 不解包（读 .value），
+//   组件/原生元素收到的是 ref 对象本体。用于 props 语义就是"接收 ref 对象"
+//   的场景（如 base-ui 的 inputRef：组件内部 useMergedRefs 合并写 .value）。
+//
+//   <Switch.Root inputRef={rawRef(myRef)} />   // myRef 保持 ref 对象传给组件
+//   <Child n={myRef} />                        // 别处照常自动解包
+//
+// 返回委托包装（value getter/setter 走原 ref），不污染原 ref——同一个原 ref
+// 可在其他 props 位置正常解包使用；包装不带响应式依赖（原 ref 才是源），
+// 组件内写 .value 委托回原 ref。
+// ============================================================
+
+export function rawRef<T>(ref: Ref<T>): Ref<T> {
+  return {
+    __v_isRef: true,
+    __av_raw: true,
+    get value() {
+      return ref.value
+    },
+    set value(v) {
+      ref.value = v
+    },
+  } as Ref<T>
+}

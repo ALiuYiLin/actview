@@ -27,6 +27,7 @@ export {
   toValue,
   toRef,
   toRefs,
+  rawRef,
   watch,
   watchEffect,
   onWatcherCleanup,

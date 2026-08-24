@@ -24,6 +24,10 @@ function isRef(v: any): boolean {
  * 在创建 vnode 时读取 .value，消费方（组件 setup / 原生元素 patchProps）收到的
  * 是解包后的普通值。
  *
+ * 逃逸口：带 __av_raw 标记的 ref（core rawRef() 产生的委托包装）不解包——
+ * 组件收到 ref 对象本体，用于 props 语义就是"接收 ref 对象"的场景
+ * （如 base-ui 的 inputRef：组件内部 useMergedRefs 合并写 .value）。
+ *
  * 时机正确性：解包发生在 JSX 表达式求值处 = 组件 render effect 执行期间
  * （组件 setup 之后的 runEffect → effect.run()），读 ref.value 会 track 到
  * 渲染 effect → ref 变化 → 重渲染 → 新值传递（响应式 props，对齐 Vue 模板
@@ -42,7 +46,7 @@ function unwrapProps(props: any): any {
   for (const k in props) {
     if (k === 'ref') continue
     const v = props[k]
-    if (isRef(v)) {
+    if (isRef(v) && !v.__av_raw) {
       if (!out) out = { ...props }
       out[k] = v.value
     }
