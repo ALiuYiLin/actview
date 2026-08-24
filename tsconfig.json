@@ -4,6 +4,7 @@
     "src",
     "packages/jsx/src/global.ts",
     "packages/core",
+    "packages/hooks-react",
     "packages/router",
     "plugins/*/src",
     "plugins/*/test"

@@ -17,6 +17,7 @@
   "devDependencies": {
     "@actview/core": "workspace:*",
     "@actview/devtools": "workspace:*",
+    "@actview/hooks-react": "workspace:*",
     "@actview/jsx": "workspace:*",
     "@actview/plugin-babel": "workspace:*",
     "@actview/plugin-scoped": "workspace:*",
