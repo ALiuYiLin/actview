@@ -79,6 +79,14 @@ export function watch<T>(
   }
 
   const effect = new ReactiveEffect(getter)
+  // Vue 3 语义：effect.stop()（含组件卸载 scope.stop → effect.stop）时
+  // 执行 pending cleanup——onCleanup 在卸载时也得到调用
+  effect.onStop = () => {
+    if (cleanup) {
+      cleanup()
+      cleanup = null
+    }
+  }
 
   const runJob = () => {
     // stop() 后跳过 stale 微任务：effect 已失效，effect.run() 会短路返回
@@ -246,11 +254,15 @@ export function watchEffect(
 
   eff.run() // 立即执行一次，收集依赖（Vue 3 语义：首次同步执行，flush 只影响后续 trigger）
 
-  return () => {
-    eff.stop()
+  // Vue 3 语义：effect.stop()（含组件卸载 scope.stop）时执行 pending cleanup
+  eff.onStop = () => {
     if (cleanup) {
       cleanup()
       cleanup = null
     }
+  }
+
+  return () => {
+    eff.stop() // onStop 已执行 cleanup（幂等）
   }
 }

@@ -1,15 +1,16 @@
 // ============================================================
-// watch onCleanup 在组件卸载时的行为验收（案例 7 推论验证）
-//   场景 A：默认 flush（pre）→ 卸载时 onCleanup 不调用
-//   场景 B：flush: 'sync' → 卸载时 onCleanup 仍不调用
-// 根因：scope.stop() 只调 effect.stop()（不调 watch 的 stop 闭包），
-//   watch 的 cleanup 只在自身 stop() 里执行 → 卸载清理必须显式
-//   onUnmounted / onScopeDispose，或 onUnmounted(watchStop) 复用 onCleanup
+// watch onCleanup 在组件卸载时的行为验收（Vue 3 语义）
+//   场景 A：默认 flush（pre）→ 卸载时 onCleanup 调用
+//   场景 B：flush: 'sync' → 卸载时 onCleanup 调用
+//   场景 C：watch.stop() 手动停止 → cleanup 执行且幂等（不重复）
+//   场景 D：watchEffect 的 onWatcherCleanup 卸载时执行
+// 机制：ReactiveEffect.onStop 钩子（Vue 3）——watch/watchEffect 把 cleanup
+//   挂在 effect.onStop 上，scope.stop() → effect.stop() → onStop → cleanup
 // 运行：pnpm exec vitest run test/watch-cleanup.test.tsx
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, ref, watch } from 'actview'
+import { createApp, reactive, ref, watch, watchEffect, onWatcherCleanup } from 'actview'
 
 function mount(app: any) {
   const host = document.createElement('div')
@@ -19,8 +20,10 @@ function mount(app: any) {
   return host
 }
 
+const flush = () => new Promise((r) => setTimeout(r, 0))
+
 describe('watch onCleanup 卸载行为', () => {
-  it('场景 A：默认 flush（pre）→ 卸载时 onCleanup 不调用', async () => {
+  it('场景 A：默认 flush（pre）→ 卸载时 onCleanup 调用', async () => {
     let cleaned = false
     const state = reactive({ show: true, n: 0 })
     function Item() {
@@ -39,18 +42,18 @@ describe('watch onCleanup 卸载行为', () => {
     }
     const host = mount(App)
     state.n = 1
-    await new Promise((r) => setTimeout(r, 0))
+    await flush()
     expect(cleaned).toBe(false) // 第一次回调：只注册 cleanup
     state.n = 2
-    await new Promise((r) => setTimeout(r, 0))
+    await flush()
     expect(cleaned).toBe(true) // 第二次回调：先执行旧 cleanup ✓
     cleaned = false
     state.show = false // 卸载
-    await new Promise((r) => setTimeout(r, 0))
-    expect(cleaned).toBe(false) // 卸载时 onCleanup 不调用 ✓
+    await flush()
+    expect(cleaned).toBe(true) // 卸载时 onCleanup 调用（Vue 3 语义）✓
   })
 
-  it('场景 B：flush: sync → 卸载时 onCleanup 不调用', async () => {
+  it('场景 B：flush: sync → 卸载时 onCleanup 调用', async () => {
     let cleaned = false
     const state = reactive({ show: true, n: 0 })
     function Item() {
@@ -75,7 +78,52 @@ describe('watch onCleanup 卸载行为', () => {
     expect(cleaned).toBe(true) // sync：立即重跑 → 先执行旧 cleanup ✓
     cleaned = false
     state.show = false // 卸载
-    await new Promise((r) => setTimeout(r, 0))
-    expect(cleaned).toBe(false) // 即使 sync，卸载时 onCleanup 仍不调用 ✓
+    await flush()
+    expect(cleaned).toBe(true) // 卸载时 onCleanup 调用 ✓
+  })
+
+  it('场景 C：watch.stop() 手动停止 → cleanup 执行且幂等', async () => {
+    let cleaned = 0
+    const state = reactive({ n: 0 })
+    const stop = watch(
+      () => state.n,
+      (_v, _o, onCleanup) => {
+        onCleanup(() => cleaned++)
+      }
+    )
+    state.n = 1
+    await flush()
+    expect(cleaned).toBe(0) // 第一次回调：只注册
+
+    stop()
+    expect(cleaned).toBe(1) // stop() → effect.stop() → onStop → cleanup ✓
+    stop() // 幂等：active 已 false，effect.stop() 短路，不重复执行
+    expect(cleaned).toBe(1)
+  })
+
+  it('场景 D：watchEffect onWatcherCleanup 卸载时执行', async () => {
+    let cleaned = false
+    const state = reactive({ show: true, n: 0 })
+    function Item() {
+      watchEffect(() => {
+        state.n
+        onWatcherCleanup(() => {
+          cleaned = true
+        })
+      })
+      return () => <div class="d">{state.n}</div>
+    }
+    function App() {
+      return () => (state.show ? <Item /> : <div class="empty" />)
+    }
+    const host = mount(App)
+    expect(cleaned).toBe(false) // 挂载时首次同步执行：只注册，未执行
+    state.n = 1
+    await flush()
+    expect(cleaned).toBe(true) // 第二次执行：先跑旧 cleanup ✓
+    cleaned = false
+    state.show = false // 卸载
+    await flush()
+    expect(cleaned).toBe(true) // 卸载时执行 ✓
   })
 })

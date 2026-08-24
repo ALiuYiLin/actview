@@ -52,6 +52,12 @@ export class ReactiveEffect {
   scheduler?: (effect: ReactiveEffect) => void
   /** 关联的组件实例（调试钩子 onRenderTracked / onRenderTriggered 用） */
   instance?: any
+  /**
+   * stop 钩子：effect.stop() 时调用（Vue 3 语义）。
+   * watch/watchEffect 注册此处执行 pending cleanup——组件卸载
+   * （scope.stop → effect.stop）时 onCleanup 得以执行。
+   */
+  onStop?: () => void
   private fn: () => void
   /** 重入保护：run() 执行中再次被 trigger 直接跳过（防止 effect 内修改自身依赖爆栈） */
   private _running = false
@@ -83,12 +89,13 @@ export class ReactiveEffect {
       shouldTrack = prevShouldTrack
     }
   }
-  /** 停止该 effect：清空所有依赖，之后不再响应 */
+  /** 停止该 effect：清空所有依赖，之后不再响应；触发 onStop 钩子（幂等） */
   public stop() {
     if (!this.active) return
     this.active = false
     cleanupEffect(this)
     this.deps = []
+    this.onStop?.()
   }
 }
 
