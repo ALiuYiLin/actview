@@ -31,6 +31,22 @@ import type {
   InsHTMLAttributes,
   BlockquoteHTMLAttributes,
   QuoteHTMLAttributes,
+  DialogHTMLAttributes,
+  DetailsHTMLAttributes,
+  ScriptHTMLAttributes,
+  ObjectHTMLAttributes,
+  ColHTMLAttributes,
+  TrackHTMLAttributes,
+  SourceHTMLAttributes,
+  StyleHTMLAttributes,
+  HtmlHTMLAttributes,
+  DataHTMLAttributes,
+  LiHTMLAttributes,
+  OptgroupHTMLAttributes,
+  OutputHTMLAttributes,
+  ParamHTMLAttributes,
+  MapHTMLAttributes,
+  MenuHTMLAttributes,
   ComponentType,
   MaybeRefProps,
   MaybeRefAttrs
@@ -66,12 +82,12 @@ declare global {
       caption: HTMLAttributes
       cite: HTMLAttributes
       code: HTMLAttributes
-      data: HTMLAttributes
+      data: DataHTMLAttributes
       datalist: HTMLAttributes
       dd: HTMLAttributes
-      details: HTMLAttributes
+      details: DetailsHTMLAttributes
       dfn: HTMLAttributes
-      dialog: HTMLAttributes
+      dialog: DialogHTMLAttributes
       div: HTMLAttributes
       dl: HTMLAttributes
       dt: HTMLAttributes
@@ -91,20 +107,20 @@ declare global {
       header: HTMLAttributes
       hgroup: HTMLAttributes
       hr: HTMLAttributes
-      html: HTMLAttributes
+      html: HtmlHTMLAttributes
       i: HTMLAttributes
       kbd: HTMLAttributes
       legend: HTMLAttributes
-      li: HTMLAttributes
+      li: LiHTMLAttributes
       main: HTMLAttributes
-      map: HTMLAttributes
+      map: MapHTMLAttributes
       mark: HTMLAttributes
-      menu: HTMLAttributes
+      menu: MenuHTMLAttributes
       nav: HTMLAttributes
       noscript: HTMLAttributes
-      object: HTMLAttributes
-      optgroup: HTMLAttributes
-      output: HTMLAttributes
+      object: ObjectHTMLAttributes
+      optgroup: OptgroupHTMLAttributes
+      output: OutputHTMLAttributes
       p: HTMLAttributes
       picture: HTMLAttributes
       pre: HTMLAttributes
@@ -113,21 +129,21 @@ declare global {
       ruby: HTMLAttributes
       s: HTMLAttributes
       samp: HTMLAttributes
-      script: HTMLAttributes
+      script: ScriptHTMLAttributes
       search: HTMLAttributes
       section: HTMLAttributes
       slot: HTMLAttributes
       small: HTMLAttributes
-      source: HTMLAttributes
+      source: SourceHTMLAttributes
       span: HTMLAttributes
       strong: HTMLAttributes
-      style: HTMLAttributes
+      style: StyleHTMLAttributes
       sub: HTMLAttributes
       summary: HTMLAttributes
       sup: HTMLAttributes
       template: HTMLAttributes
       title: HTMLAttributes
-      track: HTMLAttributes
+      track: TrackHTMLAttributes
       u: HTMLAttributes
       ul: HTMLAttributes
       var: HTMLAttributes
@@ -144,8 +160,8 @@ declare global {
       base: HTMLAttributes
       blockquote: BlockquoteHTMLAttributes
       button: ButtonHTMLAttributes
-      col: TableHTMLAttributes
-      colgroup: TableHTMLAttributes
+      col: ColHTMLAttributes
+      colgroup: ColHTMLAttributes
       del: DelHTMLAttributes
       form: FormHTMLAttributes
       iframe: IframeHTMLAttributes
@@ -158,6 +174,7 @@ declare global {
       meter: MeterHTMLAttributes
       ol: OlHTMLAttributes
       option: OptionHTMLAttributes
+      param: ParamHTMLAttributes
       progress: ProgressHTMLAttributes
       q: QuoteHTMLAttributes
       select: SelectHTMLAttributes

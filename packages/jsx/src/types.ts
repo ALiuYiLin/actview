@@ -319,6 +319,50 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   role?: string
   slot?: string
   translate?: 'yes' | 'no'
+  // ---- 对齐 React HTMLAttributes 补全 ----
+  /** 移动端虚拟键盘类型提示（Living Standard） */
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+  /** CSP nonce */
+  nonce?: string
+  /** 指定自定义内置元素（Living Standard） */
+  is?: string
+  /** 惰性元素（现代属性） */
+  inert?: boolean
+  /** 旧版 contextmenu */
+  contextMenu?: string
+  radioGroup?: string
+  /** 驼峰标准名（React 命名；小写 autocapitalize 历史兼容） */
+  autoCapitalize?: string
+  autoCorrect?: string
+  enterKeyHint?: string
+  autoSave?: string
+  // microdata
+  itemID?: string
+  itemProp?: string
+  itemRef?: string
+  itemScope?: boolean
+  itemType?: string
+  // RDFa
+  about?: string
+  datatype?: string
+  inlist?: any
+  prefix?: string
+  property?: string
+  resource?: string
+  'typeof'?: string
+  vocab?: string
+  // 非标准
+  color?: string
+  results?: number
+  security?: string
+  unselectable?: 'on' | 'off'
+  // 杂项
+  wmode?: string
+  profile?: string
+  icon?: string
+  mediaGroup?: string
+  manifest?: string
+  credentialless?: boolean
   /** React 语义：dangerouslySetInnerHTML（渲染层 setProp 透传） */
   dangerouslySetInnerHTML?: {__html: string}
   [key: `data-${string}`]: unknown
@@ -334,7 +378,11 @@ export interface AnchorHTMLAttributes extends HTMLAttributes {
   download?: string
   rel?: string
   hreflang?: string
+  /** 驼峰标准名（React 命名；hreflang 小写历史兼容） */
+  hrefLang?: string
   referrerPolicy?: string
+  type?: string
+  ping?: string
 }
 
 export interface ImgHTMLAttributes extends HTMLAttributes {
@@ -345,6 +393,10 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   loading?: 'eager' | 'lazy'
   decoding?: 'async' | 'sync' | 'auto'
   srcSet?: string
+  crossOrigin?: string
+  referrerPolicy?: string
+  sizes?: string
+  useMap?: string
 }
 
 export interface InputHTMLAttributes extends HTMLAttributes {
@@ -414,6 +466,12 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   formMethod?: string
   formNoValidate?: boolean
   formTarget?: string
+  /** 跨域策略（type=image / CORS 场景） */
+  crossOrigin?: string
+  /** 表单控件方向性（dir=auto 场景，Living Standard） */
+  dirName?: string
+  /** 虚拟键盘动作提示（驼峰标准名） */
+  enterKeyHint?: string
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -429,7 +487,9 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   maxLength?: number
   minLength?: number
   autoFocus?: boolean
+  autoComplete?: string
   wrap?: string
+  dirName?: string
   /** React 语义：defaultValue 走 property（非受控默认值） */
   defaultValue?: string
   /** 表单关联属性（<textarea form="..."> 合法） */
@@ -444,6 +504,7 @@ export interface SelectHTMLAttributes extends HTMLAttributes {
   name?: string
   size?: number
   autoFocus?: boolean
+  autoComplete?: string
   /** React 语义：defaultValue 走 property（非受控默认值） */
   defaultValue?: string | readonly string[]
   /** 表单关联属性（<select form="..."> 合法） */
@@ -484,6 +545,8 @@ export interface FormHTMLAttributes extends HTMLAttributes {
   /** React 语义：acceptCharset（HTML 属性 accept-charset） */
   acceptCharset?: string
   name?: string
+  autoComplete?: string
+  rel?: string
 }
 
 export interface LabelHTMLAttributes extends HTMLAttributes {
@@ -502,6 +565,14 @@ export interface MediaHTMLAttributes extends HTMLAttributes {
   preload?: 'none' | 'metadata' | 'auto'
   poster?: string
   crossOrigin?: string
+  /** 媒体控件列表（现代属性） */
+  controlsList?: string
+  /** 画中画禁用 */
+  disablePictureInPicture?: boolean
+  /** 远程播放禁用 */
+  disableRemotePlayback?: boolean
+  /** 内联播放（iOS 全屏抑制） */
+  playsInline?: boolean
 }
 
 export interface TableHTMLAttributes extends HTMLAttributes {
@@ -511,6 +582,7 @@ export interface TableHTMLAttributes extends HTMLAttributes {
   scope?: string
   cellPadding?: number | string
   cellSpacing?: number | string
+  summary?: string
 }
 
 export interface MetaHTMLAttributes extends HTMLAttributes {
@@ -518,6 +590,7 @@ export interface MetaHTMLAttributes extends HTMLAttributes {
   content?: string
   httpEquiv?: string
   name?: string
+  media?: string
 }
 
 export interface LinkHTMLAttributes extends HTMLAttributes {
@@ -528,6 +601,15 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   as?: string
   crossOrigin?: string
   integrity?: string
+  disabled?: boolean
+  /** 资源加载优先级（现代属性） */
+  fetchPriority?: 'high' | 'low' | 'auto'
+  /** 驼峰标准名 */
+  hrefLang?: string
+  imageSizes?: string
+  imageSrcSet?: string
+  referrerPolicy?: string
+  sizes?: string
 }
 
 export interface IframeHTMLAttributes extends HTMLAttributes {
@@ -540,6 +622,17 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   loading?: 'eager' | 'lazy'
   sandbox?: string
   title?: string
+  /** 旧式透明背景 */
+  allowTransparency?: boolean
+  frameBorder?: number | string
+  marginHeight?: number
+  marginWidth?: number
+  referrerPolicy?: string
+  scrolling?: string
+  /** 旧式无缝嵌入（已废弃但仍有类型） */
+  seamless?: boolean
+  /** 内联文档（srcdoc） */
+  srcDoc?: string
 }
 
 export interface AreaHTMLAttributes extends HTMLAttributes {
@@ -550,6 +643,9 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   shape?: string
   rel?: string
   download?: string
+  /** 驼峰标准名 */
+  hrefLang?: string
+  type?: string
 }
 
 export interface OlHTMLAttributes extends HTMLAttributes {
@@ -570,6 +666,8 @@ export interface MeterHTMLAttributes extends HTMLAttributes {
   low?: number
   high?: number
   optimum?: number
+  /** 表单关联属性（<meter form="..."> 合法） */
+  form?: string
 }
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
@@ -597,6 +695,114 @@ export interface QuoteHTMLAttributes extends HTMLAttributes {
 }
 
 // ============================================================
+// 补齐无专属声明的元素（对齐 React HTMLAttributes 家族）
+// ============================================================
+
+export interface DialogHTMLAttributes extends HTMLAttributes {
+  open?: boolean
+  /** 对话框关闭请求（Esc） */
+  onCancel?: EventHandler<Event>
+  /** 对话框关闭后 */
+  onClose?: EventHandler<Event>
+}
+
+export interface DetailsHTMLAttributes extends HTMLAttributes {
+  open?: boolean
+  /** 折叠状态切换 */
+  onToggle?: EventHandler<Event>
+}
+
+export interface ScriptHTMLAttributes extends HTMLAttributes {
+  async?: boolean
+  charSet?: string
+  crossOrigin?: string
+  defer?: boolean
+  integrity?: string
+  /** ES 模块旁路（经典脚本） */
+  noModule?: boolean
+  referrerPolicy?: string
+  src?: string
+  type?: string
+}
+
+export interface ObjectHTMLAttributes extends HTMLAttributes {
+  classID?: string
+  data?: string
+  form?: string
+  height?: number | string
+  name?: string
+  type?: string
+  useMap?: string
+  width?: number | string
+}
+
+export interface ColHTMLAttributes extends HTMLAttributes {
+  span?: number
+  width?: number | string
+}
+
+export interface TrackHTMLAttributes extends HTMLAttributes {
+  default?: boolean
+  kind?: string
+  label?: string
+  src?: string
+  srcLang?: string
+}
+
+export interface SourceHTMLAttributes extends HTMLAttributes {
+  height?: number | string
+  media?: string
+  sizes?: string
+  src?: string
+  srcSet?: string
+  type?: string
+  width?: number | string
+}
+
+export interface StyleHTMLAttributes extends HTMLAttributes {
+  media?: string
+  nonce?: string
+  scoped?: boolean
+  type?: string
+}
+
+export interface HtmlHTMLAttributes extends HTMLAttributes {
+  manifest?: string
+}
+
+export interface DataHTMLAttributes extends HTMLAttributes {
+  value?: string | number | readonly string[]
+}
+
+export interface LiHTMLAttributes extends HTMLAttributes {
+  value?: number | string
+}
+
+export interface OptgroupHTMLAttributes extends HTMLAttributes {
+  disabled?: boolean
+  label?: string
+}
+
+export interface OutputHTMLAttributes extends HTMLAttributes {
+  form?: string
+  htmlFor?: string
+  name?: string
+}
+
+export interface ParamHTMLAttributes extends HTMLAttributes {
+  name?: string
+  value?: string | number | readonly string[]
+}
+
+export interface MapHTMLAttributes extends HTMLAttributes {
+  name?: string
+}
+
+export interface MenuHTMLAttributes extends HTMLAttributes {
+  type?: string
+}
+
+// ============================================================
 // SVG 属性
 // ============================================================
 
@@ -606,16 +812,14 @@ export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   scopedId?: string
   /** SVG 元素同样接受 class（className 别名语义） */
   class?: string
+  id?: string
+  lang?: string
+  style?: string | Record<string, string | number | undefined>
+  // ---- 几何 / 坐标 ----
   viewBox?: string
-  fill?: string
-  stroke?: string
-  strokeWidth?: number | string
-  strokeLinecap?: string
-  strokeLinejoin?: string
-  strokeDasharray?: string
-  fillOpacity?: number | string
-  strokeOpacity?: number | string
   d?: string
+  path?: string
+  points?: string
   cx?: number | string
   cy?: number | string
   r?: number | string
@@ -627,27 +831,231 @@ export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   y1?: number | string
   x2?: number | string
   y2?: number | string
+  dx?: number | string
+  dy?: number | string
+  fx?: number | string
+  fy?: number | string
   width?: number | string
   height?: number | string
-  points?: string
-  transform?: string
+  refX?: number | string
+  refY?: number | string
+  targetX?: number | string
+  targetY?: number | string
+  pointsAtX?: number | string
+  pointsAtY?: number | string
+  pointsAtZ?: number | string
+  // ---- 数值参数 ----
   opacity?: number | string
+  fillOpacity?: number | string
+  strokeOpacity?: number | string
+  floodOpacity?: number | string
+  stopOpacity?: number | string
+  strokeWidth?: number | string
+  strokeMiterlimit?: number | string
+  xHeight?: number | string
+  capHeight?: number | string
+  accentHeight?: number | string
+  ascent?: number | string
+  descent?: number | string
+  unitsPerEm?: number | string
+  stemh?: number | string
+  stemv?: number | string
+  horizAdvX?: number | string
+  horizOriginX?: number | string
+  vertAdvY?: number | string
+  vertOriginX?: number | string
+  vertOriginY?: number | string
+  u1?: number | string
+  u2?: number | string
+  k?: number | string
+  k1?: number | string
+  k2?: number | string
+  k3?: number | string
+  k4?: number | string
+  rotate?: number | string
+  scale?: number | string
+  numOctaves?: number | string
+  stdDeviation?: number | string
+  amplitude?: number | string
+  exponent?: number | string
+  slope?: number | string
+  intercept?: number | string
+  surfaceScale?: number | string
+  diffuseConstant?: number | string
+  specularConstant?: number | string
+  specularExponent?: number | string
+  offset?: number | string
+  startOffset?: number | string
+  tableValues?: string
+  z?: number | string
+  // ---- 描边 / 填充 / 绘制 ----
+  fill?: string
+  stroke?: string
+  strokeLinecap?: string
+  strokeLinejoin?: string
+  strokeDasharray?: string
+  strokeDashoffset?: string
+  fillRule?: string
   clipPath?: string
   clipRule?: string
-  fillRule?: string
-  strokeMiterlimit?: number | string
+  clipPathUnits?: string
+  transform?: string
+  transformOrigin?: string
   preserveAspectRatio?: string
-  href?: string
-  xlinkHref?: string
-  gradientUnits?: string
-  gradientTransform?: string
-  offset?: number | string
-  stopColor?: string
-  stopOpacity?: number | string
-  markerUnits?: string
+  mask?: string
   maskUnits?: string
   maskContentUnits?: string
-  pathLength?: number | string
-  path?: string
+  maskType?: string
+  // ---- 渐变 / 滤镜 ----
+  gradientUnits?: string
+  gradientTransform?: string
+  spreadMethod?: string
+  stopColor?: string
+  floodColor?: string
+  lightingColor?: string
+  colorInterpolation?: string
+  colorInterpolationFilters?: string
+  colorProfile?: string
+  colorRendering?: string
+  filter?: string
+  filterRes?: string
+  filterUnits?: string
+  primitiveUnits?: string
+  in?: string
+  in2?: string
+  result?: string
+  mode?: string
+  operator?: string
+  edgeMode?: string
+  divisor?: number | string
+  kernelMatrix?: string
+  kernelUnitLength?: string
+  seed?: number | string
+  // ---- 图案 / 标记 ----
+  patternUnits?: string
+  patternContentUnits?: string
+  patternTransform?: string
+  markerEnd?: string
+  markerHeight?: number | string
+  markerMid?: string
+  markerStart?: string
+  markerWidth?: number | string
+  markerUnits?: string
+  // ---- 字体 / 文本 ----
+  fontFamily?: string
+  fontSize?: number | string
+  fontSizeAdjust?: string
+  fontStretch?: string
+  fontStyle?: string
+  fontVariant?: string
+  fontWeight?: string
+  glyphName?: string
+  glyphOrientationHorizontal?: string
+  glyphOrientationVertical?: string
+  glyphRef?: string
+  arabicForm?: string
+  mathematical?: string
+  vAlphabetic?: string
+  vHanging?: string
+  vIdeographic?: string
+  vMathematical?: string
+  overlinePosition?: string
+  overlineThickness?: string
+  underlinePosition?: string
+  underlineThickness?: string
+  strikethroughPosition?: string
+  strikethroughThickness?: string
+  textAnchor?: string
+  textDecoration?: string
+  textLength?: number | string
+  textRendering?: string
+  letterSpacing?: string
+  wordSpacing?: string
+  writingMode?: string
+  direction?: string
+  unicode?: string
+  unicodeBidi?: string
+  unicodeRange?: string
+  // ---- 渲染 ----
+  pointerEvents?: string
+  shapeRendering?: string
+  imageRendering?: string
+  vectorEffect?: string
+  paintOrder?: string
+  display?: string
+  visibility?: string
+  overflow?: string
+  cursor?: string
+  clip?: string
+  enableBackground?: string
+  renderingIntent?: string
+  // ---- 动画 ----
+  begin?: string
+  dur?: string
+  end?: string
+  repeatCount?: string
+  repeatDur?: string
+  restart?: string
+  calcMode?: string
+  keyTimes?: string
+  keySplines?: string
+  keyPoints?: string
+  from?: string
+  to?: string
+  by?: string
+  values?: string
+  accumulate?: string
+  additive?: string
+  attributeName?: string
+  attributeType?: string
+  autoReverse?: boolean | string
+  allowReorder?: boolean | string
+  externalResourcesRequired?: boolean | string
+  preserveAlpha?: boolean | string
+  // ---- 元数据 / 通用 ----
+  orientation?: string
+  origin?: string
+  version?: string
+  contentScriptType?: string
+  contentStyleType?: string
+  systemLanguage?: string
+  requiredExtensions?: string
+  requiredFeatures?: string
+  zoomAndPan?: string
+  local?: string
+  lengthAdjust?: string
+  max?: number | string
+  min?: number | string
+  media?: string
+  method?: string
+  name?: string
+  target?: string
+  type?: string
+  color?: string
+  about?: string
+  datatype?: string
+  inlist?: any
+  prefix?: string
+  property?: string
+  resource?: string
+  'typeof'?: string
+  vocab?: string
+  results?: number
+  security?: string
+  unselectable?: 'on' | 'off'
+  // ---- xlink / xml ----
+  href?: string
+  xlinkHref?: string
+  xlinkActuate?: string
+  xlinkArcrole?: string
+  xlinkRole?: string
+  xlinkShow?: string
+  xlinkTitle?: string
+  xlinkType?: string
+  xmlBase?: string
+  xmlLang?: string
+  xmlSpace?: string
+  xmlns?: string
+  xmlnsXlink?: string
   [key: `data-${string}`]: unknown
 }
