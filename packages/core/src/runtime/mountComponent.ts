@@ -291,7 +291,10 @@ export function mountComponent(
   )
 
   // 首次渲染已完成（DOM 已挂载）→ 触发 onMounted
-  // 注意：子组件的 mounted 先于父组件触发（同步挂载顺序，与 Vue 3 相反）
+  // 同步挂载顺序：子树先挂载完成 → 子 mounted 先于父组件触发。
+  // 与 Vue 3 一致（Vue 的 mounted 经 post-flush 队列，子先入队先执行；
+  //  父先子后的是 beforeMount——官方断言见 vue3 runtime-core
+  //  __tests__/apiLifecycle.spec.ts：child onMounted → root onMounted）
   invokeHooks(instance.mounted)
 
   // props 更新路径（父组件 patchComponent 手动调度）同样入队，
