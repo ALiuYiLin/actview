@@ -31,6 +31,7 @@ import {
 import { mountComponent, resetComponentUid } from './mountComponent'
 import { mountSolid, SOLID_TYPE } from './solid'
 import { getChildren } from '../vnode'
+import { resolveTeleportTarget } from './transition'
 
 /** 游标：指向容器内下一个待消费的 DOM 节点 */
 export interface HydrateCursor {
@@ -84,17 +85,24 @@ export function hydrateRoot(
   }
   // 内置组件（优先于组件分支，与 mountVNode 顺序一致）：
   //   Transition 的 SSR 输出是其渲染结果 → 子树配对，跳过 appear 动画
-  //   Teleport：SSR 无对应输出 → 重建
+  //   Teleport：SSR 内联输出 → 当前位置配对后移动 DOM 到目标
   if (vnode.type?.__builtin === 'transition') {
     return hydrateTransition(vnode, container, cursor, parent)
   }
   if (vnode.type?.__builtin === 'teleport') {
-    warnMismatch('Teleport 无法水合，重建')
-    return mountVNode(vnode, container, parent)
+    return hydrateTeleport(vnode, container, cursor, parent)
   }
-  // Fragment：无自身 DOM，直接递归 children（游标不消费）
+  // Fragment：无自身 DOM，直接递归 children（游标不消费）——
+  // 记录 __avChildren（vnode 数组）供后续 patch 精确 diff（与 mountVNode 一致）
   if (type === Fragment) {
-    return hydrateChildren(vnode.props?.children, container, cursor, parent)
+    vnode.el = null
+    vnode.__avChildren = hydrateChildren(
+      vnode.props?.children,
+      container,
+      cursor,
+      parent
+    )
+    return vnode.__avChildren
   }
   // 文本
   if (type === Text) {
@@ -186,7 +194,9 @@ function hydrateText(vnode: any, container: Element, cursor: HydrateCursor): any
   return dom
 }
 
-/** 容器 children 按序水合（与 renderer patchChildren 同构的归一化） */
+/** 容器 children 按序水合（与 renderer patchChildren 同构的归一化）。
+ * 返回 **vnode 数组**（每项 el 已由 hydrateRoot 设置为配对后的 DOM，
+ * 与 mountVNode 的 __avChildren 契约一致——后续 patch 精确 diff 复用）。 */
 function hydrateChildren(
   children: any,
   container: Element,
@@ -196,7 +206,9 @@ function hydrateChildren(
   const list = normalizeChildren(children)
   const out: any[] = []
   for (const child of list) {
-    out.push(hydrateRoot(toVNode(child), container, cursor, parent))
+    const vnode = toVNode(child)
+    hydrateRoot(vnode, container, cursor, parent)
+    out.push(vnode)
   }
   return out
 }
@@ -215,6 +227,44 @@ function hydrateTransition(
   vnode.el = null
   vnode.__avChildren = cv ? [cv] : []
   return out
+}
+
+/** Teleport 水合：SSR 内联输出 → 当前位置配对（绑定事件）后，把 DOM 移动到
+ *  to 目标容器（appendChild 移动保留事件监听）。to 为 null = 内联（不移动）；
+ *  目标不存在 → 内容留在原位 + 告警（对齐 mountTeleport 的告警语义）。 */
+function hydrateTeleport(
+  vnode: any,
+  container: Element,
+  cursor: HydrateCursor,
+  parent: any
+): any {
+  vnode.el = null
+  const out = hydrateChildren(getChildren(vnode), container, cursor, parent)
+  vnode.__avChildren = out
+  const to = vnode.props?.to
+  if (to != null) {
+    const target = resolveTeleportTarget(to, container)
+    if (target) {
+      // 收集子树全部 DOM（Fragment/组件多根）→ 移动到目标（保留监听）
+      const els: Node[] = []
+      collectEls(out, els)
+      for (const el of els) {
+        if (el.parentNode && el.parentNode !== target) target.appendChild(el)
+      }
+    } else {
+      warnMismatch(`Teleport 目标容器不存在（${String(to)}），内容留在原位`)
+    }
+  }
+  return null
+}
+
+/** 递归收集 vnode 列表中的真实 DOM（组件/Fragment 多根嵌套，vnode.el） */
+function collectEls(list: any[], out: Node[]) {
+  for (const n of list) {
+    if (!n) continue
+    if (Array.isArray(n)) collectEls(n, out)
+    else if (n.el) out.push(n.el)
+  }
 }
 
 /** class 差异检测：SSR 输出的 class 与客户端 props 不一致时告警（仅调试辅助，

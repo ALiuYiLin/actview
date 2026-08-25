@@ -23,6 +23,7 @@ import {
   Suspense,
   lazy,
   defineComponent,
+  Teleport,
 } from 'actview'
 
 function makeHost() {
@@ -270,5 +271,77 @@ describe('P1：builtin / Suspense / 并发', () => {
     spy.mockRestore()
 
     expect(host.querySelector('div')!.getAttribute('class')).toBe('b') // 客户端覆盖
+  })
+
+  it('场景 11：Teleport SSR 内联输出 + 水合移动到 target（事件保留）', async () => {
+    const state = reactive({ n: 0 })
+    function App() {
+      return () => (
+        <div class="app">
+          <span class="before">b</span>
+          <Teleport to="#modal-host">
+            <button class="modal" onClick={() => state.n++}>
+              m{state.n}
+            </button>
+          </Teleport>
+          <span class="after">a</span>
+        </div>
+      )
+    }
+    const modalHost = document.createElement('div')
+    modalHost.id = 'modal-host'
+    document.body.appendChild(modalHost)
+
+    const host = makeHost()
+    const html = renderToString(<App />)
+    // SSR 内联：modal 内容在 app 内（SSR 无 DOM，不输出到 target）
+    expect(html).toContain(
+      '<div class="app"><span class="before">b</span><button class="modal">m0</button><span class="after">a</span></div>'
+    )
+    host.innerHTML = html
+
+    createApp(App).hydrate('#' + host.id)
+    // 内容已移动到 target（原位置清空）
+    expect(host.querySelector('.app .modal')).toBeNull()
+    expect(modalHost.querySelector('.modal')).toBeTruthy()
+    expect(modalHost.querySelector('.modal')!.textContent).toBe('m0')
+    // 事件保留（move 不丢监听）+ 响应式更新走 patchTeleport
+    modalHost.querySelector('.modal')!.dispatchEvent(new MouseEvent('click'))
+    await flush()
+    expect(modalHost.querySelector('.modal')!.textContent).toBe('m1')
+  })
+
+  it('场景 12：Teleport to=null 内联（水合不移动）；to 目标不存在 → 留在原位 + 告警', () => {
+    function A() {
+      return () => (
+        <div class="app">
+          <Teleport to={null as any}>
+            <span class="inline">x</span>
+          </Teleport>
+        </div>
+      )
+    }
+    const host = makeHost()
+    host.innerHTML = renderToString(<A />)
+    createApp(A).hydrate('#' + host.id)
+    // to=null：内容留在原位（内联语义）
+    expect(host.querySelector('.app .inline')).toBeTruthy()
+
+    function B() {
+      return () => (
+        <div class="app">
+          <Teleport to="#not-exist">
+            <span class="stay">y</span>
+          </Teleport>
+        </div>
+      )
+    }
+    const host2 = makeHost()
+    host2.innerHTML = renderToString(<B />)
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    createApp(B).hydrate('#' + host2.id)
+    expect(spy).toHaveBeenCalled() // 目标缺失告警
+    spy.mockRestore()
+    expect(host2.querySelector('.app .stay')).toBeTruthy() // 留在原位
   })
 })

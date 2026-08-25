@@ -120,13 +120,18 @@ function serializeNode(
 
   // 内置组件（优先于普通组件分支）：
   //   Transition 序列化其 children（SSR 输出渲染结果，客户端水合配对，跳过动画）
-  //   Teleport 内容在目标容器，SSR 跳过（第一版边界，客户端重建）
+  //   Teleport 内联输出 children（SSR 无 DOM 无法解析 target；对齐 React portal /
+  //   Vue Teleport——客户端水合时再移动 DOM 到目标容器）
   if ((type as any)?.__builtin === 'transition') {
     return toChildrenArray(getChildren(node))
       .map((n) => serializeNode(n, parentInjects, idState))
       .join('')
   }
-  if ((type as any)?.__builtin === 'teleport') return ''
+  if ((type as any)?.__builtin === 'teleport') {
+    return toChildrenArray(getChildren(node))
+      .map((n) => serializeNode(n, parentInjects, idState))
+      .join('')
+  }
 
   // 组件：__setup(props) 拿 render =》 render() 递归（构建期静态，无响应式上下文）
   //   type 形态：Babel 转换 =》 defineComponent 产物（对象 { __setup }）；
@@ -293,7 +298,7 @@ async function serializeNodeAsync(
     return parts.join('')
   }
 
-  // 内置组件：Transition 序列化 children（与同步版一致）；Teleport SSR 跳过
+  // 内置组件：Transition 序列化 children（与同步版一致）；Teleport 内联输出（水合时移动）
   if ((type as any)?.__builtin === 'transition') {
     const parts = await Promise.all(
       toChildrenArray(getChildren(node)).map((n) =>
@@ -302,7 +307,14 @@ async function serializeNodeAsync(
     )
     return parts.join('')
   }
-  if ((type as any)?.__builtin === 'teleport') return ''
+  if ((type as any)?.__builtin === 'teleport') {
+    const parts = await Promise.all(
+      toChildrenArray(getChildren(node)).map((n) =>
+        serializeNodeAsync(n, parentInjects, idState)
+      )
+    )
+    return parts.join('')
+  }
 
   const isComponent =
     typeof type === 'function' ||

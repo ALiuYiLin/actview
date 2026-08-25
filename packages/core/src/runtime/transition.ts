@@ -33,7 +33,7 @@ export const Teleport = /* @__PURE__ */ {
 } as any
 
 /** 解析 to：选择器 =》 元素；Element =》 原样；null/未定义 =》 当前容器（内联） */
-function resolveTeleportTarget(
+export function resolveTeleportTarget(
   to: any,
   fallback: Element | null
 ): Element | null {
