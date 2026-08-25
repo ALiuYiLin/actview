@@ -14,10 +14,15 @@ import {
   createApp,
   ref,
   reactive,
+  nextTick,
   renderToString,
   renderToStringAsync,
   useId,
   onServerPrefetch,
+  Transition,
+  Suspense,
+  lazy,
+  defineComponent,
 } from 'actview'
 
 function makeHost() {
@@ -169,5 +174,101 @@ describe('renderToStringAsync', () => {
     }
     const html = await renderToStringAsync(<App />)
     expect(html).toContain('sync')
+  })
+})
+
+describe('P1：builtin / Suspense / 并发', () => {
+  it('场景 7：Transition SSR 输出 children + 水合配对（无 appear 动画）+ 移除走动画', async () => {
+    const state = reactive({ show: true })
+    function App() {
+      return () => (
+        <div class="app">
+          <Transition name="fade" appear>
+            {state.show ? <div class="box">x</div> : null}
+          </Transition>
+        </div>
+      )
+    }
+    const host = makeHost()
+    const html = renderToString(<App />)
+    expect(html).toContain('box') // SSR 输出 Transition 的渲染结果（不再为空）
+    host.innerHTML = html
+    const ssrBox = host.querySelector('.box')!
+
+    createApp(App).hydrate('#' + host.id)
+    // DOM 复用 + 无 enter 动画类（hydrateTransition 跳过 playEnter）
+    expect(host.querySelector('.box')).toBe(ssrBox)
+    expect(ssrBox.className).toBe('box')
+
+    // 移除：走正常 patch（leave 动画，无时长立即完成）
+    state.show = false
+    await nextTick()
+    await new Promise((r) => setTimeout(r, 60))
+    expect(host.querySelector('.box')).toBeNull()
+  })
+
+  it('场景 8：Suspense/lazy 水合——占位配对 + resolve 后真实内容', async () => {
+    let resolveLoader: any
+    const loaderPromise = new Promise((r) => (resolveLoader = r))
+    const LazyComp = lazy(() =>
+      loaderPromise.then(() => ({
+        default: defineComponent(function () {
+          return () => <div class="lazy">L</div>
+        }),
+      }))
+    )
+    function App() {
+      return () => (
+        <div class="app">
+          <Suspense fallback={<span class="fb">loading</span>}>
+            <LazyComp />
+          </Suspense>
+        </div>
+      )
+    }
+    const host = makeHost()
+    host.innerHTML = renderToString(<App />)
+    // 同步 hydrate（微任务未跑 → loader 未 resolve → LazyComp 渲染 null 占位）
+    createApp(App).hydrate('#' + host.id)
+    expect(host.querySelector('.lazy')).toBeNull()
+
+    resolveLoader()
+    await flush()
+    await flush()
+    // loader resolve → loaded 置真 → LazyComp 重渲染真实内容
+    expect(host.querySelector('.lazy')).toBeTruthy()
+    expect(host.querySelector('.lazy')!.textContent).toBe('L')
+  })
+
+  it('场景 9：renderToStringAsync 并发调用 useId 互不干扰（idState 隔离）', async () => {
+    function App() {
+      const id = useId()
+      return () => <div class="uid2" data-id={id}>x</div>
+    }
+    const [a, b] = await Promise.all([
+      renderToStringAsync(<App />),
+      renderToStringAsync(<App />),
+    ])
+    const idA = /data-id="([^"]+)"/.exec(a)![1]
+    const idB = /data-id="([^"]+)"/.exec(b)![1]
+    expect(idA).toMatch(/^actview-id-/)
+    expect(idA).toBe(idB) // 各自独立 idState → 都是 actview-id-1-1
+  })
+
+  it('场景 10：class 差异检测——SSR 与客户端不一致时告警 + 客户端覆盖', () => {
+    let cls = 'a'
+    function App() {
+      return () => <div class={cls}>x</div>
+    }
+    const host = makeHost()
+    host.innerHTML = renderToString(<App />)
+    cls = 'b' // 客户端首帧 class 与 SSR 不同
+
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    createApp(App).hydrate('#' + host.id)
+    expect(spy).toHaveBeenCalled() // 差异告警
+    spy.mockRestore()
+
+    expect(host.querySelector('div')!.getAttribute('class')).toBe('b') // 客户端覆盖
   })
 })

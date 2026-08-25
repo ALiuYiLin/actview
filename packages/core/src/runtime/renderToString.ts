@@ -1,4 +1,5 @@
 import type { VNode, VNodeChild } from '../vnode'
+import { getChildren } from '../vnode'
 import { setCurrentInstance } from './lifecycle'
 import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
 import { HTML_ATTR_OVERRIDES } from './attr-map'
@@ -36,9 +37,12 @@ const VOID_ELEMENTS = new Set([
   'wbr'
 ])
 
-/** 组件遍历序 id（SSR 侧分配，与客户端 mountComponent 的 uid 遍历序一致，
- *  使 useId 在服务端/客户端输出一致——客户端 hydrate 前会重置 uid） */
-let ssrUid = 0
+/** SSR 渲染上下文 id 状态：每次 renderToString 调用新建（无模块级共享 →
+ *  并发请求安全）。uid 按树遍历序分配（与客户端 mountComponent 遍历序一致，
+ *  hydrate 前重置 uid → 两端 useId 相同）；seq 是实例级（ssrInstance.__idSeq）。 */
+interface SsrIdState {
+  uid: number
+}
 
 /** Fragment 标记（与 renderer/jsxFactory 一致：Symbol.for 全局共享） */
 const Fragment = Symbol.for('react.fragment')
@@ -93,14 +97,15 @@ function isVNode(node: any): node is VNode {
 /** 递归序列化单个节点；parentInjects 沿树向下传递（子组件共享父注入表引用，对齐运行时） */
 function serializeNode(
   node: any,
-  parentInjects?: Record<PropertyKey, any>,
+  parentInjects: Record<PropertyKey, any> | undefined,
+  idState: SsrIdState,
 ): string {
   if (node == null || typeof node === 'boolean') return ''
   if (typeof node === 'string' || typeof node === 'number') {
     return escapeHtml(String(node))
   }
   if (Array.isArray(node)) {
-    return node.map((n) => serializeNode(n, parentInjects)).join('')
+    return node.map((n) => serializeNode(n, parentInjects, idState)).join('')
   }
   if (!isVNode(node)) return ''
 
@@ -109,9 +114,19 @@ function serializeNode(
   // Fragment：拼接子节点
   if (type === Fragment) {
     return toChildrenArray(props?.children)
-      .map((n) => serializeNode(n, parentInjects))
+      .map((n) => serializeNode(n, parentInjects, idState))
       .join('')
   }
+
+  // 内置组件（优先于普通组件分支）：
+  //   Transition 序列化其 children（SSR 输出渲染结果，客户端水合配对，跳过动画）
+  //   Teleport 内容在目标容器，SSR 跳过（第一版边界，客户端重建）
+  if ((type as any)?.__builtin === 'transition') {
+    return toChildrenArray(getChildren(node))
+      .map((n) => serializeNode(n, parentInjects, idState))
+      .join('')
+  }
+  if ((type as any)?.__builtin === 'teleport') return ''
 
   // 组件：__setup(props) 拿 render =》 render() 递归（构建期静态，无响应式上下文）
   //   type 形态：Babel 转换 =》 defineComponent 产物（对象 { __setup }）；
@@ -134,7 +149,7 @@ function serializeNode(
     // injects 继承父注入表引用（对齐运行时：子组件共享父表，provide 时 COW），
     // 使 provide/useInjects/createContext 在 SSR 下穿透可用。
     const ssrInstance = {
-      id: ++ssrUid,
+      id: ++idState.uid,
       props: ssrProps,
       beforeMount: [] as (() => void)[],
       mounted: [] as (() => void)[],
@@ -150,6 +165,7 @@ function serializeNode(
       scope: null,
       parent: null,
       injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
+      __idSeq: { value: 0 },
     }
     setCurrentInstance(ssrInstance as any)
     let render: any
@@ -166,10 +182,10 @@ function serializeNode(
     // onServerPrefetch：SSR 阶段同步执行预取钩子（异步 Promise 无法等待，尽力而为）
     for (const hook of ssrInstance.serverPrefetch) hook()
     if (typeof render === 'function') {
-      return serializeNode(render(), ssrInstance.injects)
+      return serializeNode(render(), ssrInstance.injects, idState)
     }
     // setup 直接返回 vnode（兼容简写）
-    return serializeNode(render, ssrInstance.injects)
+    return serializeNode(render, ssrInstance.injects, idState)
   }
 
   // 原生标签
@@ -177,7 +193,7 @@ function serializeNode(
   const tag = type as string
   const attrs = serializeAttrs(props)
   const children = toChildrenArray(props?.children)
-    .map((n) => serializeNode(n, parentInjects))
+    .map((n) => serializeNode(n, parentInjects, idState))
     .join('')
   if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}>`
   return `<${tag}${attrs}>${children}</${tag}>`
@@ -237,8 +253,7 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
 
 /** VNode 树 → HTML 字符串 */
 export function renderToString(vnode: VNode | VNodeChild): string {
-  ssrUid = 0
-  return serializeNode(vnode)
+  return serializeNode(vnode, undefined, { uid: 0 })
 }
 
 // ============================================================
@@ -246,14 +261,14 @@ export function renderToString(vnode: VNode | VNodeChild): string {
 //   async serializeNodeAsync：与同步版同构，仅组件分支 await 预取钩子。
 //   lazy 组件仍输出 Suspense fallback（loader 异步加载不阻塞，第一版边界，
 //   客户端水合后 resolve 重建真实内容）。
-//   注意：Node 多请求并发会互踩 ssrUid（模块级），SSR 场景建议单请求/
-//   进程隔离；AsyncLocalStorage 隔离列为后续增强。
+//   id 状态按调用隔离（SsrIdState 参数传递，无模块级共享）→ 并发请求安全。
 // ============================================================
 
 /** 递归异步序列化（与 serializeNode 同构；组件分支 await serverPrefetch） */
 async function serializeNodeAsync(
   node: any,
-  parentInjects?: Record<PropertyKey, any>,
+  parentInjects: Record<PropertyKey, any> | undefined,
+  idState: SsrIdState,
 ): Promise<string> {
   if (node == null || typeof node === 'boolean') return ''
   if (typeof node === 'string' || typeof node === 'number') {
@@ -261,7 +276,7 @@ async function serializeNodeAsync(
   }
   if (Array.isArray(node)) {
     const parts = await Promise.all(
-      node.map((n) => serializeNodeAsync(n, parentInjects))
+      node.map((n) => serializeNodeAsync(n, parentInjects, idState))
     )
     return parts.join('')
   }
@@ -272,11 +287,22 @@ async function serializeNodeAsync(
   if (type === Fragment) {
     const parts = await Promise.all(
       toChildrenArray(props?.children).map((n) =>
-        serializeNodeAsync(n, parentInjects)
+        serializeNodeAsync(n, parentInjects, idState)
       )
     )
     return parts.join('')
   }
+
+  // 内置组件：Transition 序列化 children（与同步版一致）；Teleport SSR 跳过
+  if ((type as any)?.__builtin === 'transition') {
+    const parts = await Promise.all(
+      toChildrenArray(getChildren(node)).map((n) =>
+        serializeNodeAsync(n, parentInjects, idState)
+      )
+    )
+    return parts.join('')
+  }
+  if ((type as any)?.__builtin === 'teleport') return ''
 
   const isComponent =
     typeof type === 'function' ||
@@ -288,7 +314,7 @@ async function serializeNodeAsync(
     const ssrProps = { ...(props ?? {}) }
     extractScopedIdProps(ssrProps)
     const ssrInstance = {
-      id: ++ssrUid,
+      id: ++idState.uid,
       props: ssrProps,
       beforeMount: [] as (() => void)[],
       mounted: [] as (() => void)[],
@@ -304,6 +330,7 @@ async function serializeNodeAsync(
       scope: null,
       parent: null,
       injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
+      __idSeq: { value: 0 },
     }
     setCurrentInstance(ssrInstance as any)
     let render: any
@@ -319,9 +346,9 @@ async function serializeNodeAsync(
     // 异步数据预取：await 全部 serverPrefetch（同步返回值同样支持）
     await Promise.all(ssrInstance.serverPrefetch.map((hook) => hook()))
     if (typeof render === 'function') {
-      return serializeNodeAsync(render(), ssrInstance.injects)
+      return serializeNodeAsync(render(), ssrInstance.injects, idState)
     }
-    return serializeNodeAsync(render, ssrInstance.injects)
+    return serializeNodeAsync(render, ssrInstance.injects, idState)
   }
 
   if (typeof type !== 'string') return ''
@@ -329,7 +356,7 @@ async function serializeNodeAsync(
   const attrs = serializeAttrs(props)
   const children = await Promise.all(
     toChildrenArray(props?.children).map((n) =>
-      serializeNodeAsync(n, parentInjects)
+      serializeNodeAsync(n, parentInjects, idState)
     )
   )
   const body = children.join('')
@@ -341,6 +368,5 @@ async function serializeNodeAsync(
 export async function renderToStringAsync(
   vnode: VNode | VNodeChild
 ): Promise<string> {
-  ssrUid = 0
-  return serializeNodeAsync(vnode)
+  return serializeNodeAsync(vnode, undefined, { uid: 0 })
 }

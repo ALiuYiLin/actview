@@ -17,22 +17,27 @@ export function getCurrentInstance(): ComponentInstance | null {
 // ============================================================
 // useId — 生成稳定的唯一 id（React useId 的可用场景）
 //   客户端：基于组件实例自增 id（mountComponent uid；setup 只执行一次 →
-//   每次重渲染间 id 稳定）+ 调用计数（同组件多次调用不冲突）
-//   SSR / setup 外：回退全局计数（静态序列化树内唯一即可）。
-//   ActView 无水合 → 服务端/客户端 id 无需一致，无需 hydration 对齐。
+//   每次重渲染间 id 稳定）+ 实例级调用计数（__idSeq，同组件多次调用不冲突）。
+//   SSR：renderToString 分配遍历序 ssrInstance.id + 实例级 __idSeq ——
+//   与客户端 hydrate（uid 重置后遍历序）一致 → 服务端/客户端 id 相同。
+//   实例级计数（非全局）→ 并发请求/多根均无共享状态，天然安全。
+//   setup 外调用：回退全局计数（静态序列化兜底）。
 // ============================================================
 
 let useIdSeq = 0
 
-/** 重置 useId 计数（SSR/hydrate 入口调用：保证服务端与客户端 id 一致）。 */
+/** 重置全局 useId 计数（兜底；实例级计数场景无需调用） */
 export function resetIdState() {
   useIdSeq = 0
 }
 
 export function useId(): string {
-  const instance = getCurrentInstance()
+  const instance = getCurrentInstance() as
+    | (ComponentInstance & { __idSeq?: { value: number } })
+    | null
   const base = instance?.id != null ? instance.id : 's'
-  return `actview-id-${base}-${++useIdSeq}`
+  const seq = instance?.__idSeq ? ++instance.__idSeq.value : ++useIdSeq
+  return `actview-id-${base}-${seq}`
 }
 
 // ============================================================

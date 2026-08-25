@@ -69,8 +69,10 @@ export function invokeHooks(hooks: (() => void)[]) {
 /** 组件实例：保存 setup/render 及当前子树 */
 export interface ComponentInstance {
   setup: (props: any) => () => any
-  /** 实例唯一 id（DevTools 用） */
+  /** 实例唯一 id（DevTools 用；SSR 遍历序与客户端一致 → useId 两端相同） */
   id: number
+  /** useId 实例级调用计数（无全局共享状态，并发/多根安全） */
+  __idSeq?: { value: number }
   /** 组件名（DevTools 用） */
   name: string
   /** 普通对象 props：由父组件 patch 时更新值并手动调用 update() */
@@ -167,6 +169,7 @@ export function mountComponent(
   const instance: ComponentInstance = {
     setup: setup,
     id: ++uid,
+    __idSeq: { value: 0 },
     name: options.name || 'Anonymous',
     props,
     parent: parentInstance ?? null,
