@@ -21,8 +21,8 @@ import {
 } from './transition'
 
 const REACT_ELEMENT_TYPE = Symbol.for('react.element')
-const Fragment = Symbol.for('react.fragment')
-const Text = Symbol.for('react.text')
+export const Fragment = Symbol.for('react.fragment')
+export const Text = Symbol.for('react.text')
 
 // ------------------------------------------------------------
 // SVG 命名空间 — createElementNS 渲染 SVG 元素
@@ -50,7 +50,7 @@ function createElement(tag: string): Element {
     : document.createElement(tag)
 }
 
-function createTextVNode(text: string) {
+export function createTextVNode(text: string) {
   return {
     $$typeof: REACT_ELEMENT_TYPE,
     type: Text,
@@ -72,7 +72,7 @@ export function isComponentVNode(vnode: any): boolean {
 }
 
 /** 将文本/数字子节点包装为文本 VNode，其余原样返回 */
-function toVNode(child: any): any {
+export function toVNode(child: any): any {
   if (child == null || typeof child === 'boolean') return null
   if (typeof child === 'string' || typeof child === 'number') {
     return createTextVNode(String(child))
@@ -80,7 +80,7 @@ function toVNode(child: any): any {
   return child
 }
 
-function normalizeChildren(children: any): any[] {
+export function normalizeChildren(children: any): any[] {
   if (children == null || children === false || children === true) return []
   // 扁平化嵌套数组：JSX children 可以是 `[el, arr.map(...)]`（数组含数组），
   // 不扁平化会把子数组当成单个 child → mountVNode(数组) → createElement(数组)
@@ -161,7 +161,12 @@ export function applyRef(ref: any, value: any) {
   else if (ref && typeof ref === 'object') ref.value = value
 }
 
-export function mountVNode(vnode: any, container: Element | null, parent?: any): any {
+export function mountVNode(
+  vnode: any,
+  container: Element | null,
+  parent?: any,
+  anchor?: Node | null
+): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
 
@@ -204,7 +209,8 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
     }
     const el = document.createTextNode(vnode.props.text)
     vnode.el = el
-    container?.appendChild(el)
+    if (anchor) container?.insertBefore(el, anchor)
+    else container?.appendChild(el)
     return el
   }
   // 原生元素
@@ -216,7 +222,8 @@ export function mountVNode(vnode: any, container: Element | null, parent?: any):
   // mutation 阶段先 placement 后挂子）。
   // 注意语义：ref 仍 inline 触发，触发时该元素的后续兄弟/后代尚未挂载，
   // 子树部分可见（与 React/Vue 的"整树完成后设 ref"不同，见 docs/issues/AI-002.md）。
-  container?.appendChild(el)
+  if (anchor) container?.insertBefore(el, anchor)
+  else container?.appendChild(el)
   // dangerouslySetInnerHTML：直接注入 HTML，忽略 children（React 语义）
   const hasDanger = vnode.props?.dangerouslySetInnerHTML != null
   vnode.__avChildren = hasDanger
@@ -611,8 +618,7 @@ function getSequence(arr: number[]): number[] {
  * 属性名，可空格分隔多个）；子组件手动应用到根元素（<div scopedId={props.scopedId}>
  * 或 <div {...props}>），此处把 scopedId 翻译为真实 scoped 属性。
  */
-function patchProps(oldProps: any, newProps: any, el: Element) {
-  oldProps = oldProps || {}
+export function patchProps(oldProps: any, newProps: any, el: Element) {  oldProps = oldProps || {}
   newProps = newProps || {}
 
   // scopedId 翻译：值 = scoped 属性名（可空格分隔多个）；旧值变化时移除旧属性

@@ -21,6 +21,11 @@ import type { VNode } from '../vnode'
 
 let uid = 0
 
+/** 重置组件 uid 计数（hydrate 入口调用：服务端/客户端遍历序对齐，useId 一致） */
+export function resetComponentUid() {
+  uid = 0
+}
+
 /**
  * renderer 注入的渲染依赖（消除 renderer ↔ mountComponent 循环依赖）：
  * mountComponent 不 import './renderer'，改由 renderer 挂载组件时传入自身
@@ -37,6 +42,11 @@ export interface RendererDeps {
   ) => void
   /** 模板引用回调（ref 指向组件实例） */
   applyRef: (ref: any, value: any) => void
+  /** 水合上下文（hydrate 树沿挂载链传递）：游标 + 子树水合函数。
+   *  组件首帧渲染不 patch（新建），改与既有 DOM 配对。 */
+  hydrate?: { cursor: any; container: Element }
+  /** 子树水合入口（由 hydrate 模块注入，避免 mountComponent ↔ hydrate 循环依赖） */
+  hydrateVNode?: (vnode: any, container: Element, cursor: any, parent: any) => any
 }
 
 /**
@@ -253,7 +263,17 @@ export function mountComponent(
       const oldSubTree = instance.subTree
       instance.subTree = normalizedSubTree
       // 子树 children 的父实例 = 本组件实例（子组件 provide/inject 继承来源）
-      deps.patch(oldSubTree, normalizedSubTree, container as Element, undefined, instance)
+      // 水合首帧：不新建 DOM，与既有 DOM 配对（游标推进）；后续更新走正常 patch
+      if (deps.hydrateVNode && !instance.isMounted) {
+        deps.hydrateVNode(
+          normalizedSubTree,
+          deps.hydrate!.container,
+          deps.hydrate!.cursor,
+          instance
+        )
+      } else {
+        deps.patch(oldSubTree, normalizedSubTree, container as Element, undefined, instance)
+      }
       // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
       vnode.el = instance.subTree ? instance.subTree.el : null
       // 钩子：首次渲染后进入 mounted 态，之后每次重渲染触发 updated

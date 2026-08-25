@@ -53,6 +53,8 @@ export {
   getCurrentInstance,
   createContext,
   renderToString,
+  renderToStringAsync,
+  hydrate,
   Teleport,
   Transition,
   TransitionGroup,

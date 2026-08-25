@@ -36,6 +36,10 @@ const VOID_ELEMENTS = new Set([
   'wbr'
 ])
 
+/** 组件遍历序 id（SSR 侧分配，与客户端 mountComponent 的 uid 遍历序一致，
+ *  使 useId 在服务端/客户端输出一致——客户端 hydrate 前会重置 uid） */
+let ssrUid = 0
+
 /** Fragment 标记（与 renderer/jsxFactory 一致：Symbol.for 全局共享） */
 const Fragment = Symbol.for('react.fragment')
 
@@ -130,6 +134,7 @@ function serializeNode(
     // injects 继承父注入表引用（对齐运行时：子组件共享父表，provide 时 COW），
     // 使 provide/useInjects/createContext 在 SSR 下穿透可用。
     const ssrInstance = {
+      id: ++ssrUid,
       props: ssrProps,
       beforeMount: [] as (() => void)[],
       mounted: [] as (() => void)[],
@@ -232,5 +237,110 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
 
 /** VNode 树 → HTML 字符串 */
 export function renderToString(vnode: VNode | VNodeChild): string {
+  ssrUid = 0
   return serializeNode(vnode)
+}
+
+// ============================================================
+// renderToStringAsync — 异步 SSR：await onServerPrefetch 数据预取
+//   async serializeNodeAsync：与同步版同构，仅组件分支 await 预取钩子。
+//   lazy 组件仍输出 Suspense fallback（loader 异步加载不阻塞，第一版边界，
+//   客户端水合后 resolve 重建真实内容）。
+//   注意：Node 多请求并发会互踩 ssrUid（模块级），SSR 场景建议单请求/
+//   进程隔离；AsyncLocalStorage 隔离列为后续增强。
+// ============================================================
+
+/** 递归异步序列化（与 serializeNode 同构；组件分支 await serverPrefetch） */
+async function serializeNodeAsync(
+  node: any,
+  parentInjects?: Record<PropertyKey, any>,
+): Promise<string> {
+  if (node == null || typeof node === 'boolean') return ''
+  if (typeof node === 'string' || typeof node === 'number') {
+    return escapeHtml(String(node))
+  }
+  if (Array.isArray(node)) {
+    const parts = await Promise.all(
+      node.map((n) => serializeNodeAsync(n, parentInjects))
+    )
+    return parts.join('')
+  }
+  if (!isVNode(node)) return ''
+
+  const { type, props } = node
+
+  if (type === Fragment) {
+    const parts = await Promise.all(
+      toChildrenArray(props?.children).map((n) =>
+        serializeNodeAsync(n, parentInjects)
+      )
+    )
+    return parts.join('')
+  }
+
+  const isComponent =
+    typeof type === 'function' ||
+    (typeof type === 'object' &&
+      type != null &&
+      typeof (type as any).__setup === 'function')
+  if (isComponent) {
+    const setup = (type as any).__setup
+    const ssrProps = { ...(props ?? {}) }
+    extractScopedIdProps(ssrProps)
+    const ssrInstance = {
+      id: ++ssrUid,
+      props: ssrProps,
+      beforeMount: [] as (() => void)[],
+      mounted: [] as (() => void)[],
+      updated: [] as (() => void)[],
+      beforeUnmount: [] as (() => void)[],
+      unmounted: [] as (() => void)[],
+      activated: [] as (() => void)[],
+      deactivated: [] as (() => void)[],
+      errorCaptured: [] as ((err: any) => boolean | void)[],
+      serverPrefetch: [] as (() => Promise<any> | any)[],
+      renderTracked: [] as ((e: any) => void)[],
+      renderTriggered: [] as ((e: any) => void)[],
+      scope: null,
+      parent: null,
+      injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
+    }
+    setCurrentInstance(ssrInstance as any)
+    let render: any
+    try {
+      const ctx = { injects: ssrInstance.injects }
+      render =
+        typeof setup === 'function'
+          ? setup(ssrProps, ctx)
+          : type(ssrProps)
+    } finally {
+      setCurrentInstance(null)
+    }
+    // 异步数据预取：await 全部 serverPrefetch（同步返回值同样支持）
+    await Promise.all(ssrInstance.serverPrefetch.map((hook) => hook()))
+    if (typeof render === 'function') {
+      return serializeNodeAsync(render(), ssrInstance.injects)
+    }
+    return serializeNodeAsync(render, ssrInstance.injects)
+  }
+
+  if (typeof type !== 'string') return ''
+  const tag = type as string
+  const attrs = serializeAttrs(props)
+  const children = await Promise.all(
+    toChildrenArray(props?.children).map((n) =>
+      serializeNodeAsync(n, parentInjects)
+    )
+  )
+  const body = children.join('')
+  if (VOID_ELEMENTS.has(tag)) return `<${tag}${attrs}>`
+  return `<${tag}${attrs}>${body}</${tag}>`
+}
+
+/** VNode 树 → HTML 字符串（异步：await onServerPrefetch 数据预取） */
+export async function renderToStringAsync(
+  vnode: VNode | VNodeChild
+): Promise<string> {
+  ssrUid = 0
+  return serializeNodeAsync(vnode)
 }

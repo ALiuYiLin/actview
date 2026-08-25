@@ -24,6 +24,11 @@ export function getCurrentInstance(): ComponentInstance | null {
 
 let useIdSeq = 0
 
+/** 重置 useId 计数（SSR/hydrate 入口调用：保证服务端与客户端 id 一致）。 */
+export function resetIdState() {
+  useIdSeq = 0
+}
+
 export function useId(): string {
   const instance = getCurrentInstance()
   const base = instance?.id != null ? instance.id : 's'
