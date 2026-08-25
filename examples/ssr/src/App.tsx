@@ -2,7 +2,10 @@ import { ref, useId } from 'actview'
 import type { Post } from './data'
 
 /**
- * 演示组件：SSR 与客户端首帧完全一致（props.initialPosts 由两端同一数据注入，
+ * 演示组件（简写形式）：直接 return JSX，由 @actview/plugin-vite 的
+ * Babel 插件转换为 defineComponent(fn, 'App')（正确写法——不经运行时兜底）。
+ *
+ * SSR 与客户端首帧完全一致（props.initialPosts 由两端同一数据注入，
  * count 初始 0）→ 水合无 mismatch，DOM 复用，事件即绑即用。
  */
 export function App(props: { initialPosts: Post[] }) {
@@ -10,7 +13,7 @@ export function App(props: { initialPosts: Post[] }) {
   const uid = useId()
   const posts = ref(props.initialPosts)
 
-  return () => (
+  return (
     <div class="app">
       <h1 class="title" data-uid={uid}>
         ActView SSR Demo

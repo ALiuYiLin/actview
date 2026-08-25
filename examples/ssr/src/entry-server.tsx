@@ -9,17 +9,37 @@ import { fetchPosts } from './data'
 // 默认 3100（3000 常被其他 dev server 占用）；可用环境变量覆盖：PORT=8080 npm start
 const PORT = Number(process.env.PORT ?? 3100)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// 客户端构建产物目录（vite build 输出：index.html + assets/）
+const CLIENT_DIR = path.join(__dirname, '..', 'dist')
+
+const MIME: Record<string, string> = {
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+}
 
 const server = http.createServer(async (req, res) => {
   try {
-    // 静态资源：客户端水合 bundle（IIFE，由 tsup 产出）
-    if (req.url === '/client.js') {
-      const js = readFileSync(path.join(__dirname, 'entry-client.js'))
-      res.writeHead(200, { 'content-type': 'application/javascript' })
-      res.end(js)
+    const url = req.url ?? '/'
+
+    // 静态资源：vite build 产物（assets/ 哈希文件）
+    if (url.startsWith('/assets/')) {
+      const file = path.join(CLIENT_DIR, url)
+      if (!file.startsWith(CLIENT_DIR)) {
+        res.writeHead(403)
+        res.end('Forbidden')
+        return
+      }
+      const body = readFileSync(file)
+      res.writeHead(200, {
+        'content-type': MIME[path.extname(file)] ?? 'application/octet-stream',
+      })
+      res.end(body)
       return
     }
-    if (req.url !== '/') {
+    if (url !== '/') {
       res.writeHead(404, { 'content-type': 'text/plain' })
       res.end('Not Found')
       return
@@ -31,39 +51,15 @@ const server = http.createServer(async (req, res) => {
     // 2) SSR：渲染组件树为 HTML（async 版本 await 组件内 serverPrefetch 同样可用）
     const appHtml = await renderToStringAsync(<App initialPosts={posts} />)
 
-    // 3) 组装页面：SSR HTML + 数据注入 + 客户端水合脚本
+    // 3) 组装页面：vite client 模板 + SSR HTML + 数据注入
+    const template = readFileSync(path.join(CLIENT_DIR, 'index.html'), 'utf-8')
     const serialized = JSON.stringify(posts).replace(/</g, '\\u003c')
-    const html = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ActView SSR Demo</title>
-  <style>
-    body { font-family: system-ui, "Segoe UI", sans-serif; background: #f6f7f9; margin: 0; color: #1f2937; }
-    .app { max-width: 680px; margin: 0 auto; padding: 40px 20px 60px; }
-    .title { font-size: 26px; margin: 0 0 6px; }
-    .sub { color: #6b7280; margin: 0 0 28px; }
-    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
-    .card h2 { font-size: 16px; margin: 0 0 6px; }
-    .hint { color: #9ca3af; font-size: 12px; margin: 0 0 12px; }
-    .row { display: flex; align-items: center; gap: 12px; }
-    button { border: none; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
-    .inc { background: #2563eb; color: #fff; }
-    .reset { background: #e5e7eb; color: #374151; }
-    .val { font-size: 22px; font-weight: 600; min-width: 24px; text-align: center; }
-    .posts { list-style: none; padding: 0; margin: 0; }
-    .post { padding: 10px 0; border-top: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 2px; }
-    .post:first-child { border-top: none; }
-    .post span { color: #6b7280; font-size: 13px; }
-  </style>
-</head>
-<body>
-  <div id="app">${appHtml}</div>
-  <script>window.__INITIAL_DATA__ = ${serialized}</script>
-  <script src="/client.js"></script>
-</body>
-</html>`
+    const html = template
+      .replace('<div id="app"></div>', `<div id="app">${appHtml}</div>`)
+      .replace(
+        '</head>',
+        `<script>window.__INITIAL_DATA__ = ${serialized}</script></head>`
+      )
 
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
     res.end(html)
