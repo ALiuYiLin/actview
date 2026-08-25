@@ -1,0 +1,18 @@
+{
+  "name": "actview-ssr-example",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/entry-server.js",
+    "dev": "npm run build && npm start"
+  },
+  "devDependencies": {
+    "@actview/jsx": "workspace:*",
+    "actview": "workspace:*",
+    "tsup": "^8.5.1",
+    "typescript": "~6.0.2",
+    "@types/node": "^26.0.1"
+  }
+}
