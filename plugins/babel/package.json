@@ -1,12 +1,16 @@
 {
   "name": "@actview/plugin-babel",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "description": "Babel 插件：JSX 组件自动 defineComponent 转换（ActView 编译核心，独立于 Vite 宿主）",
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@babel/core": "^8.0.0",
+    "@babel/generator": "^8.0.0"
+  },
+  "devDependencies": {
     "@babel/core": "^8.0.1",
     "@babel/generator": "^8.0.0"
   },

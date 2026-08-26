@@ -1,11 +1,15 @@
 {
   "name": "@actview/router",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@actview/core": "^1.1.0",
+    "@actview/jsx": "^1.1.0"
+  },
+  "devDependencies": {
     "@actview/core": "workspace:^",
     "@actview/jsx": "workspace:^"
   },

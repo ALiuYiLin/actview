@@ -1,11 +1,14 @@
 {
   "name": "@actview/hooks-react",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@actview/core": "^1.1.0"
+  },
+  "devDependencies": {
     "@actview/core": "workspace:^"
   },
   "scripts": {

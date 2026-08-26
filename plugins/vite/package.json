@@ -1,14 +1,13 @@
 {
   "name": "@actview/plugin-vite",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "ActView 的 Vite 插件：.tsx/.js 过 Babel 做 defineComponent 转换（编译核心见 @actview/plugin-babel）",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@actview/plugin-babel": "workspace:^",
-    "@babel/core": "^8.0.1"
+    "@actview/plugin-babel": "workspace:^"
   },
   "peerDependencies": {
     "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"

@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-scoped",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "description": "Vue-like scoped CSS for ActView — compile-time CSS isolation (import './x.css?scoped' 自动开启)",
   "exports": {
@@ -8,11 +8,11 @@
   },
   "dependencies": {
     "@actview/plugin-babel": "workspace:^",
-    "@babel/core": "^8.0.1",
     "postcss": "^8.5.0",
     "postcss-selector-parser": "^7.0.0"
   },
   "peerDependencies": {
+    "@babel/core": "^8.0.0",
     "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
   },
   "peerDependenciesMeta": {
@@ -21,6 +21,7 @@
     }
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
     "@types/node": "^26.0.1"
   },
   "scripts": {
