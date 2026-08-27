@@ -219,7 +219,7 @@ describe('JSX props 解包（渲染链路）', () => {
       return <Panel id="p1" title={state.title} hidden={state.hidden} />
     }
     const host = mount(App)
-    const div = host.querySelector('.panel')!
+    const div: HTMLElement = host.querySelector('.panel')!
     expect(div.getAttribute('data-id')).toBe('p1')
     expect(div.getAttribute('title')).toBe('t')
     expect(div.hidden).toBe(false)
