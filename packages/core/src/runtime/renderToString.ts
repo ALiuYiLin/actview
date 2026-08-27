@@ -1,6 +1,6 @@
 import type { VNode, VNodeChild } from '../vnode'
 import { getChildren } from '../vnode'
-import { setCurrentInstance } from './lifecycle'
+import { setCurrentInstance, getCurrentInstance } from './lifecycle'
 import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
 import { HTML_ATTR_OVERRIDES } from './attr-map'
 
@@ -172,6 +172,9 @@ function serializeNode(
       injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
       __idSeq: { value: 0 },
     }
+    // 栈式实例窗口：setup 窗口退出还原 prev（不用硬置 null——SSR 序列化嵌套
+    // 在组件递归中，父窗口同样需要保全）
+    const prevInstance = getCurrentInstance() as any
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
@@ -182,15 +185,22 @@ function serializeNode(
           ? setup(ssrProps, ctx)
           : type(ssrProps)
     } finally {
-      setCurrentInstance(null)
+      setCurrentInstance(prevInstance)
     }
     // onServerPrefetch：SSR 阶段同步执行预取钩子（异步 Promise 无法等待，尽力而为）
     for (const hook of ssrInstance.serverPrefetch) hook()
-    if (typeof render === 'function') {
-      return serializeNode(render(), ssrInstance.injects, idState)
+    // render 求值窗口（对齐运行时渲染期实例上下文）：
+    // 字面 <slot>/getCurrentInstance 等运行时取例能力在 SSR 下同样成立
+    setCurrentInstance(ssrInstance as any)
+    try {
+      if (typeof render === 'function') {
+        return serializeNode(render(), ssrInstance.injects, idState)
+      }
+      // setup 直接返回 vnode（兼容简写）
+      return serializeNode(render, ssrInstance.injects, idState)
+    } finally {
+      setCurrentInstance(prevInstance)
     }
-    // setup 直接返回 vnode（兼容简写）
-    return serializeNode(render, ssrInstance.injects, idState)
   }
 
   // 原生标签
@@ -344,6 +354,9 @@ async function serializeNodeAsync(
       injects: (parentInjects ?? {}) as Record<PropertyKey, any>,
       __idSeq: { value: 0 },
     }
+    // 栈式实例窗口：setup 窗口退出还原 prev（不用硬置 null——SSR 序列化嵌套
+    // 在组件递归中，父窗口同样需要保全）
+    const prevInstance = getCurrentInstance() as any
     setCurrentInstance(ssrInstance as any)
     let render: any
     try {
@@ -353,14 +366,21 @@ async function serializeNodeAsync(
           ? setup(ssrProps, ctx)
           : type(ssrProps)
     } finally {
-      setCurrentInstance(null)
+      setCurrentInstance(prevInstance)
     }
     // 异步数据预取：await 全部 serverPrefetch（同步返回值同样支持）
     await Promise.all(ssrInstance.serverPrefetch.map((hook) => hook()))
-    if (typeof render === 'function') {
-      return serializeNodeAsync(render(), ssrInstance.injects, idState)
+    // render 求值窗口（对齐运行时渲染期实例上下文）：
+    // 字面 <slot>/getCurrentInstance 等运行时取例能力在 SSR 下同样成立
+    setCurrentInstance(ssrInstance as any)
+    try {
+      if (typeof render === 'function') {
+        return serializeNodeAsync(render(), ssrInstance.injects, idState)
+      }
+      return serializeNodeAsync(render, ssrInstance.injects, idState)
+    } finally {
+      setCurrentInstance(prevInstance)
     }
-    return serializeNodeAsync(render, ssrInstance.injects, idState)
   }
 
   if (typeof type !== 'string') return ''

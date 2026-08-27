@@ -11,7 +11,7 @@
 
 import { shallowReactive } from '../reactivity/reactive'
 import { runEffect, queueJob, pauseTracking, resetTracking } from '../reactivity/reactive-system'
-import { setCurrentInstance } from './lifecycle'
+import { setCurrentInstance, getCurrentInstance } from './lifecycle'
 import { getErrorBoundary } from './errorBoundary'
 import { getCurrentSuspense } from './suspense'
 import { getDevtoolsHook } from '../devtools'
@@ -199,12 +199,16 @@ export function mountComponent(
   // 组件模板引用：ref 指向组件实例
   deps.applyRef(vnode.props?.ref, instance)
 
-  // setup 执行期间挂载 currentInstance 上下文：
-  // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 均注册到本实例
+  // setup 执行期间挂载 currentInstance 上下文（栈式管理，对齐 Vue）：
+  // 组件内调用 onMounted / onUpdated / onBeforeUnmount / provide 坉注册到本实例。
+  // 窗口退出必须还原【进入前的值】而非硬置 null——挂载常同步嵌套在父组件渲染
+  // 中途发生：硬置 null 会把父的上下文清掉，父继续渲染后续子树/接线时
+  // getCurrentInstance() 失效（历史缺陷）。prev-restore 后与调用栈天然成对。
   // pauseTracking：setup 在父组件渲染 effect 上下文中同步执行（挂载发生在父渲染
   // 期间），若 setup 内直接读响应式 props（如快照 const），会把父 effect 污染性
   // 地订阅到本组件 props（写入 → 父重渲染 → 自激循环）。computed/watch 的惰性
   // 求值在各自 effect.run() 内强制恢复追踪，不受影响（对齐 invokeHooks 语义）。
+  const prevInstance = getCurrentInstance()
   setCurrentInstance(instance)
   pauseTracking()
   let setupResult: any
@@ -218,7 +222,7 @@ export function mountComponent(
     })
   } finally {
     resetTracking()
-    setCurrentInstance(null)
+    setCurrentInstance(prevInstance)
   }
 
   if (setupResult && typeof setupResult.then === 'function') {
@@ -247,8 +251,13 @@ export function mountComponent(
   }
 
   // 更新函数：重新 render 并与旧子树 patch
+  // 渲染期实例上下文（对齐 Vue currentRenderingInstance 渲染窗口）：进入前置为
+  // 当前实例、退出还原 prev——渲染期内 getCurrentInstance() 可用（后续功能如
+  // 运行时插槽出口等的基础）；首次挂载与重渲染共用本闭包（runEffect 首跑即过）。
   const update = () => {
     const wasMounted = instance.isMounted
+    const prevRenderInstance = getCurrentInstance()
+    setCurrentInstance(instance)
     try {
       const newSubTree = instance.render()
       // 组件渲染返回数组（多 children / slot 数组，如 <Provider>{props.children}</Provider>
@@ -288,6 +297,8 @@ export function mountComponent(
     } catch (err) {
       // 渲染错误：沿组件树走 onErrorCaptured，再交给 ErrorBoundary
       handleError(instance, err)
+    } finally {
+      setCurrentInstance(prevRenderInstance)
     }
     // DevTools 埋点：首次渲染 = 挂载，之后 = 更新
     const dth = getDevtoolsHook()
