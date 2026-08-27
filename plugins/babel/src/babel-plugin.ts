@@ -3,6 +3,10 @@
 //   function X() { return <JSX /> }
 //   → const X = defineComponent(function() { return () => <JSX /> })
 // 并在文件顶部自动注入 defineComponent 的 import
+//
+// 废弃形态编译期直接报错：组件体内 return 渲染函数（setup 风格，如
+//   function App(){ return () => <JSX/> }）在此处抛错并给出改法提示——
+//   该嵌套方案已废弃（bug 多），静默放过会把错误拖到运行时才暴露。
 // ============================================================
 
 import { types as t } from '@babel/core'
@@ -187,13 +191,16 @@ export default function defineComponentPlugin() {
         // 首字母大写才是组件
         if (!/^[A-Z]/.test(name)) return
 
+        // setup 风格早退守卫（先于包装：包装会原地改写末尾 return）
+        assertNoSetupStyleEarlyReturns(path, name)
+
         // ---------- 2. 包装为 defineComponent（含 setup 风格 / 具名插槽） ----------
         // 组件名从变量名传递（内层函数匿名，避免 Babel 重命名内层函数）
         const fn = t.functionExpression(null, node.params, node.body, false, false)
         // 泛型组件（function Toggle<Value extends string>(props)）：
         // 保留 typeParameters，否则参数注解里的 Value 变成未声明标识符 → 坏 TS
         if (node.typeParameters) fn.typeParameters = node.typeParameters
-        const wrapped = wrapComponentFn(fn, name)
+        const wrapped = wrapComponentFn(fn, name, path)
         if (!wrapped) return
         const call = wrapped
 
@@ -219,13 +226,15 @@ export default function defineComponentPlugin() {
         const isFn =
           t.isFunctionExpression(init) || t.isArrowFunctionExpression(init)
         if (!isFn) return
+        const initPath = path.get('init')
+        // setup 风格早退守卫（先于包装：包装会原地改写末尾 return）
+        assertNoSetupStyleEarlyReturns(initPath, id.name)
         // 手动 defineComponent 包装的跳过（init 是 call，非函数）
-        const wrapped = wrapComponentFn(init, id.name)
+        const wrapped = wrapComponentFn(init, id.name, initPath)
         if (!wrapped) return
         const call = wrapped
 
         hasTransformed = true
-        const initPath = path.get('init')
         wrapEarlyReturns(initPath)
 
         node.init = call
@@ -262,12 +271,14 @@ export default function defineComponentPlugin() {
         if (t.isFunctionDeclaration(decl) && decl.typeParameters) {
           ;(fn as any).typeParameters = decl.typeParameters
         }
-        const wrapped = wrapComponentFn(fn)
+        const declPath = path.get('declaration')
+        // setup 风格早退守卫（先于包装：包装会原地改写末尾 return）
+        assertNoSetupStyleEarlyReturns(declPath)
+        const wrapped = wrapComponentFn(fn, undefined, path)
         if (!wrapped) return
         const call = wrapped
 
         hasTransformed = true
-        const declPath = path.get('declaration')
         wrapEarlyReturns(declPath)
 
         path.node.declaration = call
@@ -287,9 +298,10 @@ export default function defineComponentPlugin() {
  *   - 形态 3：return () => null
  *   - 箭头函数 expression body（() => <JSX>）：包成 { return () => <JSX> }
  *   - 具名插槽提取：仅源码 JSX 形态（含 expression body）
- * 注意：setup 风格（最后 return 渲染函数）不允许——保持裸函数不转换
+ * 报错：setup 风格（return 渲染函数）直接编译报错（带代码帧）——见
+ *   buildSetupStyleError；fnPath 用于错误定位。
  */
-function wrapComponentFn(fn: any, name?: string): any | null {
+function wrapComponentFn(fn: any, name?: string, fnPath?: any): any | null {
   const body = fn.body
   const isExprBody = !t.isBlockStatement(body)
   let last: any = null
@@ -319,9 +331,20 @@ function wrapComponentFn(fn: any, name?: string): any | null {
   // （React 惯例条件渲染；任一分支含 JSX/_jsx/null 即视为渲染返回）
   const isCondRet = isRenderExpr(ret)
   // 设计约束（2026-08）：只支持简写组件（最后 return JSX / _jsx / null / 三元渲染）。
-  // setup 风格（return 渲染函数）不允许——组件嵌套方案已废弃（bug 多），
-  // return function(){...} 的组件保持裸函数（不转换）。
-  if (!isJsx && !isJsxCall && !isNullRet && !isCondRet) return null
+  // setup 风格（return 渲染函数）编译期直接报错（带代码帧定位）：组件嵌套方案
+  // 已废弃（bug 多），「静默放过」会把错误拖到运行时才暴露（render is not a function）。
+  // 误报控制：
+  //   - 具名组件（进入本函数前已按 PascalCase 过滤）→ 一律报错；
+  //   - 匿名默认导出 → 仅当闭包内含 JSX / _jsx 调用（确属渲染闭包）才报错，
+  //     纯回调工厂等非渲染场景放过。
+  if (!isJsx && !isJsxCall && !isNullRet && !isCondRet) {
+    const returnsFn =
+      t.isArrowFunctionExpression(ret) || t.isFunctionExpression(ret)
+    if (returnsFn && (name !== undefined || containsRenderNode(ret))) {
+      throw buildSetupStyleError(fnPath, name)
+    }
+    return null
+  }
 
   // 具名插槽转换（提取 <template slot="x"> → slots prop）——
   // 仅对源码 JSX 生效（含箭头 expression body；已转换的 _jsx() 调用中无 JSX 节点）
@@ -345,6 +368,80 @@ function wrapComponentFn(fn: any, name?: string): any | null {
   const args = [fn]
   if (name) args.push(t.stringLiteral(name))
   return t.callExpression(t.identifier('defineComponent'), args)
+}
+
+/**
+ * 编译期守卫：组件体内「非末尾」的直接 return 渲染函数（箭头/函数表达式，
+ * 如 `if (!user) return () => <Login/>`）即废弃 setup 风格——立即报错。
+ * 末尾 return 放行：由 wrapComponentFn 按简写/渲染内容规则裁决并包装
+ * （匿名默认导出的纯回调工厂也靠这一层宽容放行）。
+ * 必须先于 wrapComponentFn 调用：包装与组件函数共享 AST 节点并原地改写
+ * 最后的 return，改写后无法区分源码闭包与插件生成物。
+ */
+function assertNoSetupStyleEarlyReturns(fnPath: any, name?: string): void {
+  const body = fnPath.node.body
+  if (!t.isBlockStatement(body)) return // 箭头 expression body 无语句级 return
+  const stmts = body.body
+  const trailing = stmts.length ? stmts[stmts.length - 1] : null
+  fnPath.traverse({
+    ReturnStatement(retPath: any) {
+      if (retPath.getFunctionParent() !== fnPath) return // 嵌套函数归各自 visitor 管
+      if (trailing && retPath.node === trailing) return
+      const arg = retPath.node.argument
+      if (t.isArrowFunctionExpression(arg) || t.isFunctionExpression(arg)) {
+        throw buildSetupStyleError(retPath, name)
+      }
+    },
+  })
+}
+
+/**
+ * setup 风格（组件体内 return 渲染函数）的编译期报错——带代码帧定位。
+ * fnPath 是报错节点的 NodePath（组件函数 / 早退 return 语句）；
+ * name 用于提示是哪个组件，匿名场景给中性称呼。
+ */
+function buildSetupStyleError(fnPath: any, name?: string): Error {
+  const label = name ? `组件 ${name}` : '组件函数'
+  const msg =
+    `[actview] 已废弃的 setup 风格：${label}体内 return 了渲染函数` +
+    `（() => JSX / function () { JSX }）。\n` +
+    `ActView 只支持简写组件——直接 return JSX，插件会自动包装 render 函数：\n\n` +
+    `    ✗ function App() { return () => <div /> }\n` +
+    `    ✓ function App() { return <div /> }\n`
+  try {
+    return fnPath.buildCodeFrameError(msg)
+  } catch {
+    return new Error(msg)
+  }
+}
+
+/**
+ * 节点子树内是否含渲染内容（JSX 元素/Fragment 或降级的 _jsx 系列调用）。
+ * 用于「匿名默认导出 + return 函数」的误报控制：只有确属渲染闭包才报错，
+ * 纯回调工厂（闭包内无任何 JSX）放过。通用键遍历（AST 节点无父引用、无环，
+ * seen 仅作防御）。
+ */
+function containsRenderNode(node: any, seen: Set<any> = new Set()): boolean {
+  if (!node || typeof node !== 'object' || seen.has(node)) return false
+  seen.add(node)
+  if (t.isJSXElement(node) || t.isJSXFragment(node)) return true
+  if (
+    t.isCallExpression(node) &&
+    t.isIdentifier(node.callee) &&
+    /^_?jsx/.test(node.callee.name)
+  ) {
+    return true
+  }
+  for (const k in node) {
+    if (k === 'leadingComments' || k === 'trailingComments') continue
+    const v = (node as any)[k]
+    if (Array.isArray(v)) {
+      if (v.some((c) => containsRenderNode(c, seen))) return true
+    } else if (v !== null && typeof v === 'object') {
+      if (containsRenderNode(v, seen)) return true
+    }
+  }
+  return false
 }
 
 /**

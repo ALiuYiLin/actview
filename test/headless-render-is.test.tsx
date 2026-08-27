@@ -11,7 +11,9 @@ import { createApp, defineComponent, ref } from 'actview'
 // 方案 B：render = string | ComponentType | function，string/组件用 <component is> 统一
 function Headless(props: any) {
   const rootRef = ref<any>(null)
-  return () => {
+  // 多分支早退依赖每次渲染新鲜的 props 解构 / 用户 render 回调立即调用 →
+  // 小写分发函数保持逐渲染求值；链结构中保留真实 JSX 分支满足插件判定（新约定）
+  const renderAsFunction = () => {
     const { render, orientation = 'horizontal', ...elementProps } = props
     const state = { orientation }
     const merged: any = {
@@ -19,15 +21,22 @@ function Headless(props: any) {
       'aria-orientation': orientation,
       ...elementProps,
     }
-    if (typeof render === 'function') {
-      return render({ ...merged, ...state, ref: rootRef })
-    }
-    if (render) {
-      // string（'span'）或组件 —— <component is> 统一，is 由 PD-24 剥离
-      return <component is={render} ref={rootRef} {...merged} />
-    }
-    return <div ref={rootRef} {...merged} />
+    return render({ ...merged, ...state, ref: rootRef })
   }
+  const computeMerged = () => {
+    const { orientation = 'horizontal', ...elementProps } = props
+    return {
+      role: 'separator',
+      'aria-orientation': orientation,
+      ...elementProps,
+    } as any
+  }
+  return typeof props.render === 'function'
+    ? renderAsFunction()
+    : props.render
+      ? // string（'span'）或组件 —— <component is> 统一，is 由 PD-24 剥离
+        <component is={props.render} ref={rootRef} {...computeMerged()} />
+      : <div ref={rootRef} {...computeMerged()} />
 }
 
 function mount(app: any) {

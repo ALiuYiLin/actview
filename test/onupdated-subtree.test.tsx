@@ -23,13 +23,13 @@ describe('onUpdated 时序悖论', () => {
     const id = ref('a')
     const reads: string[] = []
     function Inner(props: any) {
-      return () => <input id={props.id} />
+      return <input id={props.id} />
     }
     function Outer() {
       onUpdated(() => {
         reads.push((document.querySelector('input') as HTMLInputElement).id)
       })
-      return () => <Inner id={id.value} />
+      return <Inner id={id.value} />
     }
     const host = mount(Outer)
     id.value = 'b'
@@ -44,7 +44,7 @@ describe('onUpdated 时序悖论', () => {
     const id = ref('a')
     const reads: string[] = []
     function Inner(props: any) {
-      return () => <input id={props.id} />
+      return <input id={props.id} />
     }
     function Outer() {
       onUpdated(() => {
@@ -52,7 +52,7 @@ describe('onUpdated 时序悖论', () => {
           reads.push((document.querySelector('input') as HTMLInputElement).id)
         })
       })
-      return () => <Inner id={id.value} />
+      return <Inner id={id.value} />
     }
     const host = mount(Outer)
     id.value = 'b'

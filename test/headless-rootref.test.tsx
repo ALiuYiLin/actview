@@ -13,19 +13,28 @@ import { createApp, defineComponent, useRootElement } from 'actview'
 function Headless(props: any) {
   const rootRef = useRootElement()
 
-  return () => {
-    const { render, ...elementProps } = props
-    const merged: any = { role: 'separator', ...elementProps }
-    if (typeof render === 'function') {
-      return render({ ...merged, ref: rootRef })
-    }
-    if (render) {
-      const Tag = render.type as any
-      // key 透传：VNode.key 在字段不在 props，{...render.props} 带不过去
-      return <Tag key={render.key} {...render.props} {...merged} />
-    }
-    return <div {...merged} />
+  // 多分支早退依赖每次渲染新鲜的 props 解构 / 用户 render 回调立即调用 →
+  // 小写分发函数保持逐渲染求值；链末尾默认 <div> 是真实 JSX 分支，
+  // 三元才被插件整体包进 render（新约定）。rootRef 在 setup 期创建一次。
+  const renderAsFunction = () => {
+    const { render } = props
+    return render({ ...computeMerged(), ref: rootRef })
   }
+  const renderAsVNode = () => {
+    const { render } = props
+    const Tag = render.type as any
+    // key 透传：VNode.key 在字段不在 props，{...render.props} 带不过去
+    return <Tag key={render.key} {...render.props} {...computeMerged()} />
+  }
+  const computeMerged = () => {
+    const { render, ...elementProps } = props
+    return { role: 'separator', ...elementProps } as any
+  }
+  return typeof props.render === 'function'
+    ? renderAsFunction()
+    : props.render
+      ? renderAsVNode()
+      : <div {...computeMerged()} />
 }
 
 function mount(app: any) {

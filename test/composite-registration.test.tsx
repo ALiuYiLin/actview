@@ -49,12 +49,12 @@ describe('composite 注册 watch 桥接', () => {
 
     function Item(props: any) {
       useCompositeItem(register, unregister)
-      return () => (props.swap ? <div class="b">B</div> : <div class="a">A</div>)
+      return props.swap ? <div class="b">B</div> : <div class="a">A</div>
     }
 
     function App() {
       // show=false → Item 从树中移除 → 真实卸载（composite 项被移除的场景）
-      return () => (state.show ? <Item swap={state.swap} /> : <div class="empty" />)
+      return state.show ? <Item swap={state.swap} /> : <div class="empty" />
     }
     const host = mount(App)
     await new Promise((r) => setTimeout(r, 0))

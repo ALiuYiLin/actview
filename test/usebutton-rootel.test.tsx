@@ -52,7 +52,7 @@ function TriggerToggle(props: any) {
   queueMicrotask(sync)
   updateDisabled()
 
-  return () => <button disabled class="trigger-btn">{props.children}</button>
+  return <button disabled class="trigger-btn">{props.children}</button>
 }
 
 function mount(app: any) {

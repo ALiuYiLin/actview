@@ -9,7 +9,7 @@ import { createApp, defineComponent, reactive, useRootElement } from 'actview'
 
 // Toggle →（group 分支）→ CompositeItem（组件）→ button
 function CompositeItem(props: any) {
-  return () => <button class="real-btn">{props.children}</button>
+  return <button class="real-btn">{props.children}</button>
 }
 
 function Toggle(props: any) {
@@ -17,13 +17,17 @@ function Toggle(props: any) {
   // 把 ref 对象传出去，测试直接读 .value（onMounted/onUpdated 同步后即为最新）
   props.onRootRef?.(rootRef)
 
-  return () => {
-    if (props.inGroup) {
-      // 组件根分支：rootRef 应指向最终根 DOM（button），而非 CompositeItem 实例
-      return <CompositeItem>{props.children}</CompositeItem>
-    }
-    return <button class="solo-btn">{props.children}</button>
+  // 测试 3 会中途改 state.g 触发重渲染：分支保留到渲染期求值——
+  // 改用小写分发函数 + 尾随三元链（其中一路为字面 JSX，满足新约定的编译期识别）
+  const renderComponentRoot = () => {
+    // 组件根分支：rootRef 应指向最终根 DOM（button），而非 CompositeItem 实例
+    return <CompositeItem>{props.children}</CompositeItem>
   }
+  return props.inGroup ? (
+    renderComponentRoot()
+  ) : (
+    <button class="solo-btn">{props.children}</button>
+  )
 }
 
 function mount(app: any) {

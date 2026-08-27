@@ -39,7 +39,7 @@ describe('hydrate 场景', () => {
   it('场景 1：静态页水合——DOM 复用 + 事件绑定 + 响应式更新', async () => {
     function App() {
       const count = ref(0)
-      return () => (
+      return (
         <div class="app">
           <button class="inc" onClick={() => count.value++}>
             inc
@@ -68,11 +68,11 @@ describe('hydrate 场景', () => {
 
   it('场景 2：组件嵌套水合 + props 更新', async () => {
     function Child(props: any) {
-      return () => <span class="c">{props.n}</span>
+      return <span class="c">{props.n}</span>
     }
     function App() {
       const state = reactive({ n: 1 })
-      return () => (
+      return (
         <div class="app">
           <Child n={state.n} />
           <Child n={state.n * 10} />
@@ -99,10 +99,10 @@ describe('hydrate 场景', () => {
 
   it('场景 3：结构不匹配（tagName）→ 客户端优先重建 + 告警', () => {
     function A() {
-      return () => <div class="a">A</div>
+      return <div class="a">A</div>
     }
     function B() {
-      return () => <section class="b">B</section>
+      return <section class="b">B</section>
     }
     const host = makeHost()
     host.innerHTML = renderToString(<A />)
@@ -119,7 +119,7 @@ describe('hydrate 场景', () => {
 
   it('场景 4：容器多余节点（服务端多输出）→ 清理', () => {
     function App() {
-      return () => <div class="x">1</div>
+      return <div class="x">1</div>
     }
     const host = makeHost()
     host.innerHTML = '<div class="x">1</div><p>extra</p><span>more</span>'
@@ -133,7 +133,7 @@ describe('hydrate 场景', () => {
   it('场景 5：useId 服务端/客户端一致', () => {
     function App() {
       const id = useId()
-      return () => <div class="uid" data-id={id}>
+      return <div class="uid" data-id={id}>
         x
       </div>
     }
@@ -158,7 +158,7 @@ describe('renderToStringAsync', () => {
         await new Promise((r) => setTimeout(r, 10))
         state.data = 'fetched'
       })
-      return () => <div class="p">{state.data}</div>
+      return <div class="p">{state.data}</div>
     }
     const html = await renderToStringAsync(<App />)
     expect(html).toContain('fetched')
@@ -171,7 +171,7 @@ describe('renderToStringAsync', () => {
       onServerPrefetch(() => {
         state.data = 'sync'
       })
-      return () => <div class="p">{state.data}</div>
+      return <div class="p">{state.data}</div>
     }
     const html = await renderToStringAsync(<App />)
     expect(html).toContain('sync')
@@ -182,7 +182,7 @@ describe('P1：builtin / Suspense / 并发', () => {
   it('场景 7：Transition SSR 输出 children + 水合配对（无 appear 动画）+ 移除走动画', async () => {
     const state = reactive({ show: true })
     function App() {
-      return () => (
+      return (
         <div class="app">
           <Transition name="fade" appear>
             {state.show ? <div class="box">x</div> : null}
@@ -219,7 +219,7 @@ describe('P1：builtin / Suspense / 并发', () => {
       }))
     )
     function App() {
-      return () => (
+      return (
         <div class="app">
           <Suspense fallback={<span class="fb">loading</span>}>
             <LazyComp />
@@ -244,7 +244,7 @@ describe('P1：builtin / Suspense / 并发', () => {
   it('场景 9：renderToStringAsync 并发调用 useId 互不干扰（idState 隔离）', async () => {
     function App() {
       const id = useId()
-      return () => <div class="uid2" data-id={id}>x</div>
+      return <div class="uid2" data-id={id}>x</div>
     }
     const [a, b] = await Promise.all([
       renderToStringAsync(<App />),
@@ -259,7 +259,7 @@ describe('P1：builtin / Suspense / 并发', () => {
   it('场景 10：class 差异检测——SSR 与客户端不一致时告警 + 客户端覆盖', () => {
     let cls = 'a'
     function App() {
-      return () => <div class={cls}>x</div>
+      return <div class={cls}>x</div>
     }
     const host = makeHost()
     host.innerHTML = renderToString(<App />)
@@ -276,7 +276,7 @@ describe('P1：builtin / Suspense / 并发', () => {
   it('场景 11：Teleport SSR 内联输出 + 水合移动到 target（事件保留）', async () => {
     const state = reactive({ n: 0 })
     function App() {
-      return () => (
+      return (
         <div class="app">
           <span class="before">b</span>
           <Teleport to="#modal-host">
@@ -313,7 +313,7 @@ describe('P1：builtin / Suspense / 并发', () => {
 
   it('场景 12：Teleport to=null 内联（水合不移动）；to 目标不存在 → 留在原位 + 告警', () => {
     function A() {
-      return () => (
+      return (
         <div class="app">
           <Teleport to={null as any}>
             <span class="inline">x</span>
@@ -328,7 +328,7 @@ describe('P1：builtin / Suspense / 并发', () => {
     expect(host.querySelector('.app .inline')).toBeTruthy()
 
     function B() {
-      return () => (
+      return (
         <div class="app">
           <Teleport to="#not-exist">
             <span class="stay">y</span>

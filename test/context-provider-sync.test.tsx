@@ -33,12 +33,14 @@ function mount(app: any) {
 function Consumer(props: any) {
   const ctx = MeterCtx.use()
   const state = reactive({ v: -1 })
-  // 渲染期读 .value → 追踪
-  return () => {
+  // 渲染期读 .value → 追踪；快照写入（state.v）须逐渲染执行 →
+  // 小写分发函数经 Fragment 载体留在 render 内逐渲染求值（新约定）
+  const renderCons = () => {
     const v = ctx.value?.value
     if (v !== state.v) state.v = v
     return <span class="cons">{props.tag}-{String(state.v)}</span>
   }
+  return <>{renderCons()}</>
 }
 
 describe('Provider watch 同步边界', () => {
@@ -46,7 +48,7 @@ describe('Provider watch 同步边界', () => {
     const state = reactive({ n: 0 })
     let renders = 0
     function Host() {
-      return () => {
+      const hostRender = () => {
         renders++
         // 每次渲染 NEW 对象（引用不稳定）
         return (
@@ -55,6 +57,8 @@ describe('Provider watch 同步边界', () => {
           </MeterCtx.Provider>
         )
       }
+      // renders++ 是逐渲染副作用 → Fragment 载体 + 小写分发函数保持逐渲染求值（新约定）
+      return <>{hostRender()}</>
     }
     const host = mount(Host)
     expect(host.querySelector('.cons')!.textContent).toBe('a-0')
@@ -66,7 +70,7 @@ describe('Provider watch 同步边界', () => {
   it('场景 2：value 引用稳定（reactive 原地改）→ 对照组', async () => {
     const ctxState = reactive({ value: 0 })
     function Host() {
-      return () => (
+      return (
         <MeterCtx.Provider value={ctxState}>
           <Consumer tag="b" />
         </MeterCtx.Provider>
@@ -82,7 +86,7 @@ describe('Provider watch 同步边界', () => {
   it('场景 3：消费方重挂载（key 变化）→ 读到最新 context 值', async () => {
     const state = reactive({ n: 1, key: 'k1' })
     function Host() {
-      return () => (
+      return (
         <MeterCtx.Provider value={{ value: state.n }}>
           <Consumer key={state.key} tag="c" />
         </MeterCtx.Provider>
@@ -100,7 +104,7 @@ describe('Provider watch 同步边界', () => {
   it('场景 4：Provider 值 + children 同时变化', async () => {
     const state = reactive({ n: 2, label: 'x' })
     function Host() {
-      return () => (
+      return (
         <MeterCtx.Provider value={{ value: state.n }}>
           <Consumer tag={state.label} />
         </MeterCtx.Provider>
@@ -118,15 +122,15 @@ describe('Provider watch 同步边界', () => {
     const state = reactive({ show: true, n: 4 })
     function Leaf() {
       const ctx = MeterCtx.use()
-      return () => <span class="leaf">{ctx.value?.value}</span>
+      return <span class="leaf">{ctx.value?.value}</span>
     }
     function Middle() {
       // COW：提供过东西 → 注入表被拷贝
       provide('middle-marker', 'x')
-      return () => <Leaf />
+      return <Leaf />
     }
     function Host() {
-      return () => (
+      return (
         <div>
           {state.show ? (
             <MeterCtx.Provider value={{ value: state.n }}>

@@ -19,7 +19,7 @@ function mount(app: any) {
 }
 
 function FieldControl(props: any) {
-  return () => (
+  return (
     <span class="fc">
       {props.msg}|{props.children}
     </span>
@@ -30,11 +30,13 @@ describe('薄委托 props 透传', () => {
   it('createElement(FC, componentProps) 直传代理：材料化快照，更新透传', async () => {
     const state = reactive({ msg: 'a' })
     function Input(props: any) {
-      // createElement 内部 { ...config } → 全新 props 对象（非代理引用）
-      return () => createElement(FieldControl, props)
+      // createElement 内部 { ...config } → 全新 props 对象（非代理引用）；
+      // 仍走 createElement 保持被测 API。裸调用不是插件合法形态 → 用 Fragment
+      // 载体包进 render 逐渲染求值（Fragment 无 DOM 实体，子树语义不变）（新约定）
+      return <>{createElement(FieldControl, props)}</>
     }
     function App() {
-      return () => <Input msg={state.msg}>kid</Input>
+      return <Input msg={state.msg}>kid</Input>
     }
     const host = mount(App)
     expect(host.querySelector('.fc')!.textContent).toBe('a|kid')
@@ -46,10 +48,11 @@ describe('薄委托 props 透传', () => {
   it('createElement(FC, { ...componentProps }) 显式展开：同样正确', async () => {
     const state = reactive({ msg: 'a' })
     function Input(props: any) {
-      return () => createElement(FieldControl, { ...props })
+      // 同上：createElement 保持被测 API，Fragment 载体包进 render（新约定）
+      return <>{createElement(FieldControl, { ...props })}</>
     }
     function App() {
-      return () => <Input msg={state.msg} />
+      return <Input msg={state.msg} />
     }
     const host = mount(App)
     expect(host.querySelector('.fc')!.textContent).toBe('a|')

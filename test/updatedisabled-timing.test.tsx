@@ -58,7 +58,7 @@ describe('updateDisabled 触发时机', () => {
         disabled: state.disabled,
         composite: true,
       }))
-      return () => (
+      return (
         <button class="a-btn" disabled onClick={updateDisabled}>
           {state.n}
         </button>
@@ -84,7 +84,7 @@ describe('updateDisabled 触发时机', () => {
       }))
       // render 不读 disabledRef（只读一个无关 label）
       const label = ref('x')
-      return () => (
+      return (
         <button class="b-btn" disabled onClick={updateDisabled}>
           {label.value}
         </button>

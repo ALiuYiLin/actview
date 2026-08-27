@@ -48,7 +48,7 @@ describe('useState / useReducer', () => {
       setCount = setC
       setText = setT
       // props 顶层属性位自动解包（多子节点数组内不解包，见 types.ts 约定）
-      return () => <div class="c" data-n={count} data-t={text} />
+      return <div class="c" data-n={count} data-t={text} />
     }
     const host = mount(Host)
     expect(host.querySelector('.c')!.getAttribute('data-n')).toBe('10')
@@ -72,7 +72,7 @@ describe('useState / useReducer', () => {
     function Host() {
       const [count, d] = useReducer(reducer, 5, (n) => n * 2) // init: 10
       dispatch = d
-      return () => <div class="r">{count}</div>
+      return <div class="r">{count}</div>
     }
     const host = mount(Host)
     expect(host.querySelector('.r')!.textContent).toBe('10')
@@ -87,7 +87,7 @@ describe('useRef', () => {
     const seen: any[] = []
     function Host() {
       const boxRef = useRef<HTMLDivElement | null>(null)
-      return () => (
+      return (
         <div>
           <div class="box" ref={boxRef} />
           <button class="peek" onClick={() => seen.push(boxRef.current)} />
@@ -106,13 +106,13 @@ describe('useRef', () => {
     let toggle: any
     function Child(props: any) {
       useImperativeHandle(props.ref, () => ({ ping: 42 }))
-      return () => <span class="child" />
+      return <span class="child" />
     }
     function Host() {
       const [show, setShow] = useState(true)
       toggle = setShow
       // 三目条件里的 ref 不解包，须 .value（否则恒 truthy，组件永不移除）
-      return () => <div>{show.value ? <Child ref={childRef} /> : null}</div>
+      return <div>{show.value ? <Child ref={childRef} /> : null}</div>
     }
     const host = mount(Host)
     await flush()
@@ -129,7 +129,7 @@ describe('useMemo / useCallback', () => {
     const state = reactive({ n: 2 })
     function Host() {
       const double = useMemo(() => state.n * 2) // deps 忽略，自动追踪
-      return () => <div class="m">{double}</div>
+      return <div class="m">{double}</div>
     }
     const host = mount(Host)
     expect(host.querySelector('.m')!.textContent).toBe('4')
@@ -143,7 +143,7 @@ describe('useMemo / useCallback', () => {
     function Host() {
       fnA = useCallback(() => 1, [])
       fnB = useCallback(() => 1)
-      return () => null
+      return null
     }
     mount(Host)
     expect(fnA()).toBe(1)
@@ -166,7 +166,7 @@ describe('useEffect', () => {
           cleans++
         }
       })
-      return () => <div class="e">v{state.n}</div>
+      return <div class="e">v{state.n}</div>
     }
     const host = mount(Host)
     expect(host.querySelector('.e')!.textContent).toBe('v0')
@@ -188,7 +188,7 @@ describe('useEffect', () => {
       useEffect(() => {
         runs++
       }, [])
-      return () => <div>{state.n}</div>
+      return <div>{state.n}</div>
     }
     mount(Host)
     expect(runs).toBe(1)
@@ -209,12 +209,12 @@ describe('useEffect', () => {
           cleans++
         }
       }, [aRef])
-      return () => <span class="d">child</span>
+      return <span class="d">child</span>
     }
     function Host() {
       const [show, setShow] = useState(true)
       toggle = setShow
-      return () => <div>{show.value ? <Child /> : <span class="gone" />}</div>
+      return <div>{show.value ? <Child /> : <span class="gone" />}</div>
     }
     const host = mount(Host)
     expect(runs).toBe(1)
@@ -237,7 +237,7 @@ describe('useEffect', () => {
       useInsertionEffect(() => {
         inserted++
       }, [])
-      return () => <div />
+      return <div />
     }
     mount(Host)
     expect(laid).toBe(1)
@@ -251,10 +251,10 @@ describe('useContext', () => {
     const state = reactive({ theme: 'light' as 'light' | 'dark' })
     function Leaf() {
       const theme = useContext(ThemeCtx)
-      return () => <span class="t">{theme}</span>
+      return <span class="t">{theme}</span>
     }
     function Host() {
-      return () => (
+      return (
         <ThemeCtx.Provider value={state.theme}>
           <Leaf />
         </ThemeCtx.Provider>
@@ -284,12 +284,12 @@ describe('useSyncExternalStore', () => {
     let toggle: any
     function Leaf() {
       const snapshot = useSyncExternalStore(subscribe, () => store)
-      return () => <span class="s">{snapshot}</span>
+      return <span class="s">{snapshot}</span>
     }
     function Host() {
       const [show, setShow] = useState(true)
       toggle = setShow
-      return () => <div>{show.value ? <Leaf /> : <span class="gone" />}</div>
+      return <div>{show.value ? <Leaf /> : <span class="gone" />}</div>
     }
     const host = mount(Host)
     expect(host.querySelector('.s')!.textContent).toBe('0')
@@ -309,7 +309,7 @@ describe('并发降级与杂项', () => {
     const ids: string[] = []
     function Host() {
       ids.push(useId())
-      return () => null
+      return null
     }
     mount(Host)
     mount(Host)
@@ -326,7 +326,7 @@ describe('并发降级与杂项', () => {
       startTransition(() => {
         ran++
       })
-      return () => null
+      return null
     }
     mount(Host)
     expect(ran).toBe(1)
@@ -337,7 +337,7 @@ describe('并发降级与杂项', () => {
     const vRef = ref(1) // 参数在 setup 已求值：须传 ref 才有活引用
     function Host() {
       const deferred = useDeferredValue(vRef)
-      return () => <div class="dv">{deferred}</div>
+      return <div class="dv">{deferred}</div>
     }
     const host = mount(Host)
     expect(host.querySelector('.dv')!.textContent).toBe('1')

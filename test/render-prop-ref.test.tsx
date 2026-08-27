@@ -11,15 +11,22 @@ import { createApp, defineComponent, reactive, useRootElement } from 'actview'
 
 function Headless(props: any) {
   const rootRef = useRootElement()
-  props.onRef?.(rootRef) // 观察 ref 对象
-  return () => {
-    const { render, ...elementProps } = props
-    const merged: any = { role: 'separator', ...elementProps }
-    if (typeof render === 'function') {
-      return render({ ...merged, ref: rootRef })
-    }
-    return <div {...merged} />
+  props.onRef?.(rootRef) // 观察 ref 对象（setup 期一次）
+
+  // 渲染体依赖每次渲染新鲜的 props 解构 / 用户 render 回调立即调用 →
+  // 小写分发函数保持逐渲染求值；末尾 <div> 是真实 JSX 分支，
+  // 三元才被插件整体包进 render（新约定）
+  const renderAsFunction = () => {
+    const { render } = props
+    return render({ ...computeMerged(), ref: rootRef })
   }
+  const computeMerged = () => {
+    const { render, ...elementProps } = props
+    return { role: 'separator', ...elementProps } as any
+  }
+  return typeof props.render === 'function'
+    ? renderAsFunction()
+    : <div {...computeMerged()} />
 }
 
 function mount(app: any) {

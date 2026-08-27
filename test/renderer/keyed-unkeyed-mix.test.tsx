@@ -21,10 +21,10 @@ describe('keyed/unkeyed 混用', () => {
   it('带 key 兄弟触发 keyed diff → 无 key 子节点被重挂（元素替换）', async () => {
     const state = reactive({ n: 0, legend: 'a' })
     function Item(props: any) {
-      return () => <div data-testid={props.tid}>{props.n}</div>
+      return <div data-testid={props.tid}>{props.n}</div>
     }
     function App() {
-      return () => (
+      return (
         <div class="wrap">
           <span key={state.legend}>legend</span>
           <Item tid="unkeyed" n={state.n} />
@@ -43,10 +43,10 @@ describe('keyed/unkeyed 混用', () => {
   it('对照：全无 key → 位置 diff，原地更新', async () => {
     const state = reactive({ n: 0 })
     function Item(props: any) {
-      return () => <div data-testid={props.tid}>{props.n}</div>
+      return <div data-testid={props.tid}>{props.n}</div>
     }
     function App() {
-      return () => (
+      return (
         <div class="wrap">
           <span>legend</span>
           <Item tid="unkeyed2" n={state.n} />

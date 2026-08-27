@@ -14,13 +14,13 @@ function A() {
 // 编译后（第二参数 "A" 为组件名，供 KeepAlive include/exclude / DevTools 使用）：
 const A = defineComponent(function () { return () => <div>hi</div> }, "A")
 
-// 手动 setup 风格（return 渲染函数）——插件**不转换**（保持裸函数），
-// 但 PD-07 后运行时接受"调用一次返回函数"的裸函数 → 手动 defineComponent 之外也能挂载
-function B(props) {
-  const n = useSomething()
-  return function () { return <div>{n}</div> }
-}
-// 编译后：保持原样（不包装、不注入 defineComponent）——运行时按"返回 render 函数"兜底挂载
+// 手动 setup 风格（return 渲染函数）——**编译期直接报错**（2026-08 起）：
+// 组件嵌套方案已废弃（bug 多），不再静默放过；报错带代码帧定位与改法提示
+// function B(props) {
+//   const n = useSomething()
+//   return function () { return <div>{n}</div> }   // ✗ SyntaxError: 已废弃的 setup 风格
+// }
+// 等价写法：把 hooks/派生留在 setup，最后直接 return JSX（见上）
 ```
 
 > **三个硬性门槛**（缺一不可，见 `wrapComponentFn`）：
@@ -68,6 +68,11 @@ const C3 = (p) => (p.a ? <A/> : null)
 // 5. 箭头函数 expression body（body 本身就是返回值）
 const E = () => <span>e</span>
 ```
+
+> ⚠️ **三元链迁移的关键经验**（2026-08 存量代码迁移实证）：链条必须**至少有一个分支是字面 JSX 元素 / Fragment / `_jsx()` 调用**——`null` 分支单独不触发渲染判定，因此
+> `return cond ? renderFallback() : null`（全小写分发函数调用 + null）**不会**被包装成 render 函数，运行时抛「组件 setup 必须返回 render 函数」。
+> 需要把逐渲染求值的逻辑收进小写分发函数时（如用户传入的 render 回调立即调用），把一个真 JSX 分支直接内联进链条作锚：
+> `return typeof render === 'function' ? renderAsFn() : <div/>`。整条三元会被包进 render、分发函数逐渲染执行，语义不变。
 
 ### C. 函数体任意位置的早退 return（不只结尾）
 
@@ -130,7 +135,7 @@ const List = () => <ListWrap><template slot="item" item><b>{item}</b></template>
 | 小写命名 | `const small = () => <div/>` | 首字母非大写，视为普通函数 |
 | 结尾 return 普通调用表达式 | `function H() { return getElement() }` | 无法静态判定返回值（PD-07 运行时：返回 VNode → 明确报错） |
 | 直接调用组件 `return Hello()` | `function AppX() { return Hello() }` | 不转换；运行时 `TypeError: Hello is not a function`——defineComponent 产物是普通对象（call signature 仅类型伪装），**任何路径都不可调用**，正确写法是 `return <Hello/>` |
-| 结尾 return 渲染函数（setup 风格） | `function B(p) { return function(){...} }` | 设计约束：组件嵌套方案已废弃，插件不转（PD-07 运行时兜底可用） |
+| 结尾 return 渲染函数（setup 风格） | `function B(p) { return function(){...} }` | 设计约束：组件嵌套方案已废弃——**编译期直接报错**（带代码帧与改法提示；具名组件一律报错，匿名默认导出仅在闭包内含 JSX/`_jsx` 时报错，纯回调工厂放行） |
 | return 变量引用 | `function H() { return Comp }` | return 的是标识符，无法静态判定是否渲染 |
 | 非 JSX 返回 | `function helper() { return 1 }` / `return {a:1}` | 最后 return 不是渲染内容 |
 | 纯数值三元 | `function H(p) { return p.a ? 1 : 2 }` | 分支无渲染内容 |
@@ -147,13 +152,16 @@ const List = () => <ListWrap><template slot="item" item><b>{item}</b></template>
   ret 是 _jsx/_jsxs/jsx 调用                 → 组件，return 包成 () => ret
   ret 是 null                                → 组件，return 包成 () => null
   ret 是三元/逻辑表达式（任一分支含 JSX/_jsx）→ 组件，return 包成 () => ret
-  ret 是函数（渲染函数，setup 风格）          → ❌ 插件不转换（运行时 PD-07 兜底）
-  其他                                       → 非组件，跳过
+  ret 是函数（渲染函数，setup 风格）          → ❌ 编译期报错（buildSetupStyleError，带代码帧）
+其他                                       → 非组件，跳过
+非末尾的早退 return 渲染函数                 → ❌ 编译期报错（assertNoSetupStyleEarlyReturns，
+  先于包装执行；末尾 return 放行给 wrapComponentFn 宽容裁决——匿名默认导出
+  纯回调工厂依赖这一层放行）
 函数体任意位置的早退 return（JSX / _jsx / null / 渲染表达式）同样包成 render 函数
   （wrapEarlyReturns：仅处理函数体自身的 return，排除嵌套函数——子组件由各自 visitor 转换）
 ```
 
 ## 验证
 
-- 插件转换测试：`plugins/babel/test/plugin.test.ts`（34 用例，`npx vitest run plugins/babel/test/plugin.test.ts`）
+- 插件转换测试：`plugins/babel/test/plugin.test.ts`（43 用例，`npx vitest run plugins/babel/test/plugin.test.ts`）
 - 全量回归：`pnpm test`（含 verify / platform-diff / testing 等全部用例）

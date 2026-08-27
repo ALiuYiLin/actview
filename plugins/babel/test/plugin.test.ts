@@ -28,17 +28,13 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toMatch(/import \{ defineComponent \} from "@actview\/core"/)
   })
 
-  it('废弃方案文档化：setup 风格（return 渲染函数）不被转换——保持裸函数', () => {
-    // 组件嵌套方案已废弃（bug 多）：只允许简写组件（return JSX）。
-    // return function(){...} 的组件保持原样（插件不包装，不注入 import）。
-    const out = transform(
-      `function B(props) { const n = 1; return function() { return <div>{n}</div> } }`,
-    )
-    expect(out).toContain('function B(props)')
-    expect(out).toContain('return function () {')
-    expect(out).toContain('return _jsx("div"')
-    // 未转换：无 defineComponent
-    expect(out).not.toContain('defineComponent')
+  it('setup 风格（return 渲染函数）→ 编译期直接报错（带组件名）', () => {
+    // 废弃方案硬约束：不再静默放过，直接抛错并给出改法提示
+    expect(() =>
+      transform(
+        `function B(props) { const n = 1; return function() { return <div>{n}</div> } }`,
+      ),
+    ).toThrow(/已废弃的 setup 风格[\s\S]*组件 B/)
   })
 
   it('缺陷 2：函数表达式组件 const X = function(props) {...} → defineComponent', () => {
@@ -53,14 +49,12 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     expect(out).toContain('return () => _jsx("span"')
   })
 
-  it('废弃方案文档化：箭头函数 block body + setup 风格也不转换', () => {
-    const out = transform(
-      `const E = () => { const x = 1; return function() { return <i>{x}</i> } }`,
-    )
-    expect(out).toContain('const E = () => {')
-    expect(out).toContain('return function () {')
-    expect(out).toContain('return _jsx("i"')
-    expect(out).not.toContain('defineComponent')
+  it('箭头函数 block body 的 setup 风格同样报错', () => {
+    expect(() =>
+      transform(
+        `const E = () => { const x = 1; return function() { return <i>{x}</i> } }`,
+      ),
+    ).toThrow(/已废弃的 setup 风格/)
   })
 
   it('早退 return JSX / null 包成 render 函数', () => {
@@ -148,6 +142,54 @@ describe('defineComponentPlugin：Babel 自动转换组件', () => {
     )
     expect(out).toContain('"item": item =>')
     expect(out).not.toContain('template slot')
+  })
+})
+
+describe('defineComponentPlugin：setup 风格编译期报错（废弃方案硬约束）', () => {
+  it('箭头 expression body 链式：const F = () => () => <b/> 报错', () => {
+    expect(() => transform(`const F = () => () => <b>{1}</b>`)).toThrow(
+      /已废弃的 setup 风格/,
+    )
+  })
+
+  it('JSX 已降级形态：return () => _jsx(...) 同样报错（具名组件直接命中）', () => {
+    expect(() =>
+      transform(`function H() { return () => _jsx('div', { children: 'x' }) }`),
+    ).toThrow(/已废弃的 setup 风格[\s\S]*组件 H/)
+  })
+
+  it('匿名默认导出 + 渲染闭包（内含 JSX）也报错', () => {
+    expect(() =>
+      transform(`export default function () { return () => <div>anon</div> }`),
+    ).toThrow(/已废弃的 setup 风格/)
+  })
+
+  it('早退位置 return 渲染函数同样报错', () => {
+    expect(() =>
+      transform(`function G(p) { if (!p.ok) return () => <a/>; return <b/> }`),
+    ).toThrow(/已废弃的 setup 风格[\s\S]*组件 G/)
+  })
+
+  it('不误伤：小写回调工厂放行（非组件命名不走组件判定）', () => {
+    const out = transform(`let t = 0\nconst makeTick = () => () => { t += 1 }\n`)
+    expect(out).toContain('const makeTick = () =>')
+    expect(out).not.toContain('defineComponent')
+  })
+
+  it('不误伤：匿名默认导出返回纯回调工厂（闭包内无 JSX/_jsx）放行', () => {
+    const out = transform(
+      `export default function (n: number) { return (s: string) => s.repeat(n) }`,
+    )
+    expect(out).toContain('(s: string) => s.repeat(n)')
+    expect(out).not.toContain('defineComponent')
+  })
+
+  it('具名 PascalCase 函数即使闭包无 JSX 也报错（PascalCase 即组件约定）', () => {
+    expect(() =>
+      transform(
+        `function Composer(f: any, g: any) { return (x: any) => f(g(x)) }`,
+      ),
+    ).toThrow(/已废弃的 setup 风格[\s\S]*组件 Composer/)
   })
 })
 

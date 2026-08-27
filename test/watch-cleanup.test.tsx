@@ -35,10 +35,10 @@ describe('watch onCleanup 卸载行为', () => {
           })
         }
       )
-      return () => <div class="a">{state.n}</div>
+      return <div class="a">{state.n}</div>
     }
     function App() {
-      return () => (state.show ? <Item /> : <div class="empty" />)
+      return state.show ? <Item /> : <div class="empty" />
     }
     const host = mount(App)
     state.n = 1
@@ -66,10 +66,10 @@ describe('watch onCleanup 卸载行为', () => {
         },
         { flush: 'sync' }
       )
-      return () => <div class="b">{state.n}</div>
+      return <div class="b">{state.n}</div>
     }
     function App() {
-      return () => (state.show ? <Item /> : <div class="empty" />)
+      return state.show ? <Item /> : <div class="empty" />
     }
     const host = mount(App)
     state.n = 1
@@ -111,10 +111,10 @@ describe('watch onCleanup 卸载行为', () => {
           cleaned = true
         })
       })
-      return () => <div class="d">{state.n}</div>
+      return <div class="d">{state.n}</div>
     }
     function App() {
-      return () => (state.show ? <Item /> : <div class="empty" />)
+      return state.show ? <Item /> : <div class="empty" />
     }
     const host = mount(App)
     expect(cleaned).toBe(false) // 挂载时首次同步执行：只注册，未执行
