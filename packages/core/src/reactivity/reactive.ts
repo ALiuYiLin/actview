@@ -545,14 +545,36 @@ function readonlyProxy<T extends object>(obj: T): Readonly<T> {
   return createReactiveObject(obj, true, false) as Readonly<T>
 }
 
+/**
+ * 深度响应式代理（reactive() 的返回类型）。
+ *
+ * 设计要点（对齐 Vue 3 的「结构透明」哲学）：
+ *  - 交叉 `T & {...}`（而非 interface extends T——裸类型参数不能作接口基类，
+ *    TS2430）：向下游完全兼容原始对象用法（读属性/展开/toRefs 无感知），
+ *    所有把返回值当 T 用的既有代码零改动；
+ *  - `'__v_isReactive'?: true`：与运行时标记（IS_REACTIVE，见文件顶部常量）
+ *    呼应的正向品牌。**可选**属性 => 原始对象仍可赋给 `Reactive<T>` 形参
+ *    （不破坏 assignability），它表达的是「工厂产出了什么」而非严格闸门；
+ *    字面量字符串作键是因为运行时常量 IS_REACTIVE 无法在类型空间引用；
+ *    （注意：仅在 strictNullChecks 下 `undefined` 才保留在标记键的类型里。）
+ */
+export type Reactive<T extends object> = T & {
+  readonly '__v_isReactive'?: true
+}
+
+/** 浅层响应式代理（shallowReactive() 的返回类型）：仅第一层代理，嵌套保持原值 */
+export type ShallowReactive<T extends object> = T & {
+  readonly '__v_isShallow'?: true
+}
+
 /** 深度响应式：嵌套结构（对象/数组/集合）也响应式 */
-export function reactive<T extends object>(obj: T): T {
-  return reactiveProxy(obj)
+export function reactive<T extends object>(obj: T): Reactive<T> {
+  return reactiveProxy(obj) as Reactive<T>
 }
 
 /** 浅响应式：只代理第一层，嵌套对象保持原值（不被代理、不响应） */
-export function shallowReactive<T extends object>(obj: T): T {
-  return createReactiveObject(obj, false, true) as T
+export function shallowReactive<T extends object>(obj: T): ShallowReactive<T> {
+  return createReactiveObject(obj, false, true) as ShallowReactive<T>
 }
 
 /** 只读（深度）：任何修改（含嵌套）被拦截并警告；可读、可被响应式跟踪 */

@@ -10,6 +10,7 @@ export {
   isProxy,
   isShallow
 } from './reactive'
+export type { Reactive, ShallowReactive } from './reactive'
 export { computed } from './computed'
 export type { ComputedRef, WritableComputedRef, ComputedOptions } from './computed'
 export { ref, shallowRef, triggerRef, isRef, unref, unrefs, toValue, toRef, toRefs, rawRef } from './ref'

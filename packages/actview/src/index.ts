@@ -75,5 +75,7 @@ export type {
   ComputedOptions,
   WatchSource,
   WatchOptions,
-  Context
+  Context,
+  Reactive,
+  ShallowReactive
 } from '@actview/core'
