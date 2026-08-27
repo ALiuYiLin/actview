@@ -59,8 +59,8 @@ export function createContext<T>(defaultValue: T): Context<T> {
     // 不加 immediate：初始值已在 ref 构造时写入（避免 value 缺失时 undefined 覆盖默认值）
     watch(() => props.value, (v) => {
       state.value = v
-    })
-    return () => props.children ?? null
+    },{flush: 'sync'})
+    return () => <>{props.children ?? null}</>
   }, 'ActViewContext.Provider')
 
   const ctx: Context<T> = {
