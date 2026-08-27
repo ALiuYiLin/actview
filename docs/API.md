@@ -108,7 +108,7 @@
 | 插槽 | 默认（children）/ 作用域（函数 children）/ 具名（`<template slot="name">`） |
 | 模板引用 | `props.ref`（函数 / `{value}` 对象 / `ref()`——Vue 风格直接传）指向 DOM/组件实例，卸载自动置 null |
 | 依赖注入 | `provide(key, value)` / `useInjects(key?)`（字符串键）；`createContext(default)`（React 风格：对象身份即键，无碰撞） |
-| Context | `createContext<T>(default)` → `<Ctx.Provider value={v}>` / `<Ctx value={v}>`（React 19 风格）/ `Ctx.use()`（返回 Ref，render 读 `.value`；value 变化消费方自动重渲染；就近覆盖；SSR 可用） |
+| Context | `createContext<T>(default)` → `<Ctx.Provider value={v}>` / `<Ctx value={v}>`（React 19 风格）/ `Ctx.use()`（返回注入表中【原样存储】的值——store-as-is；响应式由传入对象携带：reactive 对象 / 装ref容器 / `rawRef()`；就近覆盖；SSR 可用） |
 | 组件名 | `defineComponent(fn, name)` / Babel 从变量名传递（KeepAlive/DevTools 用） |
 
 ---

@@ -246,16 +246,16 @@ describe('useEffect', () => {
 })
 
 describe('useContext', () => {
-  it('消费上下文 + Provider 值变化自动重渲染', async () => {
-    const ThemeCtx = createContext<'light' | 'dark'>('light')
+  it('消费上下文（响应式对象入 context）+ 深层变化自动重渲染', async () => {
+    const ThemeCtx = createContext<{ theme: 'light' | 'dark' } | undefined>(undefined)
     const state = reactive({ theme: 'light' as 'light' | 'dark' })
     function Leaf() {
-      const theme = useContext(ThemeCtx)
-      return <span class="t">{theme}</span>
+      const s = useContext(ThemeCtx)!
+      return <span class="t">{s.theme}</span>
     }
     function Host() {
       return (
-        <ThemeCtx.Provider value={state.theme}>
+        <ThemeCtx.Provider value={state}>
           <Leaf />
         </ThemeCtx.Provider>
       )

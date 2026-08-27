@@ -537,26 +537,27 @@ const theme = useInjects('theme')
 
 ### Context（React 风格，推荐替代字符串键）
 
-`createContext` 用**对象身份作键**（内部 Symbol），无需手动防键名冲突，且是响应式的（value 变化 → 消费方自动重渲染）：
+`createContext` 用**对象身份作键**（内部 Symbol），无需手动防键名冲突。存值语义为 **store-as-is**（原样存储,不包 ref/不 watch）——响应式由传入对象携带:
 
 ```tsx
 import { createContext } from 'actview'
 
-const ThemeCtx = createContext('default')   // 默认值（无 Provider 时生效）
+const ThemeCtx = createContext({ theme: 'light' })   // 默认值（无 Provider 时生效）;动态值传响应式对象
 
-// 提供（两种写法等价）：
-<ThemeCtx.Provider value="dark">...</ThemeCtx.Provider>
-<ThemeCtx value="dark">...</ThemeCtx>          // React 19 风格
+// 提供（两种写法等价;值传响应式对象/装ref容器/rawRef,勿传快照）：
+<ThemeCtx.Provider value={state}>...</ThemeCtx.Provider>
+<ThemeCtx value={state}>...</ThemeCtx>          // React 19 风格
 
-// 消费（setup 中取 ref，render 里读 .value 建立追踪）：
+// 消费（use() 返回原样值;读响应式数据即建立追踪）：
 function Toolbar() {
-  const theme = ThemeCtx.use()
-  return <div class={theme.value}>...</div>
+  const state = ThemeCtx.use()
+  return <div class={state.theme}>...</div>
 }
 ```
 
 - **就近覆盖**：内层 Provider 覆盖外层；嵌套多层各自响应式互不影响
-- 无 Provider 时 `use()` 返回默认值 ref；SSR（`renderToString`）同样可用
+- 无 Provider 时 `use()` 返回默认值（原样）；SSR（`renderToString`）同样可用
+- ⚠️ 传快照值（如 `value={state.theme}`）= 注入静态值,变化不传播——动态值请传响应式引用
 
 ---
 
