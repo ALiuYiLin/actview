@@ -33,6 +33,7 @@
 
 import { defineComponent } from './component'
 import { getCurrentInstance, provide } from './lifecycle'
+import type { Reactive } from '../reactivity/reactive'
 
 /** 上下文对象：本身可直接作组件（<Ctx value=...>），也可 .Provider / .use() */
 export interface Context<T> {
@@ -54,8 +55,19 @@ export interface Context<T> {
 /**
  * 创建上下文：返回对象即键（内部 Symbol），消费用返回值的 .use()。
  * defaultValue 仅在无 Provider 时生效。
+ *
+ * 类型重载（配合 store-as-is 契约）：
+ *  - 对象默认值必须为 Reactive<T>（reactive() 的产物）——编译期强制
+ *    「上下文默认值是响应式代理」,杜绝「传字面量快照对象、后续变化不传播」
+ *    的错误；原始值（string/number/boolean…）与 undefined 走宽松重载。
+ *  - 注意:这只约束【默认值】;<Ctx.Provider value> 端的快照风险属运行期
+ *    行为（每次渲染新字面量）,类型层无法判定,靠契约与文档约束。
  */
-export function createContext<T>(defaultValue: T): Context<T> {
+export function createContext<T extends object>(
+  defaultValue: Reactive<T>,
+): Context<T>
+export function createContext<T>(defaultValue: T): Context<T>
+export function createContext(defaultValue: any): Context<any> {
   // 唯一键：Symbol 不参与 for...in / Object.keys，对 useInjects() 全表读取不可见，
   // 与字符串键的 provide 完全隔离（无碰撞）
   const key: symbol = Symbol('actview-context')
@@ -65,12 +77,12 @@ export function createContext<T>(defaultValue: T): Context<T> {
   // 消费端读取时自动收集依赖,数据变化自动触发更新。
   // （不要在此处 watch props.value 回写注入表：注入表在子组件 setup 时
   //   被 copy-on-write 快照,回写既不完整也不必要——见文件头契约说明）
-  const provider = defineComponent(function (props: { value?: T; children?: any }) {
+  const provider = defineComponent(function (props: { value?: any; children?: any }) {
     provide(key, props.value ?? defaultValue)
     return () => <>{props.children ?? null}</>
   }, 'ActViewContext.Provider')
 
-  const ctx: Context<T> = {
+  const ctx: Context<any> = {
     _key: key,
     __setup: (provider as any).__setup,
     name: 'ActViewContext',
@@ -79,6 +91,6 @@ export function createContext<T>(defaultValue: T): Context<T> {
       const instance = getCurrentInstance()
       return instance?.injects?.[key] ?? defaultValue
     },
-  } as Context<T>
+  } as Context<any>
   return ctx
 }

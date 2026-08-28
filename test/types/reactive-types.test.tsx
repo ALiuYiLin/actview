@@ -10,12 +10,19 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  computed,
   reactive,
   shallowReactive,
   toRaw,
   isReactive,
+  ref,
+  watch,
   type Reactive,
-  type ShallowReactive
+  type ShallowReactive,
+  type RefFactory,
+  type ReactiveFactory,
+  type ComputedFactory,
+  type WatchFactory
 } from 'actview'
 
 interface User {
@@ -75,6 +82,31 @@ describe('Reactive / ShallowReactive 类型', () => {
     expect(v).toBe(1)
     expect(requiresShallow({ a: 5 })).toBe('ok') // raw 兼容
     expect(requiresShallow(sr)).toBe('ok')
+  })
+
+  it('工厂函数类型（typeof ref 等）：作为形参注入后照常工作', async () => {
+    // 工厂注入:测试替身/高阶封装可以把「创建响应式对象的能力」整体替换
+    function makePair(create: RefFactory<number>, toReactive: ReactiveFactory) {
+      const n = create(1)
+      const s = toReactive({ n: n.value })
+      return { n, s }
+    }
+    const { n, s } = makePair(ref, reactive)
+    expect(n.value).toBe(1)
+    expect(s.n).toBe(1)
+
+    // computed/watch 工厂同理（重载签名随 typeof 完整保留）
+    const makeDouble: ComputedFactory = computed
+    const c = makeDouble(() => 2)
+    expect(c.value).toBe(2)
+
+    let ran = false
+    const makeWatch: WatchFactory = watch
+    const probe = ref(0)
+    makeWatch(probe, () => (ran = true))
+    probe.value = 1
+    await new Promise((r) => setTimeout(r, 0))
+    expect(ran).toBe(true)
   })
 
   it('运行时冒烟：isReactive/toRaw 语义不受签名改动影响', () => {

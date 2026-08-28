@@ -77,5 +77,17 @@ export type {
   WatchOptions,
   Context,
   Reactive,
-  ShallowReactive
+  ShallowReactive,
+  ShallowReadonly,
+  RefFactory,
+  ShallowRefFactory,
+  ReactiveFactory,
+  ShallowReactiveFactory,
+  ReadonlyFactory,
+  ShallowReadonlyFactory,
+  ComputedFactory,
+  ToRefFactory,
+  ToRefsFactory,
+  WatchFactory,
+  WatchEffectFactory
 } from '@actview/core'

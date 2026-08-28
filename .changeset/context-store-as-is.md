@@ -17,3 +17,7 @@ createContext 改为 store-as-is 存值语义（原样存储,不包 ref/不 watc
   Vue provide/inject 本源——「存响应式的东西,读的时候自动追踪」。
 - 迁移:动态值消费方——Provider 改传稳定 reactive 对象/ref 本体,
   消费端直接读其属性/.value;静态值消费方无需改动。
+- 类型强化:createContext 增加重载——【对象默认值强制 Reactive<T>】
+  （reactive() 产物）,杜绝「字面量快照对象当默认值、后续变化不传播」;
+  原始值/undefined 走宽松重载。注意:类型只能约束工厂默认值这一入口,
+  Provider value 端的每次渲染字面量仍属运行期契约。

@@ -582,7 +582,13 @@ export function readonly<T extends object>(obj: T): Readonly<T> {
   return readonlyProxy(obj)
 }
 
+/** 浅只读代理（shallowReadonly() 的返回类型）：仅第一层只读，嵌套可写 */
+export type ShallowReadonly<T extends object> = T & {
+  readonly '__v_isShallow'?: true
+  readonly '__v_isReadonly'?: true
+}
+
 /** 浅只读：仅第一层只读，嵌套可写 */
-export function shallowReadonly<T extends object>(obj: T): Readonly<T> {
-  return createReactiveObject(obj, true, true) as Readonly<T>
+export function shallowReadonly<T extends object>(obj: T): ShallowReadonly<T> {
+  return createReactiveObject(obj, true, true) as ShallowReadonly<T>
 }
