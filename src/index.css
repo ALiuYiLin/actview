@@ -17,24 +17,10 @@
   margin-bottom: 20px;
 }
 
-.app nav {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
 /* RouterLink 渲染的 <a> 定义在 @actview/router（跨文件，不带本文件 hash），
    必须用 :deep() 才能命中（:deep 使目标选择器不追加 [data-v-hash]） */
-.app nav :deep(a) {
-  padding: 6px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #ffffff;
-  text-decoration: none;
-  color: #0f172a;
-  display: inline-block;
-  margin-right: 8px;
+.app :deep(a) {
+  color: #2563eb;
 }
 
 p {
