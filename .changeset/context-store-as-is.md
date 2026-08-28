@@ -1,5 +1,5 @@
 ---
-'@actview/core': major
+'@actview/core': minor
 ---
 
 createContext 改为 store-as-is 存值语义（原样存储,不包 ref/不 watch 同步）
