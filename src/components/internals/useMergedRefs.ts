@@ -8,9 +8,9 @@
 // 本工厂按普通函数使用（每次渲染重建开销可忽略）。
 // ============================================================
 
-export type AnyRef<T> = { value: T } | ((v: T) => void) | null | undefined
+export type AnyRef = { value: any } | ((v: any) => void) | null | undefined
 
-export function useMergedRefs<T>(...refs: AnyRef<T>[]): { value: T } {
+export function useMergedRefs(...refs: AnyRef[]): { value: any } {
   let lastValue: any
   const write = (v: any) => {
     lastValue = v
@@ -27,5 +27,5 @@ export function useMergedRefs<T>(...refs: AnyRef<T>[]): { value: T } {
     set value(v: any) {
       write(v)
     },
-  } as { value: T }
+  } as { value: any }
 }
