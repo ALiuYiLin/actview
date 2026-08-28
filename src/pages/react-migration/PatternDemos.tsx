@@ -1,13 +1,14 @@
 // ============================================================
-// 无内置等价 hooks 的组合写法 —— 每个 hook 一个独立路由页面
+// 无内置等价 hooks 的组合写法 —— 每个 hook 一个独立子路由页面
 //   /react-patterns/use-reducer | use-layout-effect | use-insertion-effect
 //   /react-patterns/use-sync-external-store | use-transition | use-deferred-value
 //   /react-patterns/use-optimistic | use-action-state
+//   （渲染在 /react-patterns 父布局的嵌套出口内）
 // ============================================================
 
 import { computed, onUnmounted, reactive, ref, watch } from "actview";
 import { btnStyle, hintStyle, inputStyle } from "../../styles";
-import { PageShell, Section } from "./shared";
+import { Section } from "./shared";
 
 // ============================================================
 // P1 useReducer → reactive 状态 + action 函数对象
@@ -82,15 +83,13 @@ function DemoReducer() {
 
 export function UseReducerPage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P1 useReducer → reactive 状态 + action 函数对象"
-        reactCode={'const [state, dispatch] = useReducer(reducer, init);\ndispatch({ type: "add", text });'}
-        actviewCode={'const state = reactive({ items: [], filter: "all" });\nconst actions = { add() {…}, toggle(id) {…} };\n// render 里读 state.* → 自动追踪;actions.*() → 直接触发'}
-      >
-        <DemoReducer />
-      </Section>
-    </PageShell>
+    <Section
+      title="P1 useReducer → reactive 状态 + action 函数对象"
+      reactCode={'const [state, dispatch] = useReducer(reducer, init);\ndispatch({ type: "add", text });'}
+      actviewCode={'const state = reactive({ items: [], filter: "all" });\nconst actions = { add() {…}, toggle(id) {…} };\n// render 里读 state.* → 自动追踪;actions.*() → 直接触发'}
+    >
+      <DemoReducer />
+    </Section>
   )
 }
 
@@ -129,15 +128,13 @@ function DemoLayoutEffect() {
 
 export function UseLayoutEffectPage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P2 useLayoutEffect → watch flush:'post'(DOM 已更新,绘制前)"
-        reactCode={'useLayoutEffect(() => {\n  setWidth(box.offsetWidth);\n});'}
-        actviewCode={'watch(() => [box.value, words.value],\n  ([el]) => el && (width.value = el.offsetWidth),\n  { flush: "post" });'}
-      >
-        <DemoLayoutEffect />
-      </Section>
-    </PageShell>
+    <Section
+      title="P2 useLayoutEffect → watch flush:'post'(DOM 已更新,绘制前)"
+      reactCode={'useLayoutEffect(() => {\n  setWidth(box.offsetWidth);\n});'}
+      actviewCode={'watch(() => [box.value, words.value],\n  ([el]) => el && (width.value = el.offsetWidth),\n  { flush: "post" });'}
+    >
+      <DemoLayoutEffect />
+    </Section>
   )
 }
 
@@ -180,15 +177,13 @@ function DemoInsertionEffect() {
 
 export function UseInsertionEffectPage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P3 useInsertionEffect → watch flush:'sync'(DOM 变更前)"
-        reactCode={'useInsertionEffect(() => {\n  injectStyles(theme);\n}, [theme]);'}
-        actviewCode={'watch(() => props.theme, inject, { flush: "sync" });'}
-      >
-        <DemoInsertionEffect />
-      </Section>
-    </PageShell>
+    <Section
+      title="P3 useInsertionEffect → watch flush:'sync'(DOM 变更前)"
+      reactCode={'useInsertionEffect(() => {\n  injectStyles(theme);\n}, [theme]);'}
+      actviewCode={'watch(() => props.theme, inject, { flush: "sync" });'}
+    >
+      <DemoInsertionEffect />
+    </Section>
   )
 }
 
@@ -224,16 +219,14 @@ function DemoExternalStore() {
 
 export function UseSyncExternalStorePage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P4 useSyncExternalStore → 订阅外部世界 + ref 桥接"
-        reactCode={'useSyncExternalStore(subscribe, () => store.get());'}
-        actviewCode={'window.addEventListener("online", on);\nwindow.addEventListener("offline", off);\nonUnmounted(() => { /* 退订 */ });'}
-        note="ActView 同步渲染无 tearing——桥接只需「订阅 → 写 ref」,无需快照校验"
-      >
-        <DemoExternalStore />
-      </Section>
-    </PageShell>
+    <Section
+      title="P4 useSyncExternalStore → 订阅外部世界 + ref 桥接"
+      reactCode={'useSyncExternalStore(subscribe, () => store.get());'}
+      actviewCode={'window.addEventListener("online", on);\nwindow.addEventListener("offline", off);\nonUnmounted(() => { /* 退订 */ });'}
+      note="ActView 同步渲染无 tearing——桥接只需「订阅 → 写 ref」,无需快照校验"
+    >
+      <DemoExternalStore />
+    </Section>
   )
 }
 
@@ -285,14 +278,12 @@ function DemoTransition() {
 
 export function UseTransitionPage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P5 useTransition → pending 标志 + setTimeout 错峰(诚实降级:非时间切片)"
-        reactCode={'const [pending, start] = useTransition();\nstart(() => setTab(next));'}
-        actviewCode={'const pending = ref(false);\nconst switchTab = (next) => {\n  pending.value = true;\n  setTimeout(() => { tab.value = next; pending.value = false }, 350);\n};\n// render:{pending.value ? <Spinner/> : <Panel/>}'}>
-        <DemoTransition />
-      </Section>
-    </PageShell>
+    <Section
+      title="P5 useTransition → pending 标志 + setTimeout 错峰(诚实降级:非时间切片)"
+      reactCode={'const [pending, start] = useTransition();\nstart(() => setTab(next));'}
+      actviewCode={'const pending = ref(false);\nconst switchTab = (next) => {\n  pending.value = true;\n  setTimeout(() => { tab.value = next; pending.value = false }, 350);\n};\n// render:{pending.value ? <Spinner/> : <Panel/>}'}>
+      <DemoTransition />
+    </Section>
   )
 }
 
@@ -333,14 +324,12 @@ function DemoDeferredValue() {
 
 export function UseDeferredValuePage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P6 useDeferredValue → watch + setTimeout 延迟副本"
-        reactCode={'const deferred = useDeferredValue(keyword);'}
-        actviewCode={'const deferred = ref("");\nwatch(keyword, (v) => {\n  clearTimeout(timer);\n  timer = setTimeout(() => (deferred.value = v), 300);\n});\n// 重列表用 deferred,输入框用 keyword —— 互不阻塞'}>
-        <DemoDeferredValue />
-      </Section>
-    </PageShell>
+    <Section
+      title="P6 useDeferredValue → watch + setTimeout 延迟副本"
+      reactCode={'const deferred = useDeferredValue(keyword);'}
+      actviewCode={'const deferred = ref("");\nwatch(keyword, (v) => {\n  clearTimeout(timer);\n  timer = setTimeout(() => (deferred.value = v), 300);\n});\n// 重列表用 deferred,输入框用 keyword —— 互不阻塞'}>
+      <DemoDeferredValue />
+    </Section>
   )
 }
 
@@ -391,14 +380,12 @@ function DemoOptimistic() {
 
 export function UseOptimisticPage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P7 useOptimistic → 乐观项 + 真值列表(完成迁移/失败回滚)"
-        reactCode={'const [optimistic, addOptimistic] = useOptimistic(\n  messages, (cur, text) => [...cur, { text }]\n);'}
-        actviewCode={'const optimistic = ref([]);        // 乐观项\nasync function send(text) {\n  optimistic.value.push({ id, text });   // 立即上屏\n  try { messages.value.push(await api(text)) }\n  finally { optimistic.value = …filter… } // 回滚\n}'}>
-        <DemoOptimistic />
-      </Section>
-    </PageShell>
+    <Section
+      title="P7 useOptimistic → 乐观项 + 真值列表(完成迁移/失败回滚)"
+      reactCode={'const [optimistic, addOptimistic] = useOptimistic(\n  messages, (cur, text) => [...cur, { text }]\n);'}
+      actviewCode={'const optimistic = ref([]);        // 乐观项\nasync function send(text) {\n  optimistic.value.push({ id, text });   // 立即上屏\n  try { messages.value.push(await api(text)) }\n  finally { optimistic.value = …filter… } // 回滚\n}'}>
+      <DemoOptimistic />
+    </Section>
   )
 }
 
@@ -435,14 +422,12 @@ function DemoActionState() {
 
 export function UseActionStatePage() {
   return (
-    <PageShell backTo="/react-patterns" backLabel="返回组合写法索引">
-      <Section
-        title="P8 useActionState → pending + async action + 表单提交拦截"
-        reactCode={'const [state, formAction, pending] =\n  useActionState(actionFn, null);\n<form action={formAction}>…</form>'}
-        actviewCode={'const state = reactive({ result: null, pending: false });\nconst formAction = async (fd) => {\n  state.pending = true;\n  try { state.result = await api(fd) } finally { state.pending = false }\n};\n// <form onsubmit={e => { e.preventDefault(); formAction(new FormData(e.target)) }}>'}
-      >
-        <DemoActionState />
-      </Section>
-    </PageShell>
+    <Section
+      title="P8 useActionState → pending + async action + 表单提交拦截"
+      reactCode={'const [state, formAction, pending] =\n  useActionState(actionFn, null);\n<form action={formAction}>…</form>'}
+      actviewCode={'const state = reactive({ result: null, pending: false });\nconst formAction = async (fd) => {\n  state.pending = true;\n  try { state.result = await api(fd) } finally { state.pending = false }\n};\n// <form onsubmit={e => { e.preventDefault(); formAction(new FormData(e.target)) }}>'}
+    >
+      <DemoActionState />
+    </Section>
   )
 }

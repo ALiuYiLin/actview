@@ -1,7 +1,7 @@
 // ============================================================
-// react-migration 共享:双栏代码对比 Section + 页面外壳
+// react-migration 共享:双栏代码对比 Section
+// （子路由页渲染在父布局的嵌套 <RouterView/> 出口内，无独立外壳）
 // ============================================================
-import { RouterLink } from "@actview/router";
 import { cardStyle, hintStyle } from "../../styles";
 
 export const codeStyle: any = {
@@ -27,17 +27,5 @@ export function Section(props: { title: string; note?: string; reactCode: string
       </div>
       <div style={{ padding: 10, background: "#f8fafc", borderRadius: 8 }}>{props.children}</div>
     </section>
-  );
-}
-
-// 每个 demo 独立页面的外壳:返回索引链接 + 内容
-export function PageShell(props: { backTo: string; backLabel: string; children?: any }) {
-  return (
-    <div style={{ padding: 20 }}>
-      <p style={{ margin: "0 0 12px" }}>
-        <RouterLink to={props.backTo}>← {props.backLabel}</RouterLink>
-      </p>
-      {props.children}
-    </div>
   );
 }

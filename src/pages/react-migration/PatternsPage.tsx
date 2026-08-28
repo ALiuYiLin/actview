@@ -1,12 +1,12 @@
 // ============================================================
-// 无内置等价 hooks 的组合写法 —— 索引页
-//   路由:/react-patterns(每个 hook 的 demo 在独立子路由页面)
+// 无内置等价 hooks 的组合写法 —— 父布局（嵌套路由）
+//   /react-patterns/use-*      → 各模式 demo 子页（嵌套出口渲染）
 //
 // React 并发/副作用类 hooks 在 ActView 没有内置等价物,
 // 但全部可以用原生原语【内联组合】表达(不定义 hooks 包装函数)。
 // ============================================================
 
-import { RouterLink } from "@actview/router";
+import { RouterLink, RouterView } from "@actview/router";
 import { cardStyle, hintStyle } from "../../styles";
 
 export function PatternsPage() {
@@ -18,7 +18,7 @@ export function PatternsPage() {
         <b>内联组合</b>(不定义 hooks 包装函数):reactive 状态 + action 对象、
         computed 派生、watch 三种 flush、ref 桥接外部订阅、乐观项回滚。
         唯一无法组合的是<b>时间切片</b>(同步渲染管线,无优先级调度)——已诚实降级。
-        每个模式的对比 + 活 demo 在独立页面:
+        每个模式的对比 + 活 demo 在独立子页（本布局常驻，切换子页不重建）:
       </p>
 
       <div class="demo-card" style={cardStyle}>
@@ -33,6 +33,9 @@ export function PatternsPage() {
           <li><RouterLink to="/react-patterns/use-action-state">P8 useActionState → pending + async action</RouterLink></li>
         </ul>
       </div>
+
+      {/* 嵌套路由出口:matched[1]（use-* 子页） */}
+      <RouterView />
     </div>
   );
 }

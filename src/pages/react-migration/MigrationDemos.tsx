@@ -1,7 +1,8 @@
 // ============================================================
-// 有内置等价物的 hooks —— 每个 hook 一个独立路由页面
+// 有内置等价物的 hooks —— 每个 hook 一个独立子路由页面
 //   /react-migration/use-state | use-ref | use-effect | use-memo
 //   /react-migration/use-callback | use-context | use-imperative-handle | use-id
+//   （渲染在 /react-migration 父布局的嵌套出口内）
 // ============================================================
 
 import {
@@ -15,7 +16,7 @@ import {
   watch,
 } from "actview";
 import { btnStyle, hintStyle, inputStyle } from "../../styles";
-import { PageShell, Section } from "./shared";
+import { Section } from "./shared";
 
 // ============================================================
 // ① useState → ref
@@ -33,11 +34,9 @@ function DemoState() {
 
 export function UseStatePage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="① useState → ref" reactCode={"const [n, setN] = useState(0);\nsetN(n + 1);"} actviewCode={"const n = ref(0);\nn.value += 1;"}>
-        <DemoState />
-      </Section>
-    </PageShell>
+    <Section title="① useState → ref" reactCode={"const [n, setN] = useState(0);\nsetN(n + 1);"} actviewCode={"const n = ref(0);\nn.value += 1;"}>
+      <DemoState />
+    </Section>
   );
 }
 
@@ -57,11 +56,9 @@ function DemoRefDom() {
 
 export function UseRefPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="② useRef(DOM) → ref" reactCode={"const el = useRef(null);\n<input ref={el} />"} actviewCode={"const el = ref(null);\n<input ref={el} />"}>
-        <DemoRefDom />
-      </Section>
-    </PageShell>
+    <Section title="② useRef(DOM) → ref" reactCode={"const el = useRef(null);\n<input ref={el} />"} actviewCode={"const el = ref(null);\n<input ref={el} />"}>
+      <DemoRefDom />
+    </Section>
   );
 }
 
@@ -94,11 +91,9 @@ function DemoEffect() {
 
 export function UseEffectPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="③ useEffect → watch(无依赖数组;返回停止函数 = cleanup)" reactCode={"useEffect(() => {\n  log(keyword);\n}, [keyword]);"} actviewCode={"watch(keyword, (v) => {\n  log(v);\n}); // 返回 stop()"}>
-        <DemoEffect />
-      </Section>
-    </PageShell>
+    <Section title="③ useEffect → watch(无依赖数组;返回停止函数 = cleanup)" reactCode={"useEffect(() => {\n  log(keyword);\n}, [keyword]);"} actviewCode={"watch(keyword, (v) => {\n  log(v);\n}); // 返回 stop()"}>
+      <DemoEffect />
+    </Section>
   );
 }
 
@@ -122,11 +117,9 @@ function DemoMemo() {
 
 export function UseMemoPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="④ useMemo → computed(依赖自动追踪)" reactCode={"const big = useMemo(\n  () => items.filter(i => i >= t),\n  [items, t]\n);"} actviewCode={"const big = computed(\n  () => items.value.filter(i => i >= t.value)\n);"}>
-        <DemoMemo />
-      </Section>
-    </PageShell>
+    <Section title="④ useMemo → computed(依赖自动追踪)" reactCode={"const big = useMemo(\n  () => items.filter(i => i >= t),\n  [items, t]\n);"} actviewCode={"const big = computed(\n  () => items.value.filter(i => i >= t.value)\n);"}>
+      <DemoMemo />
+    </Section>
   );
 }
 
@@ -150,11 +143,9 @@ function DemoCallback() {
 
 export function UseCallbackPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="⑤ useCallback → 普通函数(无需缓存)" reactCode={"const add = useCallback(\n  () => setN(n + 1),\n  [n]\n);"} actviewCode={"const add = () => (n.value += 1);"}>
-        <DemoCallback />
-      </Section>
-    </PageShell>
+    <Section title="⑤ useCallback → 普通函数(无需缓存)" reactCode={"const add = useCallback(\n  () => setN(n + 1),\n  [n]\n);"} actviewCode={"const add = () => (n.value += 1);"}>
+      <DemoCallback />
+    </Section>
   );
 }
 
@@ -191,11 +182,9 @@ function DemoContext() {
 
 export function UseContextPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="⑥ useContext → createContext" reactCode={"const SizeCtx = createContext();\nconst s = useContext(SizeCtx);"} actviewCode={"const SizeCtx = createContext(…);\nconst s = SizeCtx.use().value;"}>
-        <DemoContext />
-      </Section>
-    </PageShell>
+    <Section title="⑥ useContext → createContext" reactCode={"const SizeCtx = createContext();\nconst s = useContext(SizeCtx);"} actviewCode={"const SizeCtx = createContext(…);\nconst s = SizeCtx.use().value;"}>
+      <DemoContext />
+    </Section>
   );
 }
 
@@ -228,11 +217,9 @@ function ActionChild(props: { actionsRef: any; text: string }) {
 
 export function UseImperativeHandlePage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="⑦ useImperativeHandle → 统一写入口 ref" reactCode={"useImperativeHandle(ref, () => ({\n  reset: () => …\n}));"} actviewCode={"// 子组件:把 API 写进父传入的 ref\nref.value = { reset: () => … };"}>
-        <DemoImperative />
-      </Section>
-    </PageShell>
+    <Section title="⑦ useImperativeHandle → 统一写入口 ref" reactCode={"useImperativeHandle(ref, () => ({\n  reset: () => …\n}));"} actviewCode={"// 子组件:把 API 写进父传入的 ref\nref.value = { reset: () => … };"}>
+      <DemoImperative />
+    </Section>
   );
 }
 
@@ -246,10 +233,8 @@ function DemoUseId() {
 
 export function UseIdPage() {
   return (
-    <PageShell backTo="/react-migration" backLabel="返回迁移对照索引">
-      <Section title="⑧ useId → useId(同名等价)" reactCode={"const id = useId();"} actviewCode={"const id = useId();"}>
-        <DemoUseId />
-      </Section>
-    </PageShell>
+    <Section title="⑧ useId → useId(同名等价)" reactCode={"const id = useId();"} actviewCode={"const id = useId();"}>
+      <DemoUseId />
+    </Section>
   );
 }
