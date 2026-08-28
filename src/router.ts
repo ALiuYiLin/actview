@@ -14,6 +14,7 @@ import { IconPage } from "./pages/IconPage";
 import { FallthroughPage } from "./pages/FallthroughPage";
 import { ProvidePage } from "./pages/ProvidePage";
 import { TestPage } from "./pages/TestPage";
+import { ReactMigrationPage } from "./pages/react-migration/ReactMigrationPage";
 
 // ============================================================
 // 路由配置 — 路由切换 =》 组件切换
@@ -37,5 +38,6 @@ export const router = createRouter({
     { path: "/fallthrough", component: FallthroughPage },
     { path: "/provide", component: ProvidePage },
     { path: "/test", component: TestPage },
+    { path: "/react-migration", component: ReactMigrationPage },
   ],
 });

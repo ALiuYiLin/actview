@@ -9,7 +9,7 @@
 // ============================================================
 
 import { createContext } from 'actview'
-import type { Ref } from 'actview'
+import type { Reactive, Ref } from 'actview'
 
 /** 单个成员的注册信息(el 为 null 表示「已卸载/反注册」) */
 export interface CheckboxRegistration {
@@ -24,7 +24,7 @@ export interface CheckboxGroupContext {
   /** upsert:el 非 null 注册/更新,null 反注册(按注册对象身份) */
   register(reg: CheckboxRegistration): void
   /** 当前成员(reactive 数组,读取即追踪) */
-  members: CheckboxRegistration[]
+  members: Reactive<CheckboxRegistration[]>
   /** 群体操作示例:聚焦第一个成员的 input */
   focusFirst(): void
 }

@@ -7,7 +7,7 @@
 // 这类群体逻辑有据可查,focusFirst 演示群体操作 DOM。
 // ============================================================
 
-import { reactive, type Ref } from 'actview'
+import { reactive, type Reactive, type Ref } from 'actview'
 import {
   CheckboxGroupContext,
   type CheckboxRegistration,
@@ -15,7 +15,7 @@ import {
 
 /** 暴露给使用方的群体 API(members 为 reactive 数组,读取即追踪) */
 export interface CheckboxGroupApi {
-  members: CheckboxRegistration[]
+  members: Reactive<CheckboxRegistration[]>
   focusFirst(): void
 }
 
