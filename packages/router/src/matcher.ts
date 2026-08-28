@@ -97,11 +97,13 @@ export function createMatcher(routes: RouteRecord[]) {
         if (child) return matched.concat(child)
         // 子路由均未命中：剩余为空则父作为叶子
         if (rest === '' || rest === '/') return matched
-        return null
+        // 前缀命中但剩余段未消费：继续尝试后续记录（如 /a 注册在 /a/b 之前）
+        continue
       }
-      // 无子路由：剩余必须为空（否则不匹配）
+      // 无子路由：剩余为空才算命中
       if (rest === '' || rest === '/') return matched
-      return null
+      // 前缀命中但剩余段未消费：继续尝试后续记录（如 /a 注册在 /a/b 之前）
+      continue
     }
     return null
   }

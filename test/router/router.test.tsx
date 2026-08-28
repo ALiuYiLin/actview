@@ -299,3 +299,46 @@ describe('场景 5：路由', () => {
     expect((nav.children[0] as HTMLAnchorElement).getAttribute('href')).toBe('/')
   })
 })
+
+// ------------------------------------------------------------
+// 多段静态路径不被同名前缀路由遮蔽（索引页 /a 注册在 /a/b 之前）
+// ------------------------------------------------------------
+describe('路由：多段路径前缀遮蔽回归', () => {
+  it('前缀路由 /a 注册在前，/a/b 仍应命中子路由', () => {
+    function Index() { return <div>index</div> }
+    function Child() { return <div>child</div> }
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: [
+        { path: '/group', component: Index },
+        { path: '/group/item', component: Child },
+      ],
+    })
+    // 多段完整路径必须命中后注册的子路由（而非被前缀命中后放弃）
+    expect(router.match('/group/item')?.[0].record.component).toBe(Child)
+    // 前缀本身仍命中索引页
+    expect(router.match('/group')?.[0].record.component).toBe(Index)
+    // 未注册路径仍为 null
+    expect(router.match('/group/other')).toBeNull()
+  })
+
+  it('RouterView 渲染前缀遮蔽下的多段子路由', async () => {
+    function Index() { return <div class="idx">Group index</div> }
+    function Item() { return <div class="item">Group item page</div> }
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: [
+        { path: '/group', component: Index },
+        { path: '/group/item', component: Item },
+      ],
+    })
+    function App() { return <RouterView /> }
+    const host = mount(App)
+    router.push('/group/item')
+    await flush()
+    expect(collectText(host)).toContain('Group item page')
+    router.push('/group')
+    await flush()
+    expect(collectText(host)).toContain('Group index')
+  })
+})
