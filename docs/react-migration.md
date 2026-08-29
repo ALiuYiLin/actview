@@ -559,6 +559,67 @@ function Toolbar() {
 - 无 Provider 时 `use()` 返回默认值（原样）；SSR（`renderToString`）同样可用
 - ⚠️ 传快照值（如 `value={state.theme}`）= 注入静态值,变化不传播——动态值请传响应式引用
 
+#### 完整案例：theme（推荐范式——`Reactive<T>` 载体 + 统一写入口）
+
+payload 用 `reactive()` 代理时，把 `Reactive<T>` 写进 context 泛型：消费端 `use()` 的返回类型即自说明「读属性即追踪、写属性即触发」，无需读注释。与框架意图一致——`createContext` 的对象默认值重载已强制 `Reactive<T>`（`packages/core/src/runtime/context.tsx`，杜绝字面量快照默认值）。
+
+```tsx
+import { createContext, reactive, type Reactive } from 'actview'
+
+// ① 定义：泛型声明 payload 是 reactive 代理（undefined 默认值走宽松重载，
+//    由泛型把契约传递到 use() 的返回类型）
+interface ThemeContextValue {
+  theme: 'light' | 'dark'
+  setTheme(t: 'light' | 'dark'): void   // 统一写入口（软约束：变更集中走它，调试一目了然）
+}
+export const ThemeCtx = createContext<Reactive<ThemeContextValue> | undefined>(undefined)
+
+// ② 提供方：reactive 载体 + 方法内自引用（const 必须显式标注类型，
+//    否则闭包内自引用触发 TS 循环推断错误）
+export function ThemeProvider(props: { children?: any }) {
+  const ctx = reactive<ThemeContextValue>({
+    theme: 'light',
+    setTheme(t) { ctx.theme = t },
+  })
+  // 两种写法等价；React 19 风格：<ThemeCtx value={ctx}>…</ThemeCtx>
+  return <ThemeCtx.Provider value={ctx}>{props.children}</ThemeCtx.Provider>
+}
+
+// ③ 消费方：use() 返回原样载体（store-as-is），render 里读 ctx.theme 即建立追踪
+function ThemedCard() {
+  const ctx = ThemeCtx.use()!
+  return <div class={`card-${ctx.theme}`}>当前主题：{ctx.theme}</div>
+}
+function ThemeToggle() {
+  const ctx = ThemeCtx.use()!
+  return (
+    <button onClick={() => ctx.setTheme(ctx.theme === 'light' ? 'dark' : 'light')}>
+      切换主题
+    </button>
+  )
+}
+```
+
+要点与边界：
+
+| 点 | 说明 |
+|---|---|
+| `Reactive<T>` 是正向品牌 | `T & { readonly '__v_isReactive'?: true }`——**可选**标记，普通字面量仍可赋给它（不破坏 assignability）。它表达「工厂产出了什么」，**不能**在编译期拦住 `value=` 传快照；快照风险属运行期契约。编译期硬闸门只在对象**默认值**重载上 |
+| reactive 载体不存 ref 本体 | ActView 的 `reactive` get 陷阱**不自动解包 ref**（与 Vue 不同）：存 ref 读出来还是 ref 对象，`ctx.theme = 'dark'` 会把 ref 本体替换成字符串，静默炸掉响应性。原始值直接放字段 |
+| 载体形态按需选 | reactive 代理 → 泛型写 `Reactive<T>`；装 ref 的容器 → 泛型写 `{ theme: Ref<Theme> }`（消费端读 `.theme.value`）；ref 本体直传 → `rawRef(count)`（否则被 jsxFactory 顶层解包成值快照） |
+| 就近覆盖 | 内层 Provider 覆盖外层，嵌套多层各自响应式互不影响 |
+| 调用时机 | `use()` 在组件 setup 中调用（底层 provide/injects 链）；SSR（`renderToString`）可用 |
+
+需要「必须存在」语义时包一层 hook（对齐 `useAvatarRootContext`）：
+
+```tsx
+export function useTheme(): ThemeContextValue {
+  const ctx = ThemeCtx.use()
+  if (!ctx) throw new Error('useTheme 必须在 <ThemeProvider> 内使用')
+  return ctx
+}
+```
+
 ---
 
 ## 七、内置组件一览
