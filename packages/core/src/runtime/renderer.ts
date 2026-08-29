@@ -6,11 +6,10 @@
 
 import { mountComponent, invokeHooks } from './mountComponent'
 import { SCOPED_ID_PROP, splitScopedId, extractScopedIdProps } from './scopedProps'
-import { HTML_ATTR_OVERRIDES } from './attr-map'
 import {
-  isEnumeratedAttr,
   normalizeClass,
   normalizeStyleValue,
+  resolveAttr,
 } from './attr-utils'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import { pauseTracking, resetTracking, nextTick } from '../reactivity/reactive-system'
@@ -866,25 +865,17 @@ function setProp(el: any, key: string, value: any) {
     )
     return
   }
-  // 其余走 attribute
-  // React camelCase prop → 真实 HTML 属性名（htmlFor→for、tabIndex→tabindex…）
-  const attrName = HTML_ATTR_OVERRIDES[key] ?? key
-  // enumerated 属性（contenteditable/draggable/spellcheck）：true→"true"、
-  // false→"false" 不移除（对齐 React/Vue 值形态与 SSR serializeAttrs）
-  if (isEnumeratedAttr(attrName)) {
-    if (value == null) el.removeAttribute(attrName)
-    else el.setAttribute(
-      attrName,
-      value === true ? 'true' : value === false ? 'false' : String(value),
-    )
-    return
-  }
-  if (value == null || value === false) {
-    el.removeAttribute(attrName)
-  } else if (value === true) {
-    el.setAttribute(attrName, '')
-  } else {
-    el.setAttribute(attrName, String(value))
+  // 其余走 attribute：React 分组决策（resolveAttr，SSR serializeAttrs 同一套——
+  //   enumerated/布尔/overloaded/数值/URL 清洗/xlink-xml 命名空间全部由它产出）
+  const resolved = resolveAttr(key, value, el.tagName)
+  if (resolved.op === 'remove') {
+    el.removeAttribute(resolved.name)
+  } else if (resolved.op === 'boolean') {
+    el.setAttribute(resolved.name, '')
+  } else if (resolved.op === 'set') {
+    el.setAttribute(resolved.name, resolved.value!)
+  } else if (resolved.op === 'setNS') {
+    el.setAttributeNS(resolved.ns!, resolved.name, resolved.value!)
   }
 }
 

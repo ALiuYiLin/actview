@@ -389,7 +389,8 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
 export interface AnchorHTMLAttributes extends HTMLAttributes {
   href?: string
   target?: string
-  download?: string
+  /** overloaded 布尔：true→裸属性、false→移除、字符串→值（对齐 React） */
+  download?: string | boolean
   rel?: string
   hreflang?: string
   /** 驼峰标准名（React 命名；hreflang 小写历史兼容） */
@@ -656,7 +657,8 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   coords?: string
   shape?: string
   rel?: string
-  download?: string
+  /** overloaded 布尔：true→裸属性、false→移除、字符串→值（对齐 React） */
+  download?: string | boolean
   /** 驼峰标准名 */
   hrefLang?: string
   type?: string

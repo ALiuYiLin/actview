@@ -4,6 +4,7 @@
 > 只列 ActView 真实缺失/不一致项；已对齐的（keyed diff LIS、事件 invoker+capture+passive、markRaw/toRaw、effectScope、Transition mode/appear 等）不列。
 > 更新：2026-08。严重度：high=真实缺陷（会产生错误 DOM/输出）、medium=能力缺失、low=API 面/优化项。
 > **修复状态**：P0 四项（1.1/1.2/1.3/1.6）已修复（`runtime/attr-utils.ts` 共享规范化层 + `test/platform-diff/attr-style.test.tsx`）。
+> **修复状态**：P1 三项（1.4 xlink / 1.5 URL 清洗 / 1.7 决策统一）已修复——`resolveAttr` 照抄 React 分组 switch 语义双端共用（`test/platform-diff/attr-p1.test.tsx`）；受控输入改进（7.2）待排期。
 
 ---
 
@@ -144,6 +145,28 @@
 - ActView：仅 `input[type=text]` 类有 `setInputValue` 光标恢复（`renderer.ts:861-880`）；`<select value>`、`<textarea>` children 语义、radio 组互斥均无特例。
 - Vue：v-model 编译期展开 + `directives/vModel.ts` checkbox/radio/select 特例。
 - 影响：受控 select/textarea 在 ActView 下需手写 `selected`/`value` 属性，行为与 React 受控语义有偏差。
+
+### 7.2 受控输入机制对比（React vs ActView，2026-08 记录）
+
+**现状对比**（React `ReactDOMInput.js`+`inputValueTracking.js` vs ActView `renderer.ts:716-764,815-833`）：
+
+| 维度 | React | ActView |
+|---|---|---|
+| 受控判定 | value/checked 非 null | 同（`__avControlled` 标记） |
+| 追踪 | valueTracker 劫持 value/checked setter，记忆「框架最后一次写入值」 | 不劫持，直接比较 `el.value !== 渲染值` |
+| 还原触发 | **每次渲染提交**（updateInput commit 时比较+写回）+ focus 时 restoreStateIfNeeded——不依赖事件 | 仅 input/change 事件后 nextTick 拉回（渲染提交后执行，但触发面是事件） |
+| 值比较 | `toString(getToStringValue(v))` 归一 | 原始值 `!==`（5 vs "5" 恒不等 → 多余 DOM 写） |
+| 光标 | 不专门管 | setInputValue 恢复 selection（更精细） |
+| radio 组 | name 断开重连原子应用 + 同组同步 | 无 |
+| submit/reset | 不设 value attribute（#12872） | 无特例 |
+| type=number | 0 vs '' 特殊比较、聚焦不写 defaultValue（#7253） | 无 |
+| hydration | trackHydrated 不覆盖用户输入 + queueChangeEvent 重放 | 待核对 |
+
+**结论/借鉴方向**（已记录，待排期）：
+1. 还原从「事件驱动」升为「渲染提交兜底」——每次渲染 flush 后统一检查受控元素，覆盖自动填充/脚本改 DOM 等非事件场景（ActView 注释「对齐 React commit 阶段」只对齐了时机、没对齐触发面）
+2. toString 归一后再比较（避免 number/boolean 造成的多余 DOM 写与光标重置）
+3. valueTracker 劫持 setter **不建议照抄**（直接比较渲染值语义等价、无 defineProperty 兼容坑）
+4. submit/reset value attribute 特例（#12872）、type=number 特例、hydration 不覆盖用户输入
 
 ### 7.2 [low] 无指令系统（架构差异，非缺陷）
 - Vue 有模板编译器 + `directives/vModel|vOn|vShow`；ActView 走 JSX，`v-model`/`v-show` 等价物需手动组合（value+oninput / style.display）——迁移文档已覆盖。v-show 高频切换无内置等价（display 切换需 watch 手动）。

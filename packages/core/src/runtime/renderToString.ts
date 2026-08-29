@@ -2,12 +2,10 @@ import type { VNode, VNodeChild } from '../vnode'
 import { getChildren } from '../vnode'
 import { setCurrentInstance, getCurrentInstance } from './lifecycle'
 import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
-import { HTML_ATTR_OVERRIDES } from './attr-map'
 import {
-  BOOLEAN_ATTRS,
-  isEnumeratedAttr,
   normalizeClass,
   normalizeStyleValue,
+  resolveAttr,
 } from './attr-utils'
 
 // ============================================================
@@ -201,7 +199,7 @@ function serializeNode(
   // 原生标签
   if (typeof type !== 'string') return ''
   const tag = type as string
-  const attrs = serializeAttrs(props)
+  const attrs = serializeAttrs(props, tag)
   const children = toChildrenArray(props?.children)
     .map((n) => serializeNode(n, parentInjects, idState))
     .join('')
@@ -209,8 +207,11 @@ function serializeNode(
   return `<${tag}${attrs}>${children}</${tag}>`
 }
 
-/** 属性 → 属性字符串（事件跳过、布尔/空值语义对齐 setProp） */
-function serializeAttrs(props: Record<string, any> | null | undefined): string {
+/** 属性 → 属性字符串（事件跳过、React 分组决策 resolveAttr 双端同源） */
+function serializeAttrs(
+  props: Record<string, any> | null | undefined,
+  tag: string,
+): string {
   if (!props) return ''
   let out = ''
   for (const key of Object.keys(props)) {
@@ -241,39 +242,20 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
       if (s) out += ` style="${escapeHtml(s)}"`
       continue
     }
-    const name =
-      HTML_ATTR_OVERRIDES[key] ??
-      (key === 'className'
-        ? 'class'
-        : key === 'defaultValue'
-          ? 'value'
-          : key === 'defaultChecked'
-            ? 'checked'
-            : key)
-    if (name === 'class') {
+    if (key === 'className' || key === 'class') {
       // class 数组/对象合并（对齐运行时 normalizeClass）
       const cls = normalizeClass(value)
       if (cls) out += ` class="${escapeHtml(cls)}"`
       continue
     }
-    if (BOOLEAN_ATTRS.has(name)) {
-      if (value === false) continue // false 布尔属性移除（对齐 setProp）
-      out += ` ${name}` // true → 裸属性
+    // React 分组决策（与客户端 setProp 同一套：resolveAttr）
+    const resolved = resolveAttr(key, value, tag)
+    if (resolved.op === 'remove') continue
+    if (resolved.op === 'boolean') {
+      out += ` ${resolved.name}` // 布尔裸属性
       continue
     }
-    if (isEnumeratedAttr(name)) {
-      // enumerated：true→"true"、false→"false"（对齐 React/Vue）
-      out += ` ${name}="${escapeHtml(
-        value === true ? 'true' : value === false ? 'false' : String(value),
-      )}"`
-      continue
-    }
-    if (value == null || value === false) continue
-    if (value === true) {
-      out += ` ${name}=""` // 非布尔非 enumerated 的 true → 空属性
-      continue
-    }
-    out += ` ${name}="${escapeHtml(String(value))}"`
+    out += ` ${resolved.name}="${escapeHtml(resolved.value!)}"`
   }
   return out
 }
@@ -397,7 +379,7 @@ async function serializeNodeAsync(
 
   if (typeof type !== 'string') return ''
   const tag = type as string
-  const attrs = serializeAttrs(props)
+  const attrs = serializeAttrs(props, tag)
   const children = await Promise.all(
     toChildrenArray(props?.children).map((n) =>
       serializeNodeAsync(n, parentInjects, idState)
