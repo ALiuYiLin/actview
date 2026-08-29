@@ -7,6 +7,11 @@
 import { mountComponent, invokeHooks } from './mountComponent'
 import { SCOPED_ID_PROP, splitScopedId, extractScopedIdProps } from './scopedProps'
 import { HTML_ATTR_OVERRIDES } from './attr-map'
+import {
+  isEnumeratedAttr,
+  normalizeClass,
+  normalizeStyleValue,
+} from './attr-utils'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
 import { pauseTracking, resetTracking, nextTick } from '../reactivity/reactive-system'
 import {
@@ -779,10 +784,12 @@ function setProp(el: any, key: string, value: any) {
   // （happy-dom / jsdom 未实现该 getter-only 行为，单测环境不会复现）。
   // 因此 SVG 元素的 class 必须走 setAttribute。
   if (key === 'class' || key === 'className') {
+    const cls = normalizeClass(value)
     if (el.namespaceURI === SVG_NS) {
-      el.setAttribute('class', value ?? '')
+      if (cls) el.setAttribute('class', cls)
+      else el.removeAttribute('class')
     } else {
-      el.className = value ?? ''
+      el.className = cls
     }
     return
   }
@@ -790,10 +797,14 @@ function setProp(el: any, key: string, value: any) {
     if (typeof value === 'string') el.style.cssText = value
     else if (value) {
       // CSS 变量（--*）走 setProperty（Object.assign 对 CSSStyleDeclaration
-      // 的自定义属性键无效）；其余 camelCase 键直接赋值
+      // 的自定义属性键无效）；其余 camelCase 键直接赋值。
+      // null/undefined/false 跳过——与 SSR stringifyStyle 同一规则，
+      // 不依赖 CSSOM 对 undefined 赋值的静默忽略（C7 两端一致）
       for (const k in value) {
-        if (k.startsWith('--')) el.style.setProperty(k, String(value[k]))
-        else el.style[k] = value[k]
+        const v = normalizeStyleValue(k, value[k])
+        if (v == null) continue
+        if (k.startsWith('--')) el.style.setProperty(k, v)
+        else el.style[k] = v
       }
     } else el.removeAttribute('style')
     return
@@ -822,12 +833,26 @@ function setProp(el: any, key: string, value: any) {
       }
     }
     if (value == null || value === false) {
+      // 行为布尔（checked/disabled/readonly）：property 重置 + attribute
+      // 移除（C11——只 removeAttribute 不重置 property 会让 checked 状态
+      // 残留）。value/default* 保持原语义（property 不动，仅清属性）。
+      if (key === 'checked' || key === 'disabled' || key === 'readonly') {
+        el[key] = false
+      }
       el.removeAttribute(key)
     } else if (key === 'value') {
       // 受控 input：赋值可能重置光标到末尾，更新前后记录并恢复
       setInputValue(el, value)
     } else {
+      // 布尔/checked 属性：property 保行为 + attribute 保快照（SSR
+      // serializeAttrs 输出裸属性，客户端补 attribute 两端一致）。
+      // ⚠️ 注意：checked 的 attribute 会同步 defaultChecked（form reset
+      // 语义），此为对齐 SSR/golden 的刻意取舍。
+      // default* 不设 attribute（对齐 React：会渲染成无效的 defaultvalue 属性）
       el[key] = value
+      if (key !== 'defaultValue' && key !== 'defaultChecked') {
+        el.setAttribute(key, '')
+      }
     }
     return
   }
@@ -844,6 +869,16 @@ function setProp(el: any, key: string, value: any) {
   // 其余走 attribute
   // React camelCase prop → 真实 HTML 属性名（htmlFor→for、tabIndex→tabindex…）
   const attrName = HTML_ATTR_OVERRIDES[key] ?? key
+  // enumerated 属性（contenteditable/draggable/spellcheck）：true→"true"、
+  // false→"false" 不移除（对齐 React/Vue 值形态与 SSR serializeAttrs）
+  if (isEnumeratedAttr(attrName)) {
+    if (value == null) el.removeAttribute(attrName)
+    else el.setAttribute(
+      attrName,
+      value === true ? 'true' : value === false ? 'false' : String(value),
+    )
+    return
+  }
   if (value == null || value === false) {
     el.removeAttribute(attrName)
   } else if (value === true) {

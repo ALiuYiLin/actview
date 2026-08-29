@@ -3,6 +3,12 @@ import { getChildren } from '../vnode'
 import { setCurrentInstance, getCurrentInstance } from './lifecycle'
 import { extractScopedIdProps, SCOPED_ID_PROP } from './scopedProps'
 import { HTML_ATTR_OVERRIDES } from './attr-map'
+import {
+  BOOLEAN_ATTRS,
+  isEnumeratedAttr,
+  normalizeClass,
+  normalizeStyleValue,
+} from './attr-utils'
 
 // ============================================================
 // renderToString — 构建期/SSR 前置：VNode 树 → HTML 字符串
@@ -47,21 +53,6 @@ interface SsrIdState {
 /** Fragment 标记（与 renderer/jsxFactory 一致：Symbol.for 全局共享） */
 const Fragment = Symbol.for('react.fragment')
 
-/** 布尔属性：值为 true 时输出空属性（如 disabled/checked/readonly） */
-const BOOLEAN_ATTRS = new Set([
-  'disabled',
-  'checked',
-  'readonly',
-  'required',
-  'multiple',
-  'selected',
-  'hidden',
-  'autofocus',
-  'novalidate',
-  'defer',
-  'async'
-])
-
 /** HTML 文本/属性转义 */
 function escapeHtml(value: string): string {
   return value
@@ -72,15 +63,19 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-/** style 对象 → "k:v;k2:v2;" 字符串（camelCase 键原样输出） */
+/** style 对象 → "k:v;k2:v2" 字符串（camelCase 键原样输出；
+ *  undefined/null/false 跳过、数字非 unitless 补 px——与客户端 CSSOM 一致） */
 function stringifyStyle(
-  style: string | Record<string, string | number>
+  style: string | Record<string, string | number | undefined | null | boolean>
 ): string {
   if (typeof style === 'string') return style
   if (!style) return ''
-  return Object.entries(style)
-    .map(([k, v]) => `${k}:${v}`)
-    .join(';')
+  const parts: string[] = []
+  for (const k of Object.keys(style)) {
+    const v = normalizeStyleValue(k, style[k])
+    if (v != null) parts.push(`${k}:${v}`)
+  }
+  return parts.join(';')
 }
 
 /** 归一化 children：单值 → 数组 */
@@ -231,7 +226,6 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
       )}"`
       continue
     }
-    if (value == null || value === false) continue
     // scopedId 约定（@actview/plugin-scoped）：值为 scoped 属性名（可空格分隔
     // 多个），翻译为真实属性输出 —— 与运行时 setProp/patchProps 语义一致
     if (key === SCOPED_ID_PROP) {
@@ -256,9 +250,27 @@ function serializeAttrs(props: Record<string, any> | null | undefined): string {
           : key === 'defaultChecked'
             ? 'checked'
             : key)
+    if (name === 'class') {
+      // class 数组/对象合并（对齐运行时 normalizeClass）
+      const cls = normalizeClass(value)
+      if (cls) out += ` class="${escapeHtml(cls)}"`
+      continue
+    }
+    if (BOOLEAN_ATTRS.has(name)) {
+      if (value === false) continue // false 布尔属性移除（对齐 setProp）
+      out += ` ${name}` // true → 裸属性
+      continue
+    }
+    if (isEnumeratedAttr(name)) {
+      // enumerated：true→"true"、false→"false"（对齐 React/Vue）
+      out += ` ${name}="${escapeHtml(
+        value === true ? 'true' : value === false ? 'false' : String(value),
+      )}"`
+      continue
+    }
+    if (value == null || value === false) continue
     if (value === true) {
-      // 布尔属性：输出空属性（对齐 setAttribute(key, '')）
-      out += ` ${name}${BOOLEAN_ATTRS.has(name) ? '' : '=""'}`
+      out += ` ${name}=""` // 非布尔非 enumerated 的 true → 空属性
       continue
     }
     out += ` ${name}="${escapeHtml(String(value))}"`

@@ -282,6 +282,20 @@ export interface AriaAttributes {
 // HTML 通用属性（无宽索引签名 —— 自定义属性请用 data-*）
 // ============================================================
 
+/**
+ * class 值（运行时 normalizeClass 语义，对齐 Vue）：
+ *   字符串原样；数组递归展平；对象取 truthy 键；null/undefined/false 跳过。
+ *  class / className 属性统一接受该形态。
+ */
+export type ClassValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | ClassValue[]
+  | Record<string, any>
+
 export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   children?: VNodeChildren
   key?: string | number | null
@@ -293,8 +307,8 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
    */
   scopedId?: string
   id?: string
-  class?: string
-  className?: string
+  class?: ClassValue
+  className?: ClassValue
   style?: string | Record<string, string | number | undefined>
   title?: string
   // 全局属性
@@ -811,7 +825,7 @@ export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   /** scoped 标记 prop（@actview/plugin-scoped），语义见 HTMLAttributes.scopedId */
   scopedId?: string
   /** SVG 元素同样接受 class（className 别名语义） */
-  class?: string
+  class?: ClassValue
   id?: string
   lang?: string
   style?: string | Record<string, string | number | undefined>

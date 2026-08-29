@@ -47,8 +47,8 @@ describe('React DOM 属性名映射（运行时）', () => {
     expect(el.hasAttribute('readonly')).toBe(true)
     expect(el.getAttribute('maxlength')).toBe('10')
     expect(el.getAttribute('autocomplete')).toBe('off')
-    // spellCheck={false}：布尔 false 移除属性
-    expect(el.hasAttribute('spellcheck')).toBe(false)
+    // spellCheck={false}：enumerated 属性 → "false" 不移除（对齐 React）
+    expect(el.getAttribute('spellcheck')).toBe('false')
   })
 
   it('encType / acceptCharset / colSpan / rowSpan / srcSet', () => {

@@ -119,4 +119,18 @@ describe('HTML/SVG 属性补全（类型层）', () => {
     const bad3 = <script async="true" />
     expect(bad3).toBeTruthy()
   })
+
+  it('class 类型放宽：数组/对象条件合并可写（normalizeClass 语义）', () => {
+    const ok = true
+    const el = (
+      <div
+        class={['a', ok && 'b', { c: true, d: false }, null, undefined]}
+        className={['x', { y: true }]}
+      />
+    )
+    expect(el).toBeTruthy()
+    const svgEl = <svg class={['s', { t: true }]} />
+    expect(svgEl).toBeTruthy()
+    // class 不接受数字对象外的任意对象键（Record<string, any> 已放行，无需 ts-expect-error）
+  })
 })
