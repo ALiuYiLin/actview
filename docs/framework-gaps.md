@@ -6,6 +6,7 @@
 > **修复状态**：P0 四项（1.1/1.2/1.3/1.6）已修复（`runtime/attr-utils.ts` 共享规范化层 + `test/platform-diff/attr-style.test.tsx`）。
 > **修复状态**：P1 三项（1.4 xlink / 1.5 URL 清洗 / 1.7 决策统一）已修复——`resolveAttr` 照抄 React 分组 switch 语义双端共用（`test/platform-diff/attr-p1.test.tsx`）。
 > **修复状态**：7.2 受控机制（渲染提交兜底 + toString 归一 + hydrate 不覆盖）与 P2-3 select/textarea 归一已修复（`test/platform-diff/controlled-form.test.tsx`）；radio 组互斥由浏览器原生 + 受控拉回自然覆盖。
+> **修复状态**：P2-4 调度双层队列已修复——主队列 job id 升序（父先子后）、watch pre/post 双层队列、递归更新检测（`test/reactivity/scheduler-p2-4.test.tsx`）。
 
 ---
 

@@ -3,46 +3,113 @@ import { getCurrentScope } from './effectScope'
 import { getDevtoolsHook } from '../devtools'
 
 // ============================================================
-// 调度批处理 — effect 更新入微任务队列去重
-//   trigger =》 queueJob（Set 去重）=》 微任务统一 flush =》 effect.run()
-//   nextTick(cb?)：等待本轮 flush 完成
+// 调度批处理 — 对齐 Vue scheduler 语义（P2-4）
+//   主队列（jobQueue）：effect 更新按 id 升序（父组件先创建 id 小 → 先更新）
+//   pre 队列：watch flush:'pre'（默认）——组件更新前执行
+//   post 队列（一次性）：watch flush:'post'——渲染提交后执行
+//   常驻 post 钩子（registerPostFlushHook）：每次提交后都执行（受控还原）
+//   递归更新检测：单轮内同一 job 执行超限 → 告警并跳过（防无限循环）
 // ============================================================
 
-const jobQueue = new Set<ReactiveEffect>()
+/** 递归更新阈值（对齐 Vue RECURSION_LIMIT） */
+const RECURSION_LIMIT = 100
+
+let effectId = 0
+const jobQueue: ReactiveEffect[] = []
+const preFlushQueue: (() => void)[] = []
+const pendingPostFlushCbs: (() => void)[] = []
+const postFlushHooks: (() => void)[] = []
 let isFlushing = false
 let currentFlushPromise: Promise<void> | null = null
 
-/** 渲染 flush 完成后的【常驻】钩子：每次 flushJobs 末尾都执行
- * （对齐 React commit 阶段语义——受控还原 restoreAllControlled 等
- * 依赖「每次渲染提交后」的确定性时机，不能被一次性消费） */
-const postFlushHooks: (() => void)[] = []
-
-export function registerPostFlushHook(cb: () => void) {
-  postFlushHooks.push(cb)
-}
-
-/** 把 effect 更新加入队列（同轮去重），并调度微任务 flush */
+/** 主队列：effect 更新入队（去重 + id 升序插入——父组件先于子组件更新，
+ *  对齐 Vue findInsertionIndex 语义） */
 export function queueJob(effect: ReactiveEffect) {
   if (!effect.active) return
-  jobQueue.add(effect)
-  if (!isFlushing) {
+  if (jobQueue.includes(effect)) return
+  const id = effect.id ?? 0
+  let i = jobQueue.length - 1
+  while (i >= 0 && (jobQueue[i].id ?? 0) > id) i--
+  jobQueue.splice(i + 1, 0, effect)
+  queueFlush()
+}
+
+function queueFlush() {
+  if (!currentFlushPromise) {
     currentFlushPromise = Promise.resolve().then(flushJobs)
   }
 }
 
-function flushJobs() {
-  isFlushing = true
-  // 逐个取出执行；执行中再次入队的 job 会在本轮继续处理（Set 迭代）
-  while (jobQueue.size) {
-    const job = jobQueue.values().next().value
-    if (!job) break
-    jobQueue.delete(job)
-    job.run()
+/** watch flush:'pre'（默认）：组件更新前执行 */
+export function queuePreFlushCb(cb: () => void) {
+  preFlushQueue.push(cb)
+  queueFlush()
+}
+
+/** watch flush:'post'：渲染提交后执行（一次性队列，每轮清空） */
+export function queuePostFlushCb(cb: () => void) {
+  pendingPostFlushCbs.push(cb)
+  queueFlush()
+}
+
+/** 常驻 post-flush 钩子：每次渲染提交后都执行（受控还原等） */
+export function registerPostFlushHook(cb: () => void) {
+  postFlushHooks.push(cb)
+}
+
+/** 递归更新检测：单轮内同一 job 执行超限 → 告警并跳过（防无限循环） */
+function checkRecursive(seen: Map<any, number>, fn: any): boolean {
+  const count = (seen.get(fn) ?? 0) + 1
+  if (count > RECURSION_LIMIT) {
+    const inst = fn.instance
+    console.warn(
+      `[actview] 递归更新检测：${
+        inst?.type?.name ? `组件 <${inst.type.name}> ` : ''
+      }effect 不断修改自身依赖导致无限触发（已跳过该 job）`,
+    )
+    return true
   }
-  isFlushing = false
-  currentFlushPromise = null
-  // 渲染提交完成：执行常驻 post-flush 钩子
-  for (const hook of postFlushHooks) hook()
+  seen.set(fn, count)
+  return false
+}
+
+function flushJobs() {
+  if (isFlushing) return
+  isFlushing = true
+  const seen = new Map<any, number>()
+  try {
+    while (jobQueue.length || preFlushQueue.length) {
+      // pre 队列：组件更新前执行（可能执行中又入队）
+      if (preFlushQueue.length) {
+        const cbs = preFlushQueue.splice(0)
+        for (const cb of cbs) {
+          if (checkRecursive(seen, cb)) continue
+          cb()
+        }
+      }
+      const job = jobQueue.shift()
+      if (!job || !job.active) continue
+      if (checkRecursive(seen, job)) continue
+      job.run()
+    }
+  } finally {
+    isFlushing = false
+    currentFlushPromise = null
+    // post 队列：渲染提交后（一次性）
+    if (pendingPostFlushCbs.length) {
+      const cbs = pendingPostFlushCbs.splice(0)
+      for (const cb of cbs) {
+        if (checkRecursive(seen, cb)) continue
+        cb()
+      }
+    }
+    // 常驻钩子（受控还原等）
+    for (const hook of postFlushHooks) hook()
+    // 执行中重新入队的任务 → 下一轮微任务继续（避免深栈递归）
+    if (jobQueue.length || preFlushQueue.length || pendingPostFlushCbs.length) {
+      queueFlush()
+    }
+  }
 }
 
 /** 返回本轮 flush 结束后的 Promise；传入回调则在其后执行 */
@@ -56,6 +123,9 @@ export function nextTick<T = void>(cb?: () => T): Promise<T | void> {
 // ============================================================
 
 export class ReactiveEffect {
+  /** 创建序 id（自增）：组件更新 effect 按挂载序分配——父组件先创建 id 小，
+   *  队列按 id 升序执行 → 父先于子更新（对齐 Vue instance.uid 语义） */
+  id = ++effectId
   deps: Dep[]
   /** 是否仍可响应：stop 后置 false，队列中的 pending job 将被跳过 */
   active = true

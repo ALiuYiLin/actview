@@ -1,4 +1,9 @@
-import { ReactiveEffect, nextTick } from './reactive-system'
+import {
+  ReactiveEffect,
+  nextTick,
+  queuePostFlushCb,
+  queuePreFlushCb,
+} from './reactive-system'
 import { isRef } from './ref'
 import type { Ref } from './ref'
 
@@ -125,16 +130,18 @@ export function watch<T>(
   }
 
   let pending = false
-  // flush 调度：sync 同步执行；post 等组件 flush 后执行；pre（默认）微任务
+  // flush 调度（P2-4 对齐 Vue scheduler 双层队列）：
+  //   sync 同步执行；post 入一次性 post 队列（渲染提交后）；pre（默认）入 pre 队列
+  //   （组件更新前）。时序由调度器统一保证，不再依赖各自微任务注册顺序。
   effect.scheduler = () => {
     if (pending) return
     pending = true
     if (flush === 'sync') {
       runJob()
     } else if (flush === 'post') {
-      Promise.resolve().then(() => nextTick().then(runJob))
+      queuePostFlushCb(runJob)
     } else {
-      Promise.resolve().then(runJob)
+      queuePreFlushCb(runJob)
     }
   }
 
