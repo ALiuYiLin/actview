@@ -42,10 +42,32 @@ const result = babel.transformSync(code, {
 | 导出 | 说明 |
 |---|---|
 | `defineComponentPlugin`（默认导出同） | Babel 插件工厂：组件 → `defineComponent` 转换 |
-| `createBabelTransform(plugin)` | 宿主壳工厂：模块级创建一次 ConfigItem，返回 `(code, filename) => { code, map } \| null` |
+| `createBabelTransform(plugin, options?)` | 宿主壳工厂：模块级创建一次 ConfigItem，返回 `(code, filename) => { code, map } \| null` |
 | `createBabelItem(plugin)` | 把插件工厂预编译为 ConfigItem（Babel 8 同步） |
-| `transformWithBabel(code, filename, pluginItem)` | 统一参数的 `transformSync` |
-| 类型：`BabelPlugin` / `BabelHostResult` | 宿主壳类型 |
+| `transformWithBabel(code, filename, pluginItem, options?)` | 统一参数的 `transformSync` |
+| `isExcludedTransform(filename, options?)` | 排除判定：node_modules 硬排除 / 未命中 include / 命中 exclude |
+| 类型：`BabelPlugin` / `BabelHostResult` / `BabelTransformOptions` | 宿主壳类型 |
+
+## 排除规则（node_modules 硬排除）
+
+宿主壳**硬排除 node_modules 下的文件**（返回 `null` 不转换）：依赖是第三方代码，属依赖管线（esbuild 预构建），不是源码管线——`babel-loader` / `@rollup/plugin-babel` 同款默认。`BabelTransformOptions`：
+
+```ts
+{
+  include?: Array<string | RegExp>,  // 白名单：命中任一才转换（默认不过滤；node_modules 硬排除优先）
+  exclude?: Array<string | RegExp>,  // 黑名单：命中任一即跳过（优先于 include）
+}
+```
+
+**源码分发库包 / 主题包（node_modules 下）需要现场编译时**，不在插件层开洞，而是在宿主构建配置里做**路径转换**，让文件解析路径脱离 node_modules 段、进入源码管线：
+
+```ts
+// vite.config.ts
+resolve: {
+  alias: { 'my-lib': 'node_modules/my-lib/src' }, // 路径不再含 node_modules 段 → 正常转换
+},
+optimizeDeps: { exclude: ['my-lib'] },            // 不预构建，保持源码形态
+```
 
 ## 依赖关系
 

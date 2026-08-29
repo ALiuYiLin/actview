@@ -74,9 +74,9 @@ export function actviewScopedPlugin(options: ScopedPluginOptions = {}) {
       const clean = cleanId(id)
       if (!/\.(tsx|jsx|js)$/.test(clean)) return null
       // 快速跳过：源码不含 ?scoped 时不解析（性能友好）。
-      // 注意：不按 node_modules 跳过——源码分发的主题/库包（如 actpress 主题）
-      // 发布在 node_modules 下也会合法 import '...css?scoped'，硬跳过会导致
-      // CSS 已 scoped 化但元素无属性。?scoped 检查对全部文件都安全。
+      // node_modules 下的文件由宿主壳硬排除（transformWithBabel 返回 null）；
+      // 源码分发主题/库包（actpress 场景）需要注入时，在 vite config 里
+      // alias 到包源码 + optimizeDeps.exclude，路径脱离 node_modules 段即可。
       if (!code.includes('?scoped')) return null
 
       // 预解析 CSS import → 绝对路径（走 Vite resolver，alias/裸包路径正确，
@@ -107,7 +107,7 @@ export function actviewScopedPlugin(options: ScopedPluginOptions = {}) {
           attrPrefix,
         }),
       )
-      const result = transformWithBabel(code, id, pluginItem)
+      const result = transformWithBabel(code, id, pluginItem, options.babel)
       if (!result) return null
       const out = result.code
       // 无实际转换（有 ?scoped import 但无 JSX 元素）时原样返回，避免多余 transform

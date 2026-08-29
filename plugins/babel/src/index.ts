@@ -11,7 +11,11 @@ export {
   createBabelTransform,
   createBabelItem,
   transformWithBabel,
+  isExcludedTransform,
 } from './babel-host.ts'
-export type { BabelHostResult } from './babel-host.ts'
+export type {
+  BabelHostResult,
+  BabelTransformOptions,
+} from './babel-host.ts'
 
 export { default as solidPlugin } from './solid-plugin.ts'
