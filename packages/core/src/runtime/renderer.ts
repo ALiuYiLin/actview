@@ -954,6 +954,13 @@ function setProp(el: any, key: string, value: any, skipControlled?: boolean) {
       } else {
         // 受控 input：赋值可能重置光标到末尾，更新前后记录并恢复
         setInputValue(el, value)
+        // 对齐 SSR/React 契约：INPUT 的 value 渲染 attribute（serializeAttrs
+        // 经 resolveAttr 的 enumerated 分支已输出 value 属性；客户端补上——
+        // 双端一致 + React 对受控/非受控 input 都渲染 value attribute）。
+        // textarea 保持 React 语义（value 走 children，不输出 attribute）。
+        if (el.tagName === 'INPUT') {
+          el.setAttribute('value', String(value))
+        }
       }
     } else {
       // 布尔/checked 属性：property 保行为 + attribute 保快照（SSR
