@@ -148,8 +148,11 @@ function hydrateElement(
   //  boolean/value/checked 等复杂，DOM 读比较易误报）。
   warnClassDiff(el, vnode.props)
   // 全量 setProp：事件绑定 + 属性修正（SSR 输出与客户端 props 一致时幂等；
-  // 不一致时客户端优先覆盖——对齐 React 水合语义）
-  patchProps(null, vnode.props, el)
+  // 不一致时客户端优先覆盖——对齐 React 水合语义）。
+  // skipControlled：受控 input/select/textarea 只记录标记、不写 value/checked
+  // DOM——SSR 输出已是受控值，覆盖会丢失用户在 hydrate 前的输入
+  // （React trackHydrated 语义）
+  patchProps(null, vnode.props, el, { skipControlled: true })
   applyRef(vnode.props?.ref, el)
   // children 水合（dangerouslySetInnerHTML：SSR 已注入，跳过）
   const hasDanger = vnode.props?.dangerouslySetInnerHTML != null

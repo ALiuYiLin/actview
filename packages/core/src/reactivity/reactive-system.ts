@@ -12,6 +12,15 @@ const jobQueue = new Set<ReactiveEffect>()
 let isFlushing = false
 let currentFlushPromise: Promise<void> | null = null
 
+/** 渲染 flush 完成后的【常驻】钩子：每次 flushJobs 末尾都执行
+ * （对齐 React commit 阶段语义——受控还原 restoreAllControlled 等
+ * 依赖「每次渲染提交后」的确定性时机，不能被一次性消费） */
+const postFlushHooks: (() => void)[] = []
+
+export function registerPostFlushHook(cb: () => void) {
+  postFlushHooks.push(cb)
+}
+
 /** 把 effect 更新加入队列（同轮去重），并调度微任务 flush */
 export function queueJob(effect: ReactiveEffect) {
   if (!effect.active) return
@@ -32,6 +41,8 @@ function flushJobs() {
   }
   isFlushing = false
   currentFlushPromise = null
+  // 渲染提交完成：执行常驻 post-flush 钩子
+  for (const hook of postFlushHooks) hook()
 }
 
 /** 返回本轮 flush 结束后的 Promise；传入回调则在其后执行 */

@@ -12,7 +12,7 @@ import {
   resolveAttr,
 } from './attr-utils'
 import { mountSolid, unmountSolid, SOLID_TYPE } from './solid'
-import { pauseTracking, resetTracking, nextTick } from '../reactivity/reactive-system'
+import { pauseTracking, resetTracking, nextTick, registerPostFlushHook } from '../reactivity/reactive-system'
 import {
   mountTeleport,
   patchTeleport,
@@ -221,6 +221,19 @@ export function mountVNode(
   const el = createElement(vnode.type as string)
   vnode.el = el
   patchProps(null, vnode.props, el)
+  // textarea 特例（React 语义）：children 是 value 的声明形态，不渲染为文本
+  // 节点；无 value prop 时 children 文本作为初始 value
+  let children = vnode.props?.children
+  if (vnode.type === 'textarea') {
+    if (vnode.props?.value == null && children != null) {
+      const text = Array.isArray(children)
+        ? children.map((c: any) => (c == null ? '' : String(c))).join('')
+        : children
+      if (text != null) setInputValue(el, String(text))
+    }
+    children = undefined
+  }
+  const isSelect = vnode.type === 'select'
   // 前序插入（AI-002）：先接入容器再挂载子元素——子元素 ref 回调触发时，
   // 当前宿主元素及整条祖先链已连接（isConnected === true，对齐 React 的
   // mutation 阶段先 placement 后挂子）。
@@ -232,7 +245,12 @@ export function mountVNode(
   const hasDanger = vnode.props?.dangerouslySetInnerHTML != null
   vnode.__avChildren = hasDanger
     ? []
-    : patchChildren(null, vnode.props?.children, el, undefined, parent)
+    : patchChildren(null, children, el, undefined, parent)
+  // select 受控值在 children（options）挂载后再应用——patchProps 时 options
+  // 未就绪，value → selected 无法匹配
+  if (isSelect && vnode.props?.value != null) {
+    setSelectValue(el as HTMLSelectElement, vnode.props.value)
+  }
   // 模板引用：ref 指向挂载后的 DOM
   applyRef(vnode.props?.ref, el)
   return el
@@ -622,7 +640,13 @@ function getSequence(arr: number[]): number[] {
  * 属性名，可空格分隔多个）；子组件手动应用到根元素（<div scopedId={props.scopedId}>
  * 或 <div {...props}>），此处把 scopedId 翻译为真实 scoped 属性。
  */
-export function patchProps(oldProps: any, newProps: any, el: Element) {  oldProps = oldProps || {}
+export function patchProps(
+  oldProps: any,
+  newProps: any,
+  el: Element,
+  opts?: { skipControlled?: boolean },
+) {
+  oldProps = oldProps || {}
   newProps = newProps || {}
 
   // scopedId 翻译：值 = scoped 属性名（可空格分隔多个）；旧值变化时移除旧属性
@@ -643,7 +667,7 @@ export function patchProps(oldProps: any, newProps: any, el: Element) {  oldProp
   for (const key in oldProps) {
     if (key === 'children' || key === 'ref' || key === SCOPED_ID_PROP) continue
     if (!(key in newProps)) {
-      setProp(el, key, undefined)
+      setProp(el, key, undefined, opts?.skipControlled)
     }
   }
   // 设置/更新新 props：值未变（Object.is）直接跳过，避免无条件写 DOM
@@ -651,7 +675,7 @@ export function patchProps(oldProps: any, newProps: any, el: Element) {  oldProp
   for (const key in newProps) {
     if (key === 'children' || key === 'ref' || key === SCOPED_ID_PROP) continue
     if (Object.is(oldProps[key], newProps[key])) continue
-    setProp(el, key, newProps[key])
+    setProp(el, key, newProps[key], opts?.skipControlled)
   }
 }
 
@@ -746,25 +770,61 @@ function patchEvent(el: any, key: string, value: any) {
   }
 }
 
-/**
- * React 受控还原（value tracker 语义）：事件处理后，若 DOM 值被用户交互
- * 改变且偏离渲染时的受控值（value/checked），拉回受控值。
- * 执行时机：渲染提交之后（见 patchEvent 的调用——nextTick 绑定渲染 flush）：
- * 比较的是「最新受控值」，用户输入与 state 一致时不拉回（光标不受影响），
- * 仅当 DOM 真的偏离受控值（如 state 未同步变化）才拉回。
- */
+/** 受控元素注册表：渲染提交后统一还原（对齐 React commit 阶段 updateInput——
+ *  覆盖自动填充/脚本改 DOM 等非事件场景；事件后检查见 patchEvent，两者互补） */
+const controlledEls = new Set<Element>()
+
 function restoreControlledState(el: any) {
   const controlled = el.__avControlled
   if (!controlled) return
   if ('checked' in controlled && el.checked !== controlled.checked) {
     el.checked = controlled.checked
   }
-  if ('value' in controlled && el.value !== controlled.value) {
-    setInputValue(el, controlled.value)
+  if ('value' in controlled) {
+    if (el.tagName === 'SELECT') {
+      // select：直接按受控值重设 selected（el.value 对 multiple 语义不完整；
+      // 重设 selected 不触发 change，幂等）
+      setSelectValue(el, controlled.value)
+    } else if (el.value !== String(controlled.value)) {
+      // toString 归一后再比较（value={5} 时 el.value("5") === "5" 不拉回，
+      // 消除 number/boolean 造成的多余 DOM 写与光标重置）
+      setInputValue(el, controlled.value)
+    }
   }
 }
 
-function setProp(el: any, key: string, value: any) {
+/** 渲染 flush 完成后统一还原全部受控元素（常驻 post-flush 钩子，
+ *  每次渲染提交都执行——覆盖自动填充/脚本改 DOM 等非事件场景） */
+function restoreAllControlled() {
+  for (const el of controlledEls) {
+    try {
+      restoreControlledState(el)
+    } catch (e) {
+      // 单个元素还原失败不中断其余（防御：元素可能已被外部移除）
+      console.warn('[actview] 受控还原失败', el, e)
+    }
+  }
+}
+registerPostFlushHook(restoreAllControlled)
+
+/**
+ * select 受控值应用：value → option selected（单值 / multiple + 数组）。
+ * 单值未匹配任何 option → 清空选中（对齐 select.value 赋未知值表现）。
+ */
+function setSelectValue(el: HTMLSelectElement, value: any) {
+  const multiple = el.multiple
+  const values =
+    multiple && Array.isArray(value) ? value.map((v) => String(v)) : null
+  let matched = false
+  for (const opt of Array.from(el.options)) {
+    const sel = multiple ? values!.includes(opt.value) : String(value) === opt.value
+    if (sel) matched = true
+    opt.selected = sel
+  }
+  if (!multiple && !matched) el.selectedIndex = -1
+}
+
+function setProp(el: any, key: string, value: any, skipControlled?: boolean) {
   // 事件：addEventListener + capture + invoker 统一解绑（参考 Vue 3 patchEvent）
   if (key.startsWith('on')) {
     patchEvent(el, key, value)
@@ -823,14 +883,36 @@ function setProp(el: any, key: string, value: any) {
     // value/checked 为 null/undefined = 非受控（删标记）；checked=false 仍是
     // 受控（还原用 false）；default* 不参与受控还原。
     if (key === 'value' || key === 'checked') {
+      // 受控语义仅限表单控件（React：input/select/textarea）；
+      // <option value> 等是普通属性语义，不参与受控标记/还原
+      const isForm =
+        el.tagName === 'INPUT' ||
+        el.tagName === 'SELECT' ||
+        el.tagName === 'TEXTAREA'
+      if (!isForm) {
+        if (key === 'value') {
+          if (value == null) el.removeAttribute('value')
+          else el.setAttribute('value', String(value))
+        } else {
+          el[key] = value
+        }
+        return
+      }
       const controlled = (el.__avControlled ??= {})
       if (value == null) {
         delete controlled[key]
-        if (Object.keys(controlled).length === 0) delete el.__avControlled
+        if (Object.keys(controlled).length === 0) {
+          delete el.__avControlled
+          controlledEls.delete(el) // 非受控：移出还原注册表
+        }
       } else {
         controlled[key] = value
+        controlledEls.add(el) // 受控：注册进渲染提交还原表
       }
     }
+    // hydrate：仅记录受控标记、不写 DOM——SSR 输出已是受控值，
+    // 覆盖会丢失用户在 hydrate 前的输入（React trackHydrated 语义）
+    if (skipControlled) return
     if (value == null || value === false) {
       // 行为布尔（checked/disabled/readonly）：property 重置 + attribute
       // 移除（C11——只 removeAttribute 不重置 property 会让 checked 状态
@@ -840,8 +922,13 @@ function setProp(el: any, key: string, value: any) {
       }
       el.removeAttribute(key)
     } else if (key === 'value') {
-      // 受控 input：赋值可能重置光标到末尾，更新前后记录并恢复
-      setInputValue(el, value)
+      if (el.tagName === 'SELECT') {
+        // select 受控值：value → option selected（multiple 支持数组）
+        setSelectValue(el, value)
+      } else {
+        // 受控 input：赋值可能重置光标到末尾，更新前后记录并恢复
+        setInputValue(el, value)
+      }
     } else {
       // 布尔/checked 属性：property 保行为 + attribute 保快照（SSR
       // serializeAttrs 输出裸属性，客户端补 attribute 两端一致）。
@@ -1029,6 +1116,7 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     // 原生元素 / Fragment / 文本：递归 children——嵌套在元素/Fragment 里的
     // 组件同样要触发 onUnmounted。此前只递归组件 subTree 一层，会漏掉更深层
     // 组件（例如渲到 body 的 FloatingPortal 无法执行 portalNode 清理）。
+    if (vnode.el) controlledEls.delete(vnode.el) // 受控元素移出还原表（幂等）
     unmountChildren(vnode)
   }
   // 移除 vnode 子树的所有真实 DOM：组件 render 返回 Fragment 时组件 vnode.el
