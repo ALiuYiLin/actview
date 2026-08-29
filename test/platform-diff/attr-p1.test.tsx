@@ -181,6 +181,19 @@ describe('P1：布尔组补充键', () => {
     expect(host.querySelector('button')!.getAttribute('inert')).toBe('')
     expect(host.querySelector('option')!.getAttribute('selected')).toBe('')
   })
+
+  // camelCase 布尔 prop 命中小写布尔键（resolveAttr 需查规范化名）：
+  // autoFocus → autofocus。回归防护：1.4.0 曾因 BOOLEAN_GROUP.has(key)
+  // 只查原始 key（autoFocus）而漏匹配小写 autofocus，属性被 plain 分支移除。
+  it('autoFocus（camelCase）→ autofocus 布尔属性（双端一致）', () => {
+    function App() {
+      return <input autoFocus data-testid="i" />
+    }
+    const html = renderToString(<input autoFocus />)
+    expect(html).toContain('autofocus')
+    const host = mount(App)
+    expect(host.querySelector('input')!.hasAttribute('autofocus')).toBe(true)
+  })
 })
 
 // ------------------------------------------------------------

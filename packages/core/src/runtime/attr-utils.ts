@@ -418,6 +418,10 @@ export function resolveAttr(key: string, value: unknown, tag: string): ResolvedA
     return resolveNsAttr(XML_GROUP[key], XML_NS, value, false)
   }
   if (ENUMERATED_GROUP.has(key)) return resolveEnumeratedAttr(name, value)
-  if (BOOLEAN_GROUP.has(key)) return resolveBooleanAttr(name, value)
+  // 分组查询兼容 key 与规范化名（HTML_ATTR_OVERRIDES）：autoFocus → autofocus
+  // 等 camelCase prop 需命中小写布尔键（如 BOOLEAN_GROUP 的 'autofocus'）。
+  if (BOOLEAN_GROUP.has(key) || BOOLEAN_GROUP.has(name)) {
+    return resolveBooleanAttr(name, value)
+  }
   return resolvePlainAttr(name, value)
 }
