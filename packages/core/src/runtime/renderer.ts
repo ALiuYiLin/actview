@@ -670,6 +670,26 @@ export function patchProps(
       setProp(el, key, undefined, opts?.skipControlled)
     }
   }
+  // style 键级差异：新 style 中消失的键必须清除旧 DOM 值——patch 只设置
+  // 新值不清理会残留旧键（SliderThumb 的 z-index 从 2 → undefined 等场景，
+  // golden C5：最终 DOM 多出上一轮的 z-index:2）
+  const oldStyle = oldProps.style
+  const newStyle = newProps.style
+  if (
+    oldStyle &&
+    newStyle &&
+    typeof oldStyle === 'object' &&
+    typeof newStyle === 'object'
+  ) {
+    const elStyle = (el as any).style as CSSStyleDeclaration
+    for (const k in oldStyle) {
+      if (!(k in newStyle)) {
+        if (k.startsWith('--')) elStyle.removeProperty(k)
+        else (elStyle as any)[k] = ''
+      }
+    }
+  }
+
   // 设置/更新新 props：值未变（Object.is）直接跳过，避免无条件写 DOM
   // （选中行高亮等场景：1000 行 props 每次重渲染都相同，只重写真正变化的行）
   for (const key in newProps) {
@@ -858,10 +878,16 @@ function setProp(el: any, key: string, value: any, skipControlled?: boolean) {
       // CSS 变量（--*）走 setProperty（Object.assign 对 CSSStyleDeclaration
       // 的自定义属性键无效）；其余 camelCase 键直接赋值。
       // null/undefined/false 跳过——与 SSR stringifyStyle 同一规则，
-      // 不依赖 CSSOM 对 undefined 赋值的静默忽略（C7 两端一致）
+      // 不依赖 CSSOM 对 undefined 赋值的静默忽略（C7 两端一致）。
+      // 注意：键显式 null/undefined/false 时清除旧值（对齐"不输出即移除"，
+      // 避免上一轮的样式键残留——如 z-index 2 → undefined）。
       for (const k in value) {
         const v = normalizeStyleValue(k, value[k])
-        if (v == null) continue
+        if (v == null) {
+          if (k.startsWith('--')) el.style.removeProperty(k)
+          else el.style[k] = ''
+          continue
+        }
         if (k.startsWith('--')) el.style.setProperty(k, v)
         else el.style[k] = v
       }
