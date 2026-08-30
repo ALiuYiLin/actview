@@ -118,11 +118,15 @@ export function patch(
   newVnode: any,
   container: Element,
   index?: number,
-  parent?: any
+  parent?: any,
+  anchor?: Node | null
 ) {
   newVnode = resolveDynamicVNode(newVnode)
   if (oldVnode == null) {
-    mountVNode(newVnode, container, parent)
+    // 通用挂载（默认 append 末尾）；同索引 diff 的精确插入见 patchChildren
+    // （sameIndexAnchor——childNodes[index] 在 Fragment 递归挂载下索引错位）；
+    // 组件更新（lazy 加载完成 subtree null→实节点）传显式 anchor
+    mountVNode(newVnode, container, parent, anchor)
     return
   }
   if (newVnode == null) {
@@ -169,7 +173,8 @@ export function mountVNode(
   vnode: any,
   container: Element | null,
   parent?: any,
-  anchor?: Node | null
+  anchor?: Node | null,
+  nextSiblingVnode?: any
 ): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
@@ -188,8 +193,16 @@ export function mountVNode(
 
   // 组件
   if (isComponentVNode(vnode)) {
-    // 注入渲染依赖（patch/applyRef）→ 组件挂载不反向 import 本模块
-    mountComponent(vnode, container, parent, { patch, applyRef })
+    // 注入渲染依赖（patch/applyRef）→ 组件挂载不反向 import 本模块。
+    // anchor：组件首次渲染 subtree 的插入位置；nextSiblingVnode：lazy 等
+    // 首次渲染 null 的组件，subtree 后续挂载需要后兄弟 DOM 作锚点
+    mountComponent(vnode, container, parent, {
+      patch,
+      applyRef,
+      anchor,
+      nextSiblingVnode,
+      firstDomEl,
+    })
     return vnode.el
   }
   // Fragment：自身无 DOM，直接挂载 children
@@ -476,9 +489,42 @@ function patchChildren(
 
   const len = Math.max(oldList.length, newList.length)
   for (let i = 0; i < len; i++) {
-    patch(oldList[i] ?? null, newList[i] ?? null, container, i, parent)
+    const oldV = oldList[i] ?? null
+    const newV = newList[i] ?? null
+    if (oldV == null && newV != null) {
+      // 同索引挂载：插到「旧列表 i 之后第一个有 DOM 的节点」前（原位置），
+      // 否则 append 到末尾会破坏兄弟顺序（旧列表含 null 空位，
+      // 如 [null, btn, null] → 新 [g, btn, g] 时 g 会堆到末尾）。
+      // 不能用 container.childNodes[index]：Fragment 递归挂载/文本混排时
+      // childNodes 索引与 vnode 索引不对齐（Bug 3 回归）。
+      // nextSiblingVnode：组件（lazy 等）首次渲染 null 时记录后兄弟，
+      // 加载完成后 subtree 挂载用其 DOM 作锚点
+      mountVNode(
+        newV,
+        container,
+        parent,
+        sameIndexAnchor(oldList, i),
+        newList[i + 1] ?? null
+      )
+    } else {
+      patch(oldV, newV, container, i, parent)
+    }
   }
   return newList
+}
+
+/**
+ * 同索引 diff 的挂载锚点：旧列表第 i 项（null，无 DOM）原本应占据的位置 =
+ * 旧列表 i 之后第一个有真实 DOM 的节点前（首个即正确位置；Fragment 多 DOM
+ * 用 firstDomEl 取第一个元素）。i 之后无 DOM → append 末尾。
+ */
+function sameIndexAnchor(oldList: any[], i: number): Node | null {
+  for (let j = i + 1; j < oldList.length; j++) {
+    if (oldList[j] == null) continue
+    const el = firstDomEl(oldList[j])
+    if (el) return el
+  }
+  return null
 }
 
 // ------------------------------------------------------------
@@ -539,7 +585,9 @@ function patchKeyedChildren(
       // 对象），DOM 已挂载——若 mountVNode 会无条件重建覆盖 vnode.el =》 旧 DOM
       // 残留累积。跳过 mount，位置由第 5 步 insertBefore 调整。
       if (oldList.includes(newVNode)) continue
-      mountVNode(newVNode, container, parent)
+      // nextSiblingVnode：lazy 组件加载完成后 subtree 挂载的锚点
+      // （第 5 步统一 insertBefore 调整 DOM 顺序，组件加载完成时后兄弟已就位）
+      mountVNode(newVNode, container, parent, undefined, newList[i + 1] ?? null)
     }
   }
 

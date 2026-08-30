@@ -38,10 +38,19 @@ export interface RendererDeps {
     newVnode: any,
     container: Element,
     index?: number,
-    parent?: any
+    parent?: any,
+    anchor?: Node | null
   ) => void
   /** 模板引用回调（ref 指向组件实例） */
   applyRef: (ref: any, value: any) => void
+  /** 挂载锚点：组件 vnode 在父容器中的插入位置（同索引 diff / keyed 传入），
+   *  组件首次渲染 subtree 时用其定位（否则 append 到末尾破坏兄弟顺序） */
+  anchor?: Node | null
+  /** 组件 vnode 的后兄弟 vnode（父 children 里下一项）：subtree 首次渲染
+   *  null（lazy 占位）后加载完成挂载时，用其 DOM 作锚点保持兄弟顺序 */
+  nextSiblingVnode?: any
+  /** 取 vnode 子树第一个真实 DOM（锚点求值，renderer 注入） */
+  firstDomEl?: (vnode: any) => Node | null
   /** 水合上下文（hydrate 树沿挂载链传递）：游标 + 子树水合函数。
    *  组件首帧渲染不 patch（新建），改与既有 DOM 配对。 */
   hydrate?: { cursor: any; container: Element }
@@ -284,7 +293,25 @@ export function mountComponent(
           instance
         )
       } else {
-        deps.patch(oldSubTree, normalizedSubTree, container as Element, undefined, instance)
+        // 组件子树挂载锚点：
+        //  - 首次渲染（isMounted=false）：用挂载锚点 deps.anchor（外层传入）
+        //  - 后续 subtree 从 null → 实节点（lazy 加载完成）：用后兄弟 vnode
+        //    的 DOM（按 vnode 延迟求值，兄弟未挂载则 null → append）
+        // 否则 [lazy, div, lazy] 会渲染成 [div, lazy, lazy]（append 末尾）
+        const anchor =
+          oldSubTree == null && !instance.isMounted
+            ? deps.anchor ?? null
+            : deps.nextSiblingVnode && deps.firstDomEl
+              ? deps.firstDomEl(deps.nextSiblingVnode)
+              : null
+        deps.patch(
+          oldSubTree,
+          normalizedSubTree,
+          container as Element,
+          undefined,
+          instance,
+          anchor
+        )
       }
       // 刷新组件 VNode 的 el（子树根可能因条件渲染而改变）
       vnode.el = instance.subTree ? instance.subTree.el : null
