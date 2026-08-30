@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "@actview/core": "^1.1.0"
+    "@actview/core": "^1.0.0"
   },
   "devDependencies": {
     "@actview/core": "workspace:^"
