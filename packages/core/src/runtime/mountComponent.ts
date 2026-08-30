@@ -46,11 +46,9 @@ export interface RendererDeps {
   /** 挂载锚点：组件 vnode 在父容器中的插入位置（同索引 diff / keyed 传入），
    *  组件首次渲染 subtree 时用其定位（否则 append 到末尾破坏兄弟顺序） */
   anchor?: Node | null
-  /** 组件 vnode 的后兄弟 vnode（父 children 里下一项）：subtree 首次渲染
-   *  null（lazy 占位）后加载完成挂载时，用其 DOM 作锚点保持兄弟顺序 */
-  nextSiblingVnode?: any
-  /** 取 vnode 子树第一个真实 DOM（锚点求值，renderer 注入） */
-  firstDomEl?: (vnode: any) => Node | null
+  /** 子树结束后的下一个兄弟（对齐 Vue getNextHostNode）：组件更新时
+   *  subtree 挂载/重挂的锚点按旧子树重算（对齐 Vue :1544-1554） */
+  getNextHostNode?: (vnode: any) => Node | null
   /** 水合上下文（hydrate 树沿挂载链传递）：游标 + 子树水合函数。
    *  组件首帧渲染不 patch（新建），改与既有 DOM 配对。 */
   hydrate?: { cursor: any; container: Element }
@@ -293,16 +291,16 @@ export function mountComponent(
           instance
         )
       } else {
-        // 组件子树挂载锚点：
-        //  - 首次渲染（isMounted=false）：用挂载锚点 deps.anchor（外层传入）
-        //  - 后续 subtree 从 null → 实节点（lazy 加载完成）：用后兄弟 vnode
-        //    的 DOM（按 vnode 延迟求值，兄弟未挂载则 null → append）
-        // 否则 [lazy, div, lazy] 会渲染成 [div, lazy, lazy]（append 末尾）
+        // 组件子树挂载锚点（对齐 Vue 组件更新 :1544-1554）：
+        //  - 首次渲染（oldSubTree == null，含 lazy 占位——占位是文本节点
+        //    非 null）：用挂载锚点 deps.anchor（外层传入）
+        //  - 更新（oldSubTree 非 null）：getNextHostNode(oldSubTree) 每次重算
+        //    （子树结束后的兄弟——替换/变位场景锚点正确）
         const anchor =
-          oldSubTree == null && !instance.isMounted
+          oldSubTree == null
             ? deps.anchor ?? null
-            : deps.nextSiblingVnode && deps.firstDomEl
-              ? deps.firstDomEl(deps.nextSiblingVnode)
+            : deps.getNextHostNode
+              ? deps.getNextHostNode(oldSubTree)
               : null
         deps.patch(
           oldSubTree,

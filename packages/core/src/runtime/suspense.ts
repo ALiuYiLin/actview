@@ -21,6 +21,7 @@ import { ref } from '../reactivity/ref'
 const suspenseStack: any[] = []
 const Fragment = Symbol.for('react.fragment')
 const REACT_ELEMENT_TYPE = Symbol.for('react.element')
+const Text = Symbol.for('react.text')
 
 export function pushSuspense(instance: any) {
   suspenseStack.push(instance)
@@ -127,7 +128,17 @@ export function lazy(loader: () => Promise<any>) {
     return () => {
       if (loadError) throw loadError
       if (loaded.value && comp) return createVNode(comp)
-      return null // 未完成：占位（Suspense 显示 fallback）
+      // 占位文本节点（零宽空格，不可见）——对齐 Vue async 组件 placeholder
+      // （renderer.ts resolveAsyncComponentPlaceholder）：列表 diff / 锚点计算
+      // 有稳定节点可定位。此前渲染 null 无 DOM：加载完成 subtree null→实节点
+      // 挂载只能靠补丁式 nextSiblingVnode，且 SSR 输出为空、hydrate 无配对。
+      return {
+        $$typeof: REACT_ELEMENT_TYPE,
+        type: Text,
+        key: null,
+        ref: null,
+        props: { text: '\u200B' }
+      }
     }
   })
 }

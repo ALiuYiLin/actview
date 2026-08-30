@@ -139,14 +139,14 @@ export function patch(
   if (oldVnode === newVnode) return
   // type 与 key 都相同 → 走更新；否则整体替换
   if (oldVnode.type === newVnode.type && oldVnode.key === newVnode.key) {
-    patchVNode(oldVnode, newVnode, container, index, parent)
+    patchVNode(oldVnode, newVnode, container, index, parent, anchor)
   } else if (newVnode.component?.isActive?.()) {
     // keep-alive 缓存命中：旧组件先卸载（走缓存分支，DOM 移入隐藏容器），
     // 再复用缓存实例更新；实例已失效（如 Suspense 的 fallback 替换后）则重建
     unmount(oldVnode, container, index)
     patchComponent(oldVnode, newVnode, container, parent)
   } else {
-    replace(oldVnode, newVnode, container, index, parent)
+    replace(oldVnode, newVnode, container, index, parent, anchor)
   }
 }
 
@@ -173,8 +173,7 @@ export function mountVNode(
   vnode: any,
   container: Element | null,
   parent?: any,
-  anchor?: Node | null,
-  nextSiblingVnode?: any
+  anchor?: Node | null
 ): any {
   vnode = resolveDynamicVNode(vnode)
   if (vnode == null || typeof vnode === 'boolean') return null
@@ -194,18 +193,19 @@ export function mountVNode(
   // 组件
   if (isComponentVNode(vnode)) {
     // 注入渲染依赖（patch/applyRef）→ 组件挂载不反向 import 本模块。
-    // anchor：组件首次渲染 subtree 的插入位置；nextSiblingVnode：lazy 等
-    // 首次渲染 null 的组件，subtree 后续挂载需要后兄弟 DOM 作锚点
+    // anchor：组件首次渲染 subtree 的插入位置；getNextHostNode：组件更新
+    // 时 subtree 挂载/重挂的锚点重算（对齐 Vue）
     mountComponent(vnode, container, parent, {
       patch,
       applyRef,
       anchor,
-      nextSiblingVnode,
-      firstDomEl,
+      getNextHostNode,
     })
     return vnode.el
   }
-  // Fragment：自身无 DOM，直接挂载 children
+  // Fragment：自身无 DOM，children 直接挂父容器（挂载锚点 = 传入 anchor，
+  // 即 Fragment 应插入的位置——父 diff 上下文提供；不引入额外锚点节点，
+  // 避免打破 childNodes[index] 定位假设）
   if (vnode.type === Fragment) {
     vnode.el = null
     vnode.__avChildren = patchChildren(
@@ -213,7 +213,8 @@ export function mountVNode(
       vnode.props?.children,
       container as Element,
       undefined,
-      parent
+      parent,
+      anchor
     )
     return null
   }
@@ -288,7 +289,8 @@ function patchVNode(
   newVnode: any,
   container: Element,
   index?: number,
-  parent?: any
+  parent?: any,
+  anchor?: Node | null
 ) {
   // <solid> 块：内部自驱动，新旧始终短路（DOM/订阅不变，el 继承供 keyed 移动）
   if (newVnode.$$typeof === SOLID_TYPE) {
@@ -360,7 +362,8 @@ function patchVNode(
       newVnode.props?.children,
       container,
       oldVnode,
-      parent
+      parent,
+      anchor
     )
     return
   }
@@ -372,6 +375,10 @@ function patchVNode(
   }
   // dangerouslySetInnerHTML：忽略 children
   const hasDanger = newVnode.props?.dangerouslySetInnerHTML != null
+  // 元素内部 children：**不传 anchor**——anchor 是父容器（平级）的定位节点，
+  // 元素内部挂载应 append（内部无平级兄弟）；错传父容器 anchor 会让
+  // insertBefore 用不在本元素下的 referenceNode，jsdom/真实浏览器抛
+  // NotFoundError → 组件更新中断（props 不响应 / provide 断链）
   newVnode.__avChildren = patchChildren(
     hasDanger ? undefined : oldVnode.props?.children,
     hasDanger ? undefined : newVnode.props?.children,
@@ -466,7 +473,8 @@ function patchChildren(
   newChildren: any,
   container: Element,
   oldVnode?: any,
-  parent?: any
+  parent?: any,
+  anchor?: Node | null
 ): any[] {
   // 旧 vnode 列表：优先用上次 diff 缓存的 vnode（带 el，文本节点可精确定位），
   // 否则对旧 children 重新包装（首次/异常兜底）
@@ -483,7 +491,7 @@ function patchChildren(
 
   // 新列表中出现 key → 走 keyed diff；否则保持同索引 diff
   if (newList.some((v) => v && v.key != null)) {
-    patchKeyedChildren(oldList, newList, container, parent)
+    patchKeyedChildren(oldList, newList, container, parent, anchor)
     return newList
   }
 
@@ -492,22 +500,32 @@ function patchChildren(
     const oldV = oldList[i] ?? null
     const newV = newList[i] ?? null
     if (oldV == null && newV != null) {
-      // 同索引挂载：插到「旧列表 i 之后第一个有 DOM 的节点」前（原位置），
+      // 同索引挂载：插到「旧列表 i 之后第一个仍在本容器的 DOM」前（原位置），
       // 否则 append 到末尾会破坏兄弟顺序（旧列表含 null 空位，
       // 如 [null, btn, null] → 新 [g, btn, g] 时 g 会堆到末尾）。
       // 不能用 container.childNodes[index]：Fragment 递归挂载/文本混排时
       // childNodes 索引与 vnode 索引不对齐（Bug 3 回归）。
-      // nextSiblingVnode：组件（lazy 等）首次渲染 null 时记录后兄弟，
-      // 加载完成后 subtree 挂载用其 DOM 作锚点
+      // sameIndexAnchor 带归属校验（container.contains）：旧节点可能已卸载/
+      // 跨容器（Teleport/keep-alive），取容器外 DOM 作 anchor 会抛 NotFoundError。
+      // fallback anchor：Fragment 内部 children 的结束锚点（防止越过后续兄弟）
       mountVNode(
         newV,
         container,
         parent,
-        sameIndexAnchor(oldList, i),
-        newList[i + 1] ?? null
+        sameIndexAnchor(oldList, i, container) ?? anchor
       )
     } else {
-      patch(oldV, newV, container, i, parent)
+      // anchor：该项之后的位置（Fragment 等无自身 DOM 的平级容器，
+      // 其 children 追加/挂载用它定位——不引入额外锚点节点，避免打破
+      // childNodes[index] 定位假设）；普通元素/文本忽略该参数
+      patch(
+        oldV,
+        newV,
+        container,
+        i,
+        parent,
+        sameIndexAnchor(oldList, i, container) ?? anchor
+      )
     }
   }
   return newList
@@ -515,14 +533,21 @@ function patchChildren(
 
 /**
  * 同索引 diff 的挂载锚点：旧列表第 i 项（null，无 DOM）原本应占据的位置 =
- * 旧列表 i 之后第一个有真实 DOM 的节点前（首个即正确位置；Fragment 多 DOM
- * 用 firstDomEl 取第一个元素）。i 之后无 DOM → append 末尾。
+ * 旧列表 i 之后第一个「仍在本容器内」的真实 DOM 节点前。
+ * **归属校验（container.contains）**：旧节点可能已卸载/跨容器
+ * （Teleport 内容在 target、keep-alive 失活在 storage、过滤列表旧项已移除），
+ * 取到容器外的 DOM 作 anchor 会让 insertBefore 抛 NotFoundError。
+ * 校验不通过继续向后找；i 之后无可用 DOM → append 末尾。
  */
-function sameIndexAnchor(oldList: any[], i: number): Node | null {
+function sameIndexAnchor(
+  oldList: any[],
+  i: number,
+  container: Element,
+): Node | null {
   for (let j = i + 1; j < oldList.length; j++) {
     if (oldList[j] == null) continue
     const el = firstDomEl(oldList[j])
-    if (el) return el
+    if (el && container.contains(el)) return el
   }
   return null
 }
@@ -541,7 +566,8 @@ function patchKeyedChildren(
   oldList: any[],
   newList: any[],
   container: Element,
-  parent?: any
+  parent?: any,
+  anchor?: Node | null
 ) {
   const oldKeyToIndex = new Map<any, number>()
   oldList.forEach((vnode, i) => {
@@ -585,9 +611,9 @@ function patchKeyedChildren(
       // 对象），DOM 已挂载——若 mountVNode 会无条件重建覆盖 vnode.el =》 旧 DOM
       // 残留累积。跳过 mount，位置由第 5 步 insertBefore 调整。
       if (oldList.includes(newVNode)) continue
-      // nextSiblingVnode：lazy 组件加载完成后 subtree 挂载的锚点
-      // （第 5 步统一 insertBefore 调整 DOM 顺序，组件加载完成时后兄弟已就位）
-      mountVNode(newVNode, container, parent, undefined, newList[i + 1] ?? null)
+      // keyed 挂载：位置由第 5 步统一 insertBefore 调整（lazy 占位是文本节点，
+      // collectDomEls 可定位，无需额外锚点）
+      mountVNode(newVNode, container, parent)
     }
   }
 
@@ -611,13 +637,16 @@ function patchKeyedChildren(
     // 多个子节点（Fragment 多根）需全部按序插入
     const els = collectDomEls(newVNode)
     if (els.length === 0) continue
-    const anchor = i + 1 < newLen ? firstDomEl(newList[i + 1]) : null
+    // 锚点：i+1 项（已处理）首个 DOM；列表尾部 fallback 传入 anchor
+    // （Fragment 内部 keyed children 的结束锚点——防止尾部挂载越过后续兄弟）
+    const anchorNode =
+      i + 1 < newLen ? firstDomEl(newList[i + 1]) : anchor ?? null
     if (source[i] === 0) {
       // 新节点：插入到 anchor 前
-      for (const el of els) container.insertBefore(el, anchor)
+      for (const el of els) container.insertBefore(el, anchorNode)
     } else if (j < 0 || i !== seq[j]) {
       // 复用节点但不在 LIS 上 → 需要移动
-      for (const el of els) container.insertBefore(el, anchor)
+      for (const el of els) container.insertBefore(el, anchorNode)
     } else {
       j-- // 在 LIS 上，保持原位
     }
@@ -652,6 +681,42 @@ function collectDomEls(vnode: any, out: Node[] = []): Node[] {
 function firstDomEl(vnode: any): Node | null {
   const els = collectDomEls(vnode)
   return els.length > 0 ? els[0] : null
+}
+
+/**
+ * 子树结束后的下一个兄弟（对齐 Vue getNextHostNode，renderer.ts:2403）：
+ *   - 组件 → 递归 subTree
+ *   - 元素/文本 → el.nextSibling
+ *   - Fragment → 末尾子 DOM 的 nextSibling
+ *   - Teleport → null（内容在 target 容器，不参与本容器的 nextSibling 搜索，
+ *     对齐 Vue #9071/#9313）
+ * 用于「替换/挂载锚点」：新节点应插到旧子树之后（保持兄弟顺序）。
+ */
+function getNextHostNode(vnode: any): Node | null {
+  if (vnode == null) return null
+  if (vnode.type?.__builtin === 'teleport') return null
+  if (isComponentVNode(vnode)) {
+    return vnode.component?.subTree
+      ? getNextHostNode(vnode.component.subTree)
+      : null
+  }
+  if (vnode.el != null) {
+    return (vnode.el.nextSibling as Node | null) ?? null
+  }
+  if (Array.isArray(vnode.__avChildren)) {
+    let last: Node | null = null
+    for (const child of vnode.__avChildren) {
+      // Teleport 内容在 target 容器，不参与本容器的 nextSibling 搜索
+      // （对齐 Vue teleportEnd 跳过 #9071/#9313）——否则取到 target 里的
+      // 节点作 anchor，jsdom/真实浏览器 insertBefore 抛 NotFoundError，
+      // 组件更新中断（props 不响应 / provide 断链）
+      if (child?.type?.__builtin === 'teleport') continue
+      const els = collectDomEls(child)
+      if (els.length) last = els[els.length - 1]
+    }
+    return last ? (last.nextSibling as Node | null) : null
+  }
+  return null
 }
 
 // 最长递增子序列（返回下标数组；贪心 + 二分 + 前驱链回溯，值 0 表示新节点不参与）
@@ -1082,17 +1147,16 @@ function replace(
   newVnode: any,
   container: Element,
   index?: number,
-  parent?: any
+  parent?: any,
+  anchor?: Node | null
 ) {
-  // 旧子树所有真实 DOM：组件根可能是 Fragment（vnode.el 为 null，无法定位），
-  // 取首个节点的父节点 + 最后一个节点的 nextSibling 作为插入锚点——
-  // 否则 Fragment 根组件被替换时新元素会留在容器末尾（兄弟顺序错乱）
-  const oldEls = collectDomEls(oldVnode)
-  const firstEl =
-    oldEls[0] ?? oldVnode.el ?? (index != null ? container.childNodes[index] : null)
-  const lastEl = oldEls[oldEls.length - 1] ?? firstEl
-  const domParent = firstEl?.parentNode
-  const anchor = lastEl?.nextSibling ?? null
+  // 锚点 = 旧子树结束后的下一个兄弟（getNextHostNode 按类型递归：
+  // 组件→subTree、Fragment→末尾子 DOM、Teleport→跳过——比手写 collectDomEls
+  // 更稳，覆盖 Fragment 根组件等 el 为 null 的形态）。
+  // fallback：旧子树无 DOM（空 Fragment 等）时 getNextHostNode 返回 null，
+  // 用 patch 链传入的同列表位置锚点（sameIndexAnchor = 该项之后兄弟的 DOM），
+  // 否则 append 到末尾破坏兄弟顺序（[frag(null), b] 替换 frag 时 a 会跑到 b 后）
+  const target = getNextHostNode(oldVnode) ?? anchor ?? null
   // 先卸载旧节点：keep-alive 缓存的组件走缓存分支（DOM 移入隐藏容器、实例保留），
   // 否则组件停止 effect 并触发 beforeUnmount、元素移除 DOM
   unmount(oldVnode, container, index)
@@ -1101,14 +1165,8 @@ function replace(
   // 逐一插到 anchor 前——否则 Fragment 新根会留在容器末尾（兄弟顺序错乱）
   mountVNode(newVnode, container, parent)
   const newEls = collectDomEls(newVnode)
-  if (
-    domParent &&
-    newEls.length > 0 &&
-    anchor &&
-    anchor.parentNode === domParent &&
-    newEls[0].parentNode === domParent
-  ) {
-    newEls.forEach((el) => domParent.insertBefore(el, anchor))
+  if (target && newEls.length > 0 && newEls[0].parentNode === container) {
+    newEls.forEach((el) => container.insertBefore(el, target))
   }
 }
 
@@ -1201,20 +1259,15 @@ export function unmount(vnode: any, container?: Element, index?: number) {
     unmountChildren(vnode)
   }
   // 移除 vnode 子树的所有真实 DOM：组件 render 返回 Fragment 时组件 vnode.el
-  // 为 null（Fragment 无自身 DOM），按 childNodes[index] 恢复会取错/漏删节点，
-  // 必须沿子树收集全部 DOM 逐一移除
+  // 为 null（Fragment 无自身 DOM），必须沿子树收集全部 DOM 逐一移除。
+  // 不做 childNodes[index] 兜底——vnode 索引 ≠ DOM 索引（Fragment 无 DOM /
+  // 文本混排时 childNodes[index] 会误删后续兄弟，如 [frag(null), b] 替换
+  // frag 时 index=0 删掉 b）。文本 vnode 有持久 el（patchVNode 继承），
+  // collectDomEls 已覆盖；空文本无 DOM 本就不该删。
   const domEls = collectDomEls(vnode)
   if (domEls.length > 0) {
     for (const el of domEls) {
       if (el && el.parentNode) el.parentNode.removeChild(el)
-    }
-  } else {
-    // 文本旧节点无持久 el（每次 render 重建），按索引从 childNodes 恢复
-    const el =
-      vnode.el ??
-      (container && index != null ? container.childNodes[index] : null)
-    if (el && el.parentNode) {
-      el.parentNode.removeChild(el)
     }
   }
   // 模板引用：卸载时置 null
