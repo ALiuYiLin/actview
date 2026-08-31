@@ -56,7 +56,7 @@ import type {
   TextareaHTMLAttributes,
   TimeHTMLAttributes,
   TrackHTMLAttributes,
-} from '@actview/jsx/types'
+} from './jsx-attributes'
 
 declare global {
   namespace JSX {

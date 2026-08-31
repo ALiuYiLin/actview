@@ -1,102 +1,8 @@
 // ============================================================
-// VNode 与属性类型 — 完整 TSX 类型体系
-//   - VNode / ComponentType / PropsOf
-//   - DOM 事件全量 + ARIA + HTML 通用属性 + 各元素专属 + SVG
+// JSX 属性类型（v2）— 从 v1 @actview/jsx/types.ts 提取的属性类型部分
+// React 语义：className / htmlFor / onChange（onChange→onInput 由
+// @actview/plugin-jsx 编译期映射）等；纯类型、无运行时依赖。
 // ============================================================
-
-/** VNode 的 type 字段允许的类型 */
-export type VNodeTypes = string | symbol | ((props: any) => any)
-
-/** VNode key */
-export type VNodeKey = string | number | null
-
-/** VNode 描述对象 */
-export interface VNode<Type = VNodeTypes> {
-  $$typeof: symbol
-  type: Type
-  key: VNodeKey
-  ref: any
-  props: Record<string, any> | null
-  /** 指向真实 DOM（渲染后挂载） */
-  el?: Node | null
-}
-
-/** 组件类型：defineComponent 产物（{ __setup } + call signature），props 泛型化 */
-export type ComponentType<P = any> = {
-  __setup: (props: P, ctx?: any) => any
-} & ((props: P) => any)
-
-/** 从组件类型推导 props：取 __setup 的第一个参数 */
-export type PropsOf<T> = T extends { __setup: (props: infer P) => any }
-  ? P
-  : T extends (props: infer P) => any
-    ? P
-    : {}
-
-/**
- * ref 最小结构（与 core reactivity/ref.ts 结构互认；jsx 包保持零依赖底座，
- * 不 import core——core 的 Ref/ComputedRef 均满足本结构，可互相赋值）。
- */
-export interface Ref<T = any> {
-  value: T
-  readonly __v_isRef?: true
-}
-
-/**
- * 值或 ref——JSX 属性（props/children/原生元素属性）接受解包前（Ref）与
- * 解包后（值）两种形态，运行时由 jsxFactory.unwrapProps 统一顶层解包。
- */
-export type MaybeRef<T> = T | Ref<T>
-
-/**
- * 组件/元素 props 的 JSX 消费形态：顶层属性接受 Ref。
- * 与运行时 unwrapProps 一致：只解包顶层，嵌套对象内不解包。
- *   type Props = { count: number }
- *   MaybeRefProps<Props> = { count: number | Ref<number> }
- */
-export type MaybeRefProps<P> = { [K in keyof P]: MaybeRef<P[K]> }
-
-/**
- * 原生元素属性 MaybeRef 化（IntrinsicElements 的元素类型统一包装）：
- * TS 对 intrinsic 元素（<input>）的 props 检查直接读 JSX.IntrinsicElements[K]，
- * 不经 jsx 函数签名——因此元素属性类型本身必须接受 Ref。
- *   MaybeRefAttrs<InputHTMLAttributes> = { value: string | number | readonly string[] | Ref<...>, ... }
- */
-export type MaybeRefAttrs<A extends Record<string, any>> = {
-  [K in keyof A]: MaybeRef<A[K]>
-}
-
-/** children 原子节点（不含 ref、不含数组——两者单独表达，精确对齐运行时解包边界） */
-export type VNodeChildLeaf =
-  | VNode
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | void
-
-/** 单个子节点：顶层允许 ref（jsxFactory unwrapProps 顶层解包 → 值/文本） */
-export type VNodeChild = VNodeChildLeaf | Ref<any>
-
-/**
- * children：原子节点 | 顶层 ref | 递归数组。
- * 数组内不允许 ref：运行时只解包 children 顶层，数组内 ref 不会解包、
- * 会作为无效 vnode 挂载失败——编译期即拦截（与运行时行为精确一致）。
- */
-export type VNodeChildren = VNodeChildLeaf | Ref<any> | VNodeArrayChildren
-
-/** 数组子节点：元素为原子节点或嵌套数组（不含 ref） */
-export type VNodeArrayChildren = Array<VNodeChildLeaf | VNodeArrayChildren>
-
-/** 组件 setup 返回的 render 函数类型 */
-export type LazyVNode = () => VNode
-
-// ============================================================
-// 事件类型
-// ============================================================
-
-/** 表单事件 — target 上带 value/checked 等输入属性 */
 export interface FormEvent extends Event {
   target: EventTarget & {
     value: string
@@ -295,6 +201,9 @@ export type ClassValue =
   | undefined
   | ClassValue[]
   | Record<string, any>
+
+/** children 类型（v2：vue VNode / 文本 / 数组；宽松放行） */
+export type VNodeChildren = any
 
 export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   children?: VNodeChildren

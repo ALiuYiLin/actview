@@ -1,24 +1,19 @@
 {
   // ============================================================
-  // 测试环境 TS 配置（test/*.test.tsx）
-  // 继承 tsconfig.base.json 的 JSX（@actview/jsx）与 paths；
-  // include 只含 test，让编辑器 / tsc -p tsconfig.test.json
-  // 用正确 JSX runtime 检查测试文件（默认 react-jsx 会找
-  // react/jsx-runtime 报"找不到模块路径"）。
+  // 测试环境 TS 配置（test/v2/*.test.tsx）
+  // 继承 tsconfig.base.json；JSX 类型用 actview（v2：vue 组件 +
+  // React 语义属性，全局声明见 packages/actview/src/jsx-runtime.ts）
   // ============================================================
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    // 测试代码类型不严谨（未使用 import、implicit any、Ref vs 值等）属
-    // 既有状态：显式关闭 strict 系与未使用检查，让 tsc -p tsconfig.test.json
-    // 与编辑器只对 test 文件做基础检查（app 的 tsconfig.json 不受影响）
+    // v2：React 语义 JSX 类型
+    "jsxImportSource": "actview",
+    // 测试代码类型不严谨属既有状态：关闭 strict 系与未使用检查
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["test"],
-  // v2（vue 基座）测试暂不纳入类型检查：v2 的 JSX 类型层（vue 组件 +
-  // React 语义属性）是独立类型工程，见 docs/architecture-v2-vue-base.md §6
-  "exclude": ["test/v2"]
+  "include": ["test/v2"]
 }
