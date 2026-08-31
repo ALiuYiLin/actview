@@ -304,7 +304,11 @@ export function defineComponent<
             //（模块级深度——组件 JSX children 被插件惰性化为插槽函数，执行
             //  时机在本组件 render 结束之后，见 createVNode 的 wrapSlots）
             if (renderPhase || activeRenderDepth > 0) {
-              return ctx.slots.default?.() ?? null
+              // React 对齐：单子元素解包为元素本身（vue 插槽规范化返回
+              // 数组）；多子元素/空保持数组/null
+              const kids = ctx.slots.default?.() ?? null
+              if (Array.isArray(kids) && kids.length === 1) return kids[0]
+              return kids
             }
             if (!warnedNonRenderRead) {
               warnedNonRenderRead = true

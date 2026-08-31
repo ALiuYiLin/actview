@@ -11,16 +11,19 @@
 import { createBabelItem, transformWithBabel } from '@actview/plugin-babel'
 import type { BabelTransformOptions } from '@actview/plugin-babel'
 import pluginJsx from '@actview/plugin-jsx'
-
-// plugin-jsx 是 declare() 产物（插件对象），createConfigItemSync 直接收对象
-const item = createBabelItem(pluginJsx as any)
+import type { VueJSXPluginOptions } from '@actview/plugin-jsx'
 
 export interface ActviewJsxPluginOptions {
   /** Babel 宿主壳规则（include/exclude 路径过滤；node_modules 硬排除） */
   babel?: BabelTransformOptions
+  /** @actview/plugin-jsx 选项（autoDefineComponent / createVNodeSource 等） */
+  pluginOptions?: VueJSXPluginOptions
 }
 
 export function actviewJsxPlugin(options: ActviewJsxPluginOptions = {}) {
+  // plugin-jsx 是 declare() 产物（插件对象），createConfigItemSync 直接收对象；
+  // pluginOptions 非空时按 [plugin, options] 元组创建（Babel 标准插件选项）
+  const item = createBabelItem(pluginJsx as any, options.pluginOptions)
   return {
     name: 'actview-v2-jsx',
     enforce: 'pre' as const,

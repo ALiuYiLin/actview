@@ -58,9 +58,16 @@ export function isExcludedTransform(
   return false
 }
 
-/** 把插件工厂预编译为 ConfigItem（Babel 8 同步版本，可跨多次 transformSync 复用） */
-export function createBabelItem(plugin: BabelPlugin): PluginItem {
-  return babel.createConfigItemSync(plugin as any, { type: 'plugin' })
+/** 把插件工厂预编译为 ConfigItem（Babel 8 同步版本，可跨多次 transformSync 复用）；
+ *   pluginOptions 非空时按 [plugin, options] 元组创建（Babel 标准插件选项） */
+export function createBabelItem(
+  plugin: BabelPlugin,
+  pluginOptions?: object,
+): PluginItem {
+  return babel.createConfigItemSync(
+    pluginOptions == null ? (plugin as any) : [plugin as any, pluginOptions],
+    { type: 'plugin' },
+  )
 }
 
 /** 统一参数的 transformSync：排除命中或失败返回 null，成功返回 { code, map } */

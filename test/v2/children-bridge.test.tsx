@@ -85,6 +85,27 @@ describe('v2.1: children 桥接（React 对齐）', () => {
     ))
     expect(host.querySelector('b')?.textContent).toBe('lazy-kid')
   })
+
+  it('单子元素解包（React 对齐）：props.children 是元素本身而非数组', () => {
+    let captured: any
+    function Panel(props: any) {
+      // 渲染期捕获（JSX 表达式里赋值——逗号表达式）
+      return (
+        <div class="panel">
+          {(captured = props.children, props.children)}
+        </div>
+      )
+    }
+    const host = mount(() => (
+      <Panel>
+        <b>kid</b>
+      </Panel>
+    ))
+    // React 语义：单子元素 = 元素本身（vue 插槽返回数组，桥接解包）
+    expect(Array.isArray(captured)).toBe(false)
+    expect(captured?.__v_isVNode).toBe(true)
+    expect(host.querySelector('.panel b')?.textContent).toBe('kid')
+  })
 })
 
 describe('v2.1: createVNode 包装（props.children → 第三参）', () => {
