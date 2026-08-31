@@ -76,7 +76,6 @@ export {
   Static,
   KeepAlive,
   Teleport,
-  Suspense,
   Transition,
   TransitionGroup,
   defineAsyncComponent,
@@ -137,6 +136,7 @@ import {
   inject,
   isVNode,
   provide,
+  Suspense as VueSuspense,
 } from 'vue'
 
 // ============================================================
@@ -168,6 +168,36 @@ export function createVNode(type: any, props: any, children?: any): VueVNode {
   }
   return vueCreateVNode(type, props, children)
 }
+
+// ============================================================
+// Suspense — React 语义桥接（fallback prop → vue #fallback 插槽）
+//
+//   React 写法 <Suspense fallback={<X />}>children</Suspense>：
+//   vue 的 Suspense 用 #fallback 具名插槽（fallback 不是 prop）。
+//   桥接组件把 props.fallback（vnode）接到 #fallback 插槽，children
+//   走默认插槽——React 语义 JSX 直接可用；其余 props（onResolve /
+//   onPending / onFallback / timeout 等）透传给 vue Suspense。
+// ============================================================
+export interface SuspenseProps {
+  /** React 语义：异步解析期间显示的 fallback（桥接为 vue #fallback 插槽） */
+  fallback?: any
+  /** vue 原生插槽（默认插槽 props.slots.default()） */
+  slots?: any
+  /** 其余透传：vue Suspense 事件/选项 */
+  [key: string]: any
+}
+
+export const Suspense = defineComponent(function (
+  props: SuspenseProps,
+) {
+  return () => {
+    const { fallback, ...rest } = props as any
+    return h(VueSuspense, rest, {
+      default: () => props.slots?.default?.() ?? [],
+      fallback: () => (fallback != null ? fallback : []),
+    })
+  }
+}, 'ActViewSuspense')
 
 /**
  * v2 组件类型（类型层形状）：

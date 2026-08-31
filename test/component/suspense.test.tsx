@@ -51,6 +51,8 @@ describe('Suspense 增强', () => {
       )
     }
     const host = mount(App)
+    // pending 期间显示 fallback（React 语义桥接：fallback prop → #fallback 插槽）
+    expect(host.querySelector('.loading')).not.toBeNull()
     await flush()
     expect(collectText(host)).toContain('async content')
   })

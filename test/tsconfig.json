@@ -1,0 +1,16 @@
+{
+  // ============================================================
+  // test/ 目录专属 TS 配置
+  //
+  // TS server（VSCode 等 IDE）默认只认名为 tsconfig.json 的配置
+  // 文件——根 tsconfig.test.json 不会被自动发现，test/v2 的 JSX
+  // 文件因此落入 inferred project，报：
+  //   「JSX element implicitly has type 'any' because no interface
+  //    'JSX.IntrinsicElements' exists」
+  // 本文件让 IDE 向上查找时命中 test/，继承 tsconfig.test.json 的
+  // 宽松设置 + actview JSX 类型（jsxImportSource）。命令行仍可用
+  // tsc -p tsconfig.test.json（只查 v2）。
+  // ============================================================
+  "extends": "../tsconfig.test.json",
+  "include": ["v2", "component", "reactivity", "scoped-css", "./*.tsx", "./*.ts"]
+}

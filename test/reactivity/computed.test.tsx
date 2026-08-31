@@ -5,7 +5,6 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { reactive, computed } from 'actview'
-import { runEffect } from 'actview'
 
 // ------------------------------------------------------------
 // 以下 it 块拷贝自 actview.test.tsx — 迁移：computed（L359-427，6 用例）
