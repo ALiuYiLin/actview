@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-babel",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "description": "共享 Babel 宿主壳（排除规则/transformSync 参数统一，供 @actview/plugin-vite 与 @actview/plugin-scoped 复用）",
   "exports": {

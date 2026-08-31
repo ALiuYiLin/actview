@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-vite",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "type": "module",
   "description": "ActView 的 Vite 插件：v1 defineComponent 转换 + v2 React 语义 JSX（@actview/plugin-jsx）",
   "exports": {
