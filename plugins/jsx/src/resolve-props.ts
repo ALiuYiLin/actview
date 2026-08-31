@@ -51,6 +51,9 @@ export function resolveComponentProps(
   let param: t.Node = first
   if (t.isAssignmentPattern(first)) param = first.left
   if (!t.isIdentifier(param) || !param.typeAnnotation) return undefined
+  // Babel 8 的 typeAnnotation 是 TSTypeAnnotation | FlowType 联合——窄化到 TS
+  const ann = param.typeAnnotation
+  if (!t.isTSTypeAnnotation(ann)) return undefined
 
   const ctx: SimpleTypeResolveContext = {
     filename: file.opts.filename || 'unknown.jsx',
@@ -67,7 +70,7 @@ export function resolveComponentProps(
     },
     helper: (key) => `_${key}`,
     getString: (node) => file.code.slice(node.start!, node.end!),
-    propsTypeDecl: param.typeAnnotation.typeAnnotation,
+    propsTypeDecl: ann.typeAnnotation,
     propsRuntimeDefaults: undefined,
     propsDestructuredBindings: {},
     emitsTypeDecl: undefined,
@@ -77,8 +80,13 @@ export function resolveComponentProps(
   try {
     runtimeProps = extractRuntimeProps(ctx)
   } catch (e) {
-    // 类型引用未解析（如跨文件 import 的类型）→ 跳过注入，组件保持无声明语义
-    console.warn(`[actview/plugin-jsx] 跳过 props 提取：${(e as Error).message}`)
+    // interface extends 跨文件泛型（如 Base UI 的 BaseUIComponentProps）是
+    // 常见模式且非用户错误——静默跳过（组件退回无 props 声明语义）；
+    // 其余解析失败（跨文件 import 的类型等）保留 warn 提示
+    const msg = (e as Error).message
+    if (!msg.includes('Failed to resolve extends base type')) {
+      console.warn(`[actview/plugin-jsx] 跳过 props 提取：${msg}`)
+    }
     return undefined
   }
   if (!runtimeProps) return undefined
