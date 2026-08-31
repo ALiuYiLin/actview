@@ -6,6 +6,8 @@
 //   与 vue 模板编译器 transformStyle 的静态行为对齐。
 // ============================================================
 import { describe, expect, it } from 'vitest'
+import { transformSync } from '@babel/core'
+import jsxPlugin from '@actview/plugin-jsx'
 import { createApp } from 'actview'
 
 function mount(App: any): HTMLElement {
@@ -48,6 +50,37 @@ describe('v2: style 数字 → px', () => {
       'style',
     )
     expect(style).toContain('font-size: 20px')
+  })
+
+  it('--custom 属性与 0 值不转（React setValueForStyle 规则）', () => {
+    const App = () => (
+      <div style={{ '--count': 12, zIndex: 0, margin: 0 }}>x</div>
+    )
+    const host = mount(App)
+    const style = (host.querySelector('div') as HTMLElement).getAttribute(
+      'style',
+    )
+    // --count 数字原样（不加 px）
+    expect(style).toContain('--count: 12')
+    expect(style).not.toContain('--count: 12px')
+    // zIndex unitless：0 直接有效
+    expect(style).toContain('z-index: 0')
+  })
+
+  it('rotate/translate 数字加 px（React 白名单仅 scale；产物断言）', () => {
+    const { code } = transformSync(
+      `const App = () => <div style={{ rotate: 45, translate: 10, scale: 2 }} />`,
+      {
+        filename: 'x.tsx',
+        plugins: [[jsxPlugin, {}]],
+        parserOpts: { plugins: ['jsx', 'typescript'] },
+        babelrc: false,
+        configFile: false,
+      },
+    )!
+    expect(code).toContain('rotate: "45px"')
+    expect(code).toContain('translate: "10px"')
+    expect(code).toContain('scale: 2')
   })
 
   it('字符串值原样保留', () => {

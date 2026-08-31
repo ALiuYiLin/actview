@@ -29,8 +29,12 @@ const xlinkRE = /^xlink([A-Z])/
 // React 的 style={{ fontSize: 12 }} 自动加 px（unitless 属性除外）；
 // vue 运行时（patchStyle/setStyle）原样赋值 → 无单位数字被浏览器忽略。
 // 编译期把 style 对象字面量里的数字静态转成 '12px'（与 vue 模板编译器
-// transformStyle 的静态行为一致）；动态值/三元不转换（运行时责任）。
+// transformStyle 的静态行为一致）；动态值/三元分支递归转换；
+// 规则与 React setValueForStyle 对齐：
+//   数字 && value !== 0 && 非 unitless 白名单 && 非 --custom → +'px'
+// unitless 白名单 = React isUnitlessNumber.js 官方全集（44 标准 + 27 vendor 前缀）
 const STYLE_UNITLESS = new Set([
+  // 标准项
   'animationIterationCount',
   'aspectRatio',
   'borderImageOutset',
@@ -62,10 +66,12 @@ const STYLE_UNITLESS = new Set([
   'opacity',
   'order',
   'orphans',
+  'scale',
   'tabSize',
   'widows',
   'zIndex',
   'zoom',
+  // SVG 相关
   'fillOpacity',
   'floodOpacity',
   'stopOpacity',
@@ -74,14 +80,43 @@ const STYLE_UNITLESS = new Set([
   'strokeMiterlimit',
   'strokeOpacity',
   'strokeWidth',
-  'scale',
-  'rotate',
-  'translate',
+  // 已知 vendor 前缀项（React 保留，兼容旧代码）
+  'MozAnimationIterationCount',
+  'MozBoxFlex',
+  'MozBoxFlexGroup',
+  'MozLineClamp',
+  'msAnimationIterationCount',
+  'msFlex',
+  'msZoom',
+  'msFlexGrow',
+  'msFlexNegative',
+  'msFlexOrder',
+  'msFlexPositive',
+  'msFlexShrink',
+  'msGridColumn',
+  'msGridColumnSpan',
+  'msGridRow',
+  'msGridRowSpan',
+  'WebkitAnimationIterationCount',
+  'WebkitBoxFlex',
+  'WebKitBoxFlexGroup',
+  'WebkitBoxOrdinalGroup',
+  'WebkitColumnCount',
+  'WebkitColumns',
+  'WebkitFlex',
+  'WebkitFlexGrow',
+  'WebkitFlexPositive',
+  'WebkitFlexShrink',
+  'WebkitLineClamp',
 ])
 
-/** 数字 → px（含负数、三元分支递归）；非数字原样返回 */
+/**
+ * 数字 → px（React setValueForStyle 规则：0 原样；含负数、三元分支递归）。
+ * 非数字/0 原样返回。
+ */
 function styleNumberToPx(node: t.Expression): t.Expression {
   if (t.isNumericLiteral(node)) {
+    if (node.value === 0) return node
     return t.stringLiteral(`${node.value}px`)
   }
   if (
@@ -89,6 +124,7 @@ function styleNumberToPx(node: t.Expression): t.Expression {
     node.operator === '-' &&
     t.isNumericLiteral(node.argument)
   ) {
+    if (node.argument.value === 0) return node
     return t.stringLiteral(`-${node.argument.value}px`)
   }
   if (t.isConditionalExpression(node)) {
@@ -98,7 +134,10 @@ function styleNumberToPx(node: t.Expression): t.Expression {
   return node
 }
 
-/** style 对象字面量：数字属性值 → px 字符串（unitless 排除） */
+/**
+ * style 对象字面量：数字属性值 → px 字符串。
+ * unitless 白名单与 -- 自定义属性不转（React 规则）。
+ */
 function transformStyleNumbers(node: t.ObjectExpression) {
   for (const prop of node.properties) {
     if (!t.isObjectProperty(prop)) continue
@@ -107,7 +146,7 @@ function transformStyleNumbers(node: t.ObjectExpression) {
       : t.isStringLiteral(prop.key)
         ? prop.key.value
         : null
-    if (!key || STYLE_UNITLESS.has(key)) continue
+    if (!key || key.startsWith('--') || STYLE_UNITLESS.has(key)) continue
     prop.value = styleNumberToPx(prop.value as t.Expression)
   }
 }
