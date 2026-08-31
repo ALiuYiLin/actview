@@ -1,6 +1,6 @@
 {
   "name": "actview",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "type": "module",
   "description": "ActView v2：Vue 引擎 + React 语义 JSX（运行时基于 vue 官方包，JSX 由 @actview/plugin-jsx 编译）",
   "exports": {
