@@ -25,6 +25,93 @@ import type { NodePath, Visitor } from '@babel/core'
 
 const xlinkRE = /^xlink([A-Z])/
 
+// ---------- React 语义：style 数字 → px ----------
+// React 的 style={{ fontSize: 12 }} 自动加 px（unitless 属性除外）；
+// vue 运行时（patchStyle/setStyle）原样赋值 → 无单位数字被浏览器忽略。
+// 编译期把 style 对象字面量里的数字静态转成 '12px'（与 vue 模板编译器
+// transformStyle 的静态行为一致）；动态值/三元不转换（运行时责任）。
+const STYLE_UNITLESS = new Set([
+  'animationIterationCount',
+  'aspectRatio',
+  'borderImageOutset',
+  'borderImageSlice',
+  'borderImageWidth',
+  'boxFlex',
+  'boxFlexGroup',
+  'boxOrdinalGroup',
+  'columnCount',
+  'columns',
+  'flex',
+  'flexGrow',
+  'flexPositive',
+  'flexShrink',
+  'flexNegative',
+  'flexOrder',
+  'gridArea',
+  'gridRow',
+  'gridRowEnd',
+  'gridRowSpan',
+  'gridRowStart',
+  'gridColumn',
+  'gridColumnEnd',
+  'gridColumnSpan',
+  'gridColumnStart',
+  'fontWeight',
+  'lineClamp',
+  'lineHeight',
+  'opacity',
+  'order',
+  'orphans',
+  'tabSize',
+  'widows',
+  'zIndex',
+  'zoom',
+  'fillOpacity',
+  'floodOpacity',
+  'stopOpacity',
+  'strokeDasharray',
+  'strokeDashoffset',
+  'strokeMiterlimit',
+  'strokeOpacity',
+  'strokeWidth',
+  'scale',
+  'rotate',
+  'translate',
+])
+
+/** 数字 → px（含负数、三元分支递归）；非数字原样返回 */
+function styleNumberToPx(node: t.Expression): t.Expression {
+  if (t.isNumericLiteral(node)) {
+    return t.stringLiteral(`${node.value}px`)
+  }
+  if (
+    t.isUnaryExpression(node) &&
+    node.operator === '-' &&
+    t.isNumericLiteral(node.argument)
+  ) {
+    return t.stringLiteral(`-${node.argument.value}px`)
+  }
+  if (t.isConditionalExpression(node)) {
+    node.consequent = styleNumberToPx(node.consequent)
+    node.alternate = styleNumberToPx(node.alternate)
+  }
+  return node
+}
+
+/** style 对象字面量：数字属性值 → px 字符串（unitless 排除） */
+function transformStyleNumbers(node: t.ObjectExpression) {
+  for (const prop of node.properties) {
+    if (!t.isObjectProperty(prop)) continue
+    const key = t.isIdentifier(prop.key)
+      ? prop.key.name
+      : t.isStringLiteral(prop.key)
+        ? prop.key.value
+        : null
+    if (!key || STYLE_UNITLESS.has(key)) continue
+    prop.value = styleNumberToPx(prop.value as t.Expression)
+  }
+}
+
 type ExcludesBoolean = <T>(x: T | false | true) => x is T
 
 function getJSXAttributeValue(
@@ -86,6 +173,15 @@ function buildProps(path: NodePath<t.JSXElement>, state: State) {
       // React 语义别名：className → class / htmlFor → for / onChange → onInput
       // （仅原生元素；组件 props 原样保留）
       name = applyReactPropAliases(name, isComponent, tag, props)
+
+      // React 语义：style 对象字面量里的数字 → px（unitless 除外）
+      if (
+        !isComponent &&
+        name === 'style' &&
+        t.isObjectExpression(attributeValue)
+      ) {
+        transformStyleNumbers(attributeValue)
+      }
 
       // dangerouslySetInnerHTML={{ __html: x }} → innerHTML: x（React 形状 → Vue 原生）
       if (!isComponent && name === 'dangerouslySetInnerHTML') {

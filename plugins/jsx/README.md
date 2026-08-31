@@ -18,6 +18,7 @@
   - `children` 声明自动剔除（slots 桥接键，不能进 props 声明）
   - 类型不可解析（跨文件 import 类型 / 复杂类型 / `any`）→ warn 并跳过，组件退回无声明语义（不落根）
   - 显式 `defineComponent(fn)` 同样提取
+- **style 数字 → px**（React 语义，编译期）：`style={{ fontSize: 12, marginTop: -4 }}` 自动转 `'12px'`/`'-4px'`（unitless 属性如 `opacity`/`zIndex`/`lineHeight` 不转；三元分支里的数字同样处理；字符串原样；组件 props 的 style 不转）——vue 运行时 `patchStyle` 对数字不加单位，模板编译器 `transformStyle` 的静态行为在此对齐
 - **Vue 指令属性**：`v-model` / `v-show` / `v-html` / `v-text` / `v-slots` 编译期展开/保留
 - **产物形态**：`createVNode(tag, props, children, patchFlag?, dynamicProps?)`（`optimize` 选项开启 patchFlag 静态分析）
 

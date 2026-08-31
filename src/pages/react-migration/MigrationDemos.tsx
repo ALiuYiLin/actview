@@ -10,10 +10,10 @@ import {
   createContext,
   reactive,
   ref,
-  toRefs,
   useId,
   watch,
 } from "actview";
+import type { Ref } from "actview";
 import { btnStyle, hintStyle, inputStyle } from "../../styles";
 import { Section } from "./shared";
 
@@ -160,8 +160,8 @@ function SizeLabel() {
 
 function SizeButton() {
   const s = SizeCtx.use()!;
-  const next = s.size === "大" ? "小" : "大";
-  return <button style={btnStyle} onclick={() => s.setSize(next)}>切换为{next}字</button>;
+  const next = computed(()=>s.size === "大" ? "小" : "大");
+  return <button style={btnStyle} onClick={() => s.setSize(next.value)}>切换为{next.value}字</button>;
 }
 
 function DemoContext() {
@@ -171,6 +171,7 @@ function DemoContext() {
       <div>
         <SizeLabel />
         <SizeButton />
+        {/* style 数字自动 px（React 语义，编译期转换） */}
         <p style={{ fontSize: ctx.size === "大" ? 20 : 13, margin: 0 }}>
           这段文字的字号来自 context(ctx.size)
         </p>
@@ -195,8 +196,9 @@ function DemoImperative() {
   const actionsRef = ref<{ reset(): void } | null>(null);
   return (
     <div>
-      {/* v2：JSX 无顶层 ref 解包——ref 本体直接传（无 rawRef 概念） */}
-      <ActionChild actionsRef={ actionsRef} text={text.value} />
+      {/* v2：JSX 无顶层 ref 解包——ref 本体直接传（无 rawRef 概念）。
+          传 ref 本体 = 传响应式引用（vue 语义）：子可写 .value 更新父状态 */}
+      <ActionChild actionsRef={actionsRef} text={text} />
       <span style={hintStyle}>当前:{text.value}</span>
       <button style={btnStyle} onclick={() => actionsRef.value?.reset()}>
         调用子组件 reset()
@@ -205,11 +207,19 @@ function DemoImperative() {
   );
 }
 
-function ActionChild(props: { actionsRef: any; text: string }) {
-  const { actionsRef, text } = toRefs(props);
-  // 子部件侧:把命令式 API 写进父传入的 ref(等价 useImperativeHandle)
-  actionsRef.value = {
-    reset: () => { text.value = "已由父调用 reset 重置"; },
+function ActionChild(props: {
+  actionsRef: Ref<{ reset(): void } | null>;
+  text: Ref<string>;
+}) {
+  // props 里的 ref 是父组件 ref 本体（同一实例）。
+  // ⚠️ 不能 toRefs(props).x.value = ...：props 对象是 shallowReadonly
+  // （vue 语义：props 由父驱动，子禁止篡改），toRefs 的 setter 会写回
+  // props 本身 → readonly 拦截。正确姿势：读 props 拿 ref 本体，
+  // 写 ref 内部 .value（ref 对象可变）。
+  props.actionsRef.value = {
+    reset: () => {
+      props.text.value = "已由父调用 reset 重置";
+    },
   };
   return <span style={hintStyle}>(子部件暴露 reset 给父)</span>;
 }
