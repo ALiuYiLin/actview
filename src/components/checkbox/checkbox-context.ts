@@ -1,11 +1,14 @@
 // ============================================================
-// CheckboxGroup 上下文 —— 多 ref 场景的「父级注册」通道
+// CheckboxGroup 上下文 —— 注册表 + 选中值统管通道
 //
-// Group 不持有 DOM,它只提供注册表:每个 Checkbox 把自己的隐藏 <input>
-// 以【函数 ref】形式登记进来(挂载 → register(el)、卸载 → register(null)),
-// 从而实现:
-//   - 成员收集(表单校验/全选等群体操作的数据来源)
-//   - 反注册(卸载/disabled 时从注册表移除——函数 ref 收到 null)
+// Group 不持有 DOM，它提供两件事：
+//   1. 注册表：每个 Checkbox 把自己的隐藏 <input> 以【函数 ref】形式
+//      登记进来（挂载 → register(el)、卸载 → register(null)），供
+//      成员收集 / 反注册 / focusFirst 等群体操作使用。
+//   2. 选中值统管（React 对齐）：checkedValues（当前选中数组）与
+//      toggleValue（翻转某个成员值）。Root 不自己维护勾选状态，
+//      渲染期从 checkedValues 派生，点击时经 toggleValue 上报——
+//      受控形态只回调 onValueChange，由 Group 的 value prop 驱动。
 // ============================================================
 
 import { createContext } from 'actview'
@@ -27,6 +30,10 @@ export interface CheckboxGroupContext {
   members: Reactive<CheckboxRegistration[]>
   /** 群体操作示例:聚焦第一个成员的 input */
   focusFirst(): void
+  /** 当前选中值(computed ref;受控 = props.value,非受控 = 内部维护) */
+  checkedValues: Ref<string[]>
+  /** 翻转某个成员值:受控 → 只回调 onValueChange;非受控 → 内部更新 + 回调 */
+  toggleValue(value: string | undefined, event?: unknown): void
 }
 
 export const CheckboxGroupContext =

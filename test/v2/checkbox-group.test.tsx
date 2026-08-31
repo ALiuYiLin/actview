@@ -113,5 +113,60 @@ describe('多 ref 合并（Checkbox）', () => {
     expect(renderElRef.value).toBe(el)
     expect((renderElRef.value as HTMLButtonElement).getAttribute('aria-checked')).toBe('true')
   })
+
+  it('T5: Group 受控 value + onValueChange（React 对齐：统管勾选状态）', async () => {
+    const values = ref<string[]>(['apple'])
+    function App() {
+      return (
+        <CheckboxGroup
+          value={values.value}
+          onValueChange={(v) => {
+            values.value = v
+          }}
+        >
+          <CheckboxRoot value="apple" />
+          <CheckboxRoot value="banana" />
+        </CheckboxGroup>
+      )
+    }
+    const host = mount(App)
+    const boxes = host.querySelectorAll('[role="checkbox"]')
+    const apple = boxes[0] as HTMLElement
+    const banana = boxes[1] as HTMLElement
+    expect(apple.getAttribute('aria-checked')).toBe('true')
+    expect(banana.getAttribute('aria-checked')).toBe('false')
+
+    // 点击 banana → toggleValue 上报 → 父更新 value → 重渲染派生
+    banana.click()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(banana.getAttribute('aria-checked')).toBe('true')
+    expect(values.value).toEqual(['apple', 'banana'])
+
+    // 点击 apple → 取消选中
+    apple.click()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apple.getAttribute('aria-checked')).toBe('false')
+    expect(values.value).toEqual(['banana'])
+  })
+
+  it('T6: 独立 Root（无 Group）本地翻转 + onCheckedChange 回调', async () => {
+    const changes: boolean[] = []
+    function App() {
+      return (
+        <CheckboxRoot
+          defaultChecked={false}
+          onCheckedChange={(c) => changes.push(c)}
+          value="solo"
+        />
+      )
+    }
+    const host = mount(App)
+    const btn = host.querySelector('[role="checkbox"]') as HTMLElement
+    expect(btn.getAttribute('aria-checked')).toBe('false')
+    btn.click()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(btn.getAttribute('aria-checked')).toBe('true')
+    expect(changes).toEqual([true])
+  })
 })
 

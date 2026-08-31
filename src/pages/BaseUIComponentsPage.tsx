@@ -1,6 +1,6 @@
 // ============================================================
 // Base UI 移植组件展示：
-//   Checkbox（多 ref 合并 + Group 注册表 + render prop 自定义形态）
+//   Checkbox（Group 统管 value/onValueChange + Root 注册 + Indicator）
 //   Avatar  （state/context 驱动：render prop 收 (props, state)、
 //            className 函数形态、setImageLoadingStatus 状态机）
 // ============================================================
@@ -8,6 +8,7 @@ import { reactive, ref } from 'actview'
 import {
   CheckboxGroup,
   CheckboxRoot,
+  CheckboxIndicator,
   type CheckboxGroupApi,
 } from '../components/checkbox'
 import { AvatarRoot, useAvatarRootContext } from '../components/avatar'
@@ -26,6 +27,18 @@ const badgeStyle: any = {
   color: '#4338ca',
   fontSize: 12,
 }
+const checkboxButtonStyle: any = {
+  display: 'inline-flex',
+  gap: 8,
+  alignItems: 'center',
+  padding: '4px 10px',
+  border: '1px solid #e2e8f0',
+  borderRadius: 8,
+  background: '#fff',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  fontSize: 14,
+}
 
 /** 模拟图片加载：setup 同步置 loading → 500ms 后 loaded（context 驱动根重渲染） */
 function AvatarStatusSimulator() {
@@ -37,62 +50,37 @@ function AvatarStatusSimulator() {
 
 export function BaseUIComponentsPage() {
   const groupRef = ref<CheckboxGroupApi | null>(null)
-  // 香蕉 defaultChecked 初始选中——同步进已选列表
+  // 受控选中值（React 对齐：绑在 Group 的 value 上，初始预置 banana）
   const selections = reactive<string[]>(['banana'])
   const toggleCount = ref(0)
-  const onCheckedChange = (value: string) => (checked: boolean) => {
-    toggleCount.value++
-    const i = selections.indexOf(value)
-    if (checked && i < 0) selections.push(value)
-    else if (!checked && i >= 0) selections.splice(i, 1)
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* ---------- Checkbox：多选表单（多 ref + Group 注册） ---------- */}
+      {/* ---------- Checkbox：Group 统管 value + Indicator ---------- */}
       <div class="demo-card" style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Checkbox（Base UI 移植：多 ref + Group 注册）</h2>
-        <CheckboxGroup groupRef={groupRef}>
+        <h2 style={{ marginTop: 0 }}>
+          Checkbox（Base UI 移植：Group 统管 value + Indicator）
+        </h2>
+        <CheckboxGroup
+          groupRef={groupRef}
+          value={selections}
+          onValueChange={(values) => {
+            toggleCount.value++
+            selections.splice(0, selections.length, ...values)
+          }}
+          aria-label="水果多选"
+          className="demo-checkbox-group"
+        >
           <div style={rowStyle}>
-            <CheckboxRoot
-              value="apple"
-              defaultChecked={false}
-              onCheckedChange={onCheckedChange('apple')}
-              render={(p: any, s: any) => {
-                const { children: _c, ...rest } = p
-                return (
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={s.checked} {...rest} /> 🍎 苹果
-                  </label>
-                )
-              }}
-            />
-            <CheckboxRoot
-              value="banana"
-              defaultChecked={true}
-              onCheckedChange={onCheckedChange('banana')}
-              render={(p: any, s: any) => {
-                const { children: _c, ...rest } = p
-                return (
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={s.checked} {...rest} /> 🍌 香蕉（默认选中）
-                  </label>
-                )
-              }}
-            />
-            <CheckboxRoot
-              value="cherry"
-              disabled
-              onCheckedChange={onCheckedChange('cherry')}
-              render={(p: any, s: any) => {
-                const { children: _c, ...rest } = p
-                return (
-                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', cursor: 'not-allowed', opacity: 0.6 }}>
-                    <input type="checkbox" checked={s.checked} {...rest} /> 🍒 樱桃（disabled）
-                  </label>
-                )
-              }}
-            />
+            <CheckboxRoot value="apple" style={checkboxButtonStyle}>
+              <CheckboxIndicator /> 🍎 苹果
+            </CheckboxRoot>
+            <CheckboxRoot value="banana" style={checkboxButtonStyle}>
+              <CheckboxIndicator /> 🍌 香蕉（默认选中）
+            </CheckboxRoot>
+            <CheckboxRoot value="cherry" disabled style={checkboxButtonStyle}>
+              <CheckboxIndicator /> 🍒 樱桃（disabled）
+            </CheckboxRoot>
           </div>
         </CheckboxGroup>
         <p style={hintStyle}>
@@ -102,16 +90,15 @@ export function BaseUIComponentsPage() {
         </p>
         <button
           style={btnStyle}
-          onclick={() => {
-            const cur = [...selections]
-            for (const k of cur) selections.splice(selections.indexOf(k), 1)
-          }}
+          onclick={() => selections.splice(0, selections.length)}
         >
           清空选择
         </button>
         <p style={hintStyle}>
-          每个 Checkbox 的隐藏 input 由 ①使用方 ref + ②库内部 ref + ③Group 注册函数
-          三方合并（useMergedRefs）；点击根元素 → 翻转并同步写 input.checked。
+          value / onValueChange 绑在 Group 上（React 对齐）；Root 只注册
+          value，勾选状态从 Group context 派生；Indicator 读 Root context
+          渲染勾。隐藏 input 由 ①使用方 ref + ②库内部 ref + ③Group 注册函数
+          三方合并（useMergedRefs）；点击根按钮 → 翻转并同步写 input.checked。
         </p>
       </div>
 

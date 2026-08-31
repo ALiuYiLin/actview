@@ -19,12 +19,12 @@ export default defineConfig({
     // v2 测试 + 迁移到 v2 引擎的 v1 行为测试）
     // ⚠️ include/exclude 规则需正斜杠（babel-host 会把 filename 归一为正斜杠）；
     // 且用绝对路径——'/src/' 会误匹配 packages/*/src
+    ...actviewScopedPlugin(),
     actviewJsxPlugin({
       babel: { include: [SRC_DIR, TEST_DIR] },
     }),
     // ⚠️ 顺序：scoped 先注入 data-v-* 属性（JSX 源码形态），
     // actviewJsxPlugin 后转 createVNode（保留注入的属性）
-    ...actviewScopedPlugin(),
   ],
   test: {
     environment: 'happy-dom',
