@@ -12,7 +12,7 @@
 //   v1（自研 core）已冻结归档，见 docs/architecture-v2-vue-base.md
 // ============================================================
 
-import type { DefineComponent, Reactive, SetupContext } from 'vue'
+import type { Reactive, SetupContext, VNode as VueVNode } from 'vue'
 
 // ---------- reactivity（vue 官方） ----------
 export {
@@ -140,12 +140,33 @@ import {
   provide,
 } from 'vue'
 
+/**
+ * v2 组件类型（类型层形状）：
+ * 运行时是 vue DefineComponent（createApp/渲染消费），但类型层用自定义形状
+ * ——只有 call signature、无构造签名。TS 6 的 JSX 检查（getJsxReferenceKind）
+ * 按「构造签名 → Component 路径（$props 宽松）/ 调用签名 → Function 路径
+ * （props = 参数类型，严格）」分流——无构造签名让组件走 Function 路径，
+ * props 检查精确为 Props & { children }（React 严格语义：未声明 prop 报错）。
+ */
+export type ActViewComponent<
+  Props extends Record<string, any> = Record<string, any>,
+> = {
+  /** 类型层 call signature：TS 走 Function 路径，props = Props & { children } */
+  (props: Props & { children?: any }): VueVNode
+  /** ElementAttributesProperty{ $props } 兜底（vue 全局 JSX 机制） */
+  $props: Props & { children?: any }
+  name?: string
+  /** vue 组件标记（运行时是 DefineComponent） */
+  __isVue?: true
+  __vccOpts?: any
+}
+
 export function defineComponent<
   Props extends Record<string, any> = Record<string, any>,
 >(
   setup: (props: Props, ctx: SetupContext) => unknown,
   name?: string,
-): DefineComponent<Props> {
+): ActViewComponent<Props> {
   return vueDefineComponent({
     name,
     // 未消费 props 不自动落根 DOM（React 语义；Vue 默认 inheritAttrs 会落）
@@ -198,7 +219,7 @@ export function defineComponent<
       return setup(bridge as Props, ctx)
     },
     // 返回类型以声明为准（vue 的推断带 ExtractPropTypes 包装，与泛型 Props 不完全同构）
-  }) as unknown as DefineComponent<Props>
+  }) as unknown as ActViewComponent<Props>
 }
 
 // ============================================================

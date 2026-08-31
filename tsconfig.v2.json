@@ -1,0 +1,15 @@
+{
+  // ============================================================
+  // v2（vue 基座）测试 TS 配置
+  // JSX 类型来自 actview/jsx-runtime（vue 组件 + React 语义原生元素），
+  // 与 v1 测试（@actview/jsx 全局类型）互不干扰。
+  // 验证：pnpm exec tsc -p tsconfig.v2.json --noEmit
+  // ============================================================
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "jsxImportSource": "actview"
+  },
+  "include": ["test/v2"],
+  // 覆盖继承自 tsconfig.test.json 的 exclude: ["test/v2"]
+  "exclude": []
+}
