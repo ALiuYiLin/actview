@@ -1,5 +1,5 @@
 ---
-"actview": major
+"actview": minor
 ---
 
 children 桥接重构（React 对齐）：渲染期求值 + createVNode 包装抽三参
