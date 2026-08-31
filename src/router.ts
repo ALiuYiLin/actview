@@ -35,6 +35,7 @@ export const router = createRouter({
     { path: "/icon", component: lazyPage(() => import("./pages/IconPage"), (m) => m.IconPage) },
     { path: "/fallthrough", component: lazyPage(() => import("./pages/FallthroughPage"), (m) => m.FallthroughPage) },
     { path: "/provide", component: lazyPage(() => import("./pages/ProvidePage"), (m) => m.ProvidePage) },
+    { path: "/base-ui", component: lazyPage(() => import("./pages/BaseUIComponentsPage"), (m) => m.BaseUIComponentsPage) },
     { path: "/test", component: lazyPage(() => import("./pages/TestPage"), (m) => m.TestPage) },
     {
       path: "/react-migration",

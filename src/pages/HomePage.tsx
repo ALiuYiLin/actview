@@ -24,6 +24,7 @@ export function HomePage() {
         <li><RouterLink to="/icon">/icon</RouterLink> — ⑪ 图标</li>
         <li><RouterLink to="/fallthrough">/fallthrough</RouterLink> — ⑫ 透传/scoped</li>
         <li><RouterLink to="/provide">/provide</RouterLink> — ⑬ provide/inject</li>
+        <li><RouterLink to="/base-ui">/base-ui</RouterLink> — Base UI 移植组件（Checkbox 多 ref/Group + Avatar state/context）</li>
         <li><RouterLink to="/test">/test</RouterLink> — 测试用空页面</li>
         <li><RouterLink to="/react-migration">/react-migration</RouterLink> — React hooks 迁移对照（嵌套：8 个 hook 子页 + 速查表索引）</li>
         <li><RouterLink to="/react-patterns">/react-patterns</RouterLink> — 无等价 hooks 的组合模式（嵌套：8 个模式子页）</li>
