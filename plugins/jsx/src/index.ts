@@ -135,8 +135,12 @@ const plugin: (
               'createTextVNode',
               'isVNode',
             ]
+            // createVNode 从 actview import（包装函数：props.children → 第三参，
+            // React 对齐）；其余 helper 保持 vue 官方
+            const createVNodeSource =
+              _opt.createVNodeSource ?? 'actview'
             if (isModule(path)) {
-              // import { createVNode } from "vue";
+              // import { createVNode } from "actview";（其余 from "vue"）
               const importMap: Record<
                 string,
                 t.MemberExpression | t.Identifier
@@ -146,9 +150,14 @@ const plugin: (
                   if (importMap[name]) {
                     return types.cloneNode(importMap[name])
                   }
-                  const identifier = addNamed(path, name, 'vue', {
-                    ensureLiveReference: true,
-                  })
+                  const identifier = addNamed(
+                    path,
+                    name,
+                    name === 'createVNode' ? createVNodeSource : 'vue',
+                    {
+                      ensureLiveReference: true,
+                    },
+                  )
                   importMap[name] = identifier
                   return identifier
                 })

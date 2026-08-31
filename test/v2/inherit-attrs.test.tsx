@@ -15,11 +15,11 @@ function Widget(props: { step?: number }) {
 }
 
 // children 在类型里：编译期剔除（slots 桥接键），不落根、桥接正常
-function Panel(props: { title?: string; children?: any }) {
+function Panel(props: { title?: string; children?: any; slots?: any }) {
   return (
     <div className="p" data-t={props.title}>
       {props.title}
-      {props.children}
+      {props.slots?.default?.()}
     </div>
   )
 }

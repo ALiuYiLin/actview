@@ -20,10 +20,10 @@ function Counter(props: { step?: number }) {
 const Badge = ({ label }: { label: string }) => <span className="b">{label}</span>
 
 // 形态 3：带 children 的组件（children 桥接）
-function Card(props: { title?: string; children?: any }) {
+function Card(props: { title?: string; children?: any; slots?: any }) {
   return (
     <div className="card" data-t={props.title}>
-      {props.children}
+      {props.slots?.default?.()}
     </div>
   )
 }

@@ -16,10 +16,10 @@ function mount(App: any): HTMLElement {
 
 describe('v2: React 语义 JSX on Vue', () => {
   it('className 映射 + children 桥接 + 响应式更新', async () => {
-    const Card = defineComponent(function (props: { title?: string; children?: any }) {
+    const Card = defineComponent(function (props: { title?: string; children?: any; slots?: any }) {
       return (
         <div className="card" data-title={props.title ?? ''}>
-          {props.children}
+          {props.slots?.default?.()}
         </div>
       )
     }, 'Card')

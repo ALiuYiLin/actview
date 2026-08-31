@@ -145,7 +145,7 @@ describe('props 响应式（shallowReactive）', () => {
           .filter(Boolean)
           .join(' ')
       )
-      return <a class={cls.value}>{props.children ?? null}</a>
+      return <a class={cls.value}>{props.slots?.default?.() ?? null}</a>
     }
     function App() {
       return <VPLink active={state.active}>{state.text}</VPLink>
@@ -292,7 +292,7 @@ describe('场景 27：props 全量 + 显式透传', () => {
     let captured: any
     function Content(props: any) {
       captured = props
-      return <div class="content-body">{props.children}</div>
+      return <div class="content-body">{props.slots?.default?.()}</div>
     }
     function App() {
       return <Content class="vp-doc" title="t" features={[1, 2]}>内容</Content>
@@ -305,7 +305,7 @@ describe('场景 27：props 全量 + 显式透传', () => {
 
   it('不显式透传：外部 class/属性不落根元素（方案 3 核心语义）', () => {
     function Content(props: any) {
-      return <div class="content-body">{props.children}</div>
+      return <div class="content-body">{props.slots?.default?.()}</div>
     }
     function App() {
       return <Content class="vp-doc" title="t">内容</Content>
@@ -379,7 +379,7 @@ describe('场景 27：props 全量 + 显式透传', () => {
     let refVal: any = null
     function Item(props: any) {
       captured = props
-      return <li class="item">{props.children}</li>
+      return <li class="item">{props.slots?.default?.()}</li>
     }
     function App() {
       return <Item key="k1" ref={(el: any) => (refVal = el)}>文本</Item>

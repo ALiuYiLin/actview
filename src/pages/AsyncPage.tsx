@@ -18,14 +18,15 @@ function Bomber() {
   return <span>{boom.on ? throwBoom() : "✅ 正常渲染"}</span>;
 }
 
-// v2 错误边界组件：onErrorCaptured 捕获子树错误（vue 语义）
-function ErrorBoundary(props: { fallback: any; children?: any }) {
+// v2 错误边界组件：onErrorCaptured 捕获子树错误（vue 语义）；
+// 子内容用 vue 原生 slots（v2.1：无 props.children 桥接）
+function ErrorBoundary(props: { fallback: any; slots?: any }) {
   const hasError = ref(false)
   onErrorCaptured(() => {
     hasError.value = true
     return false // 阻止继续冒泡
   })
-  return (hasError.value ? props.fallback : props.children)
+  return (hasError.value ? props.fallback : props.slots.default?.() ?? null)
 }
 
 // 模拟异步加载：1 秒后 resolve 一个组件（vue defineAsyncComponent）

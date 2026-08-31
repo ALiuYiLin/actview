@@ -7,7 +7,7 @@
 ## 核心功能
 
 - **vue 运行时 re-export**：响应式（`ref` / `reactive` / `computed` / `watch` / `effectScope`）、组件（`defineComponent` / `createApp` / `h`）、生命周期、内置组件（`KeepAlive` / `Teleport` / `Suspense` / `Transition` / `TransitionGroup`）
-- **defineComponent 桥接**（React 语义）：`ctx.slots` → `props.children`（读时求值），props 读不到时从 attrs 兜底；**有 props 声明时自动落根**（`inheritAttrs` 开启，未消费 attrs 透传到根元素 + scoped data-v 生效），无声明时保持不透传（React 语义，避免 props 污染 DOM）
+- **defineComponent 桥接**（React 对齐）：props 读不到时从 attrs 兜底（React 风格任意 props 可读）；**`props.children` 渲染期读取 = 子内容值**（React 语义，非渲染期读取返回 undefined 并提示——判断有无子内容用 `props.slots.default != null`）；`props.slots.default()` 具名插槽/显式调用（render 期）；**createVNode 包装**：`<p {...props}>` 展开的 children 键自动抽进第三参（React 对齐）；桥接虚拟键（children/slots）不参与展开/遍历；**有 props 声明时自动落根**（`inheritAttrs` 开启，未消费 attrs 透传到根元素 + scoped data-v 生效），无声明时保持不透传（React 语义，避免 props 污染 DOM）
 - **createContext**：React 语义（`.Provider` / `.use()`），基于 vue `provide/inject`
 - **JSX 类型层**：全局 `IntrinsicElements` 完整标签表（React 语义属性）+ vue 组件兼容；组件 props 严格检查（未声明 prop 报错）
 

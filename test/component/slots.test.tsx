@@ -62,7 +62,7 @@ describe('场景 20：具名插槽', () => {
       return (
         <div class="card">
           <div class="header">{props.slots?.header?.()}</div>
-          <div class="body">{props.children}</div>
+          <div class="body">{props.slots?.default?.()}</div>
           <div class="footer">{props.slots?.footer?.()}</div>
         </div>
       )
@@ -116,7 +116,7 @@ describe('场景 20：具名插槽', () => {
       return (
         <div>
           {props.slots?.title?.() ?? null}
-          {props.children}
+          {props.slots?.default?.()}
         </div>
       )
     }

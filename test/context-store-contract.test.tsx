@@ -94,7 +94,7 @@ describe('createContext 快照值边界（store-as-is）', () => {
       // 自身 provide 过 → 注入表 copy-on-write;上下文键应仍在表中
       // （简写体:此赋值在 setup 期执行一次,仅作 COW 触发标记）
       ;(props as any).__marker = true
-      return <div>{props.children}</div>
+      return <div>{props.slots?.default?.()}</div>
     }
     function Leaf() {
       const s = ThemeCtx.use()!

@@ -66,7 +66,6 @@ export {
   createApp,
   nextTick,
   h,
-  createVNode,
   cloneVNode,
   mergeProps,
   isVNode,
@@ -122,23 +121,53 @@ export type {
 } from 'vue'
 
 // ============================================================
-// defineComponent — slots → props.children 桥接
+// defineComponent — attrs 兜底 + slots 表暴露（vue 原生子内容语义）
 //
-//   Vue 模型：子内容在 ctx.slots（延迟函数）；React 模型：props.children（值）。
-//   桥接：Proxy 包住 props——读 props.children 时求值 slots.default()，
-//   读 props.slots 时返回整个 slots 表（具名插槽兼容 v1 语义）。
-//
-//   语义等价 React：children 每次读取重新求值（= 每次 render 重新创建）。
-//   ⚠️ setup 只执行一次：不要在 setup 体顶层解构 props.children（快照），
-//      在 render 函数里读（响应式 props 是同一对象，闭包捕获安全）。
+//   Vue 模型：子内容在 ctx.slots（延迟函数），组件内 props.slots.default()
+//   在 render 期调用（依赖追踪正常）；具名插槽 props.slots.header() 等。
+//   ⚠️ 无 props.children 桥接（v2.1 起废弃）：读时求值 slots 会丢失
+//      渲染上下文（「Slot invoked outside of render function」警告）、
+//      展开污染 vnode props——统一用 vue 原生 slots。
 // ============================================================
 import {
+  createVNode as vueCreateVNode,
   defineComponent as vueDefineComponent,
   Fragment as _Fragment,
   h,
   inject,
+  isVNode,
   provide,
 } from 'vue'
+
+// ============================================================
+// createVNode 包装（React 对齐：props.children → 第三参）
+//
+//   vue 的 vnode 结构：子节点在第三参（h(type, props, children)），
+//   props 里的 children 键不是合法子节点（patch 时当 DOM 属性设置失败）。
+//   React 的 children 就在 props 里——为对齐 React 语义（<p {...props}>
+//   展开时 children 进三参），运行时规范化：
+//     children == null && props 含 children 键 → 抽出作第三参 + 删键
+//   另对齐 h()：单个 vnode children 包成数组（createVNode 原生不
+//   normalize，单个 vnode 会被当 slots 处理）。
+//   JSX 显式 children（第三参非 null）优先，不抽。
+//   ⚠️ 只影响「props 显式含 children 键」的场景（vue 正常产物无此键）——
+//      零干扰；代价是每次调用多一次 in 检查。
+// ============================================================
+export function createVNode(type: any, props: any, children?: any): VueVNode {
+  if (props && 'children' in props) {
+    if (children == null) {
+      children = props.children
+    }
+    // 无论是否抽出都删键：残留的 children 键会被 patch 当 DOM 属性设置
+    //（「Failed setting prop children」警告）；JSX 显式 children（第三参）
+    // 优先，不覆盖
+    delete props.children
+  }
+  if (children != null && !Array.isArray(children) && isVNode(children)) {
+    children = [children]
+  }
+  return vueCreateVNode(type, props, children)
+}
 
 /**
  * v2 组件类型（类型层形状）：
@@ -146,15 +175,17 @@ import {
  * ——只有 call signature、无构造签名。TS 6 的 JSX 检查（getJsxReferenceKind）
  * 按「构造签名 → Component 路径（$props 宽松）/ 调用签名 → Function 路径
  * （props = 参数类型，严格）」分流——无构造签名让组件走 Function 路径，
- * props 检查精确为 Props & { children }（React 严格语义：未声明 prop 报错）。
+ * props 检查精确为 Props（React 严格语义：未声明 prop 报错）。
+ * 子内容类型：JSX children 属性来自全局 IntrinsicAttributes（react-jsx
+ * 机制）；组件内读 props.slots（vue 原生，类型由组件 props 声明或 any）。
  */
 export type ActViewComponent<
   Props extends Record<string, any> = Record<string, any>,
 > = {
-  /** 类型层 call signature：TS 走 Function 路径，props = Props & { children } */
-  (props: Props & { children?: any }): VueVNode
+  /** 类型层 call signature：TS 走 Function 路径，props = Props */
+  (props: Props): VueVNode
   /** ElementAttributesProperty{ $props } 兜底（vue 全局 JSX 机制） */
-  $props: Props & { children?: any }
+  $props: Props
   name?: string
   /** vue 组件标记（运行时是 DefineComponent） */
   __isVue?: true
@@ -188,53 +219,80 @@ export function defineComponent<
     inheritAttrs: !!opts.props,
     setup(props, ctx) {
       // Vue：未声明 props 的组件所有传入属性进 ctx.attrs（props 对象为空）。
-      // 桥接：读 props 失败时从 attrs 兜底——React 语义「任意 props 都在 props 上」
+      // 桥接：
+      //   - attrs 兜底：读 props 失败时从 attrs 读——React 语义「任意 props 都在 props 上」
+      //   - slots 引用暴露：props.slots = ctx.slots（纯引用，不求值；组件内
+      //     props.slots.default() 在 render 期调用，依赖追踪正常）
+      //   - children（React 对齐）：渲染期读取 = slots.default() 求值（值语义）；
+      //     非渲染期读取 = undefined + 一次性提示（不执行——避免「Slot invoked
+      //     outside of render function」警告与依赖丢失）；判断有无子内容用
+      //     props.slots.default != null（静态检查）
+      //   - 虚拟键（children/slots）不参与 ownKeys/descriptor：展开 {...props}、
+      //     Object.keys、toRefs 遍历不会带上桥接键（vue 的 slots 机制不走 props）
       const attrs = ctx.attrs as Record<string, any>
+      let renderPhase = false
+      let warnedNonRenderRead = false
+
       const bridge = new Proxy(props as object, {
         get(t, k) {
-          if (k === 'children') return ctx.slots.default?.() ?? null
           if (k === 'slots') return ctx.slots
+          if (k === 'children') {
+            if (renderPhase) return ctx.slots.default?.() ?? null
+            if (!warnedNonRenderRead) {
+              warnedNonRenderRead = true
+              console.warn(
+                '[actview] 非渲染期读取 props.children：插槽内容只在渲染期可用。' +
+                  '判断有无子内容请用 props.slots.default != null；' +
+                  '渲染期用 props.children 或 props.slots.default()',
+              )
+            }
+            return undefined
+          }
           const own = Reflect.get(t, k)
           if (own !== undefined) return own
           return attrs[k as any]
         },
         has(t, k) {
           return (
-            k === 'children' ||
             k === 'slots' ||
+            k === 'children' ||
             Reflect.has(t, k) ||
             k in attrs
           )
         },
         ownKeys(t) {
-          // children 是 slots 桥接键：保留在遍历中（Base UI 移植件的
-          // toRefs(props) 依赖它产出 render prop 的 p.children；显式渲染
-          // p.children 时内容来自表达式而非 vnode props）
+          // 桥接虚拟键不参与展开/遍历——只有真实 props + attrs
           return [
             ...new Set([
               ...Reflect.ownKeys(t),
               ...Reflect.ownKeys(attrs),
-              'children',
-              'slots',
             ]),
           ]
         },
         getOwnPropertyDescriptor(t, k) {
-          if (k === 'children' || k === 'slots') {
-            return {
-              enumerable: true,
-              configurable: true,
-              value:
-                k === 'children' ? (ctx.slots.default?.() ?? null) : ctx.slots,
-            }
-          }
           return (
             Reflect.getOwnPropertyDescriptor(t, k) ??
             Reflect.getOwnPropertyDescriptor(attrs, k)
           )
         },
       })
-      return setup(bridge as Props, ctx)
+
+      const userResult = setup(bridge as Props, ctx)
+      // 渲染期标记：桥接包装 render——标记区间 = vue 渲染调用链内
+      //（与 vue 的 currentRenderingInstance 上下文同步，slots.default()
+      //  此时调用无警告）
+      if (typeof userResult === 'function') {
+        const userRender = userResult
+        return () => {
+          renderPhase = true
+          try {
+            return userRender()
+          } finally {
+            renderPhase = false
+          }
+        }
+      }
+      return userResult
     },
     // 返回类型以声明为准（vue 的推断带 ExtractPropTypes 包装，与泛型 Props 不完全同构）
   }) as unknown as ActViewComponent<Props>
@@ -273,10 +331,10 @@ export function createContext(defaultValue: any): Context<any> {
   const key: symbol = Symbol('actview-context')
 
   const provider = defineComponent(function (
-    props: { value?: any; children?: any },
+    props: { value?: any; slots?: any },
   ) {
     provide(key, props.value ?? defaultValue)
-    return () => h(_Fragment, null, props.children ?? null)
+    return () => h(_Fragment, null, props.slots.default?.() ?? null)
   }, 'ActViewContext.Provider')
 
   const ctx = {

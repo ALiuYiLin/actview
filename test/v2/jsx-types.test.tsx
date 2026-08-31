@@ -49,10 +49,11 @@ describe('v2: JSX 类型层', () => {
     const Card = defineComponent(function (props: {
       title?: string
       children?: any
+      slots?: any
     }) {
       return (
         <section className="card" data-title={props.title ?? ''}>
-          {props.children}
+          {props.slots?.default?.()}
         </section>
       )
     })

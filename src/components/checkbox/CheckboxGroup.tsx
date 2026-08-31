@@ -22,7 +22,8 @@ export interface CheckboxGroupApi {
 export interface CheckboxGroupProps {
   /** 拿到 group API——供外部状态栏/全选按钮等使用(写 .value 一次性赋值) */
   groupRef?: Ref<CheckboxGroupApi | null>
-  children?: any
+  /** vue 原生插槽（默认插槽 props.slots.default()） */
+  slots?: any
 }
 
 export function CheckboxGroup(props: CheckboxGroupProps) {
@@ -56,7 +57,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
   return (
     <CheckboxGroupContext.Provider value={group}>
       <div role="group" data-checkbox-group="">
-        {props.children}
+        {props.slots?.default?.()}
       </div>
     </CheckboxGroupContext.Provider>
   )

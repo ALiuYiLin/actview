@@ -32,4 +32,10 @@ export interface VueJSXPluginOptions {
    * @default 'actview'
    */
   defineComponentSource?: string
+  /**
+   * 产物 createVNode 的 import 来源（actview 导出包装函数：
+   * props.children → 第三参，React 对齐；'vue' 为原生 createVNode）
+   * @default 'actview'
+   */
+  createVNodeSource?: string
 }

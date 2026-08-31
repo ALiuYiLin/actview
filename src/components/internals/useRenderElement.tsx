@@ -26,7 +26,7 @@
 // （详见 docs/babel-defineComponent.md 的简写组件契约）。
 // ============================================================
 
-import { h, type VNode } from 'actview'
+import { h, useSlots, type VNode } from 'actview'
 import type {
   BaseUIComponentProps,
   ComponentRenderFn,
@@ -152,7 +152,13 @@ function evaluateRenderProp<S extends Record<string, any>>(
   if (render) {
     if (typeof render === 'function') {
       if (DEV) warnIfRenderPropLooksLikeComponent(render as any)
-      return (render as any)(props, state)
+      // v2.1：children 不再来自 props（无桥接）——render 期显式取
+      // slots.default()（依赖追踪正常），以普通对象属性传入 render prop；
+      // 无子内容时不加 children 键（避免 {...p} 展开出 children: null）
+      const slotChildren = renderSlots()
+      const renderProps =
+        slotChildren != null ? { ...props, children: slotChildren } : props
+      return (render as any)(renderProps, state)
     }
 
     // 节点形态 = cloneElement(mergeProps(props, render.props), ref 覆盖为合并链,
@@ -162,8 +168,12 @@ function evaluateRenderProp<S extends Record<string, any>>(
     const node = render as VNode
     const mergedProps = mergeProps(props, node.props)
     mergedProps.ref = props.ref
-    const { children, key, ...rest } = mergedProps
-    return h(node.type as any, { ...rest, key: key ?? node.key ?? undefined }, children ?? null)
+    const { key, ...rest } = mergedProps
+    return h(
+      node.type as any,
+      { ...rest, key: key ?? node.key ?? undefined },
+      node.children ?? renderSlots(),
+    )
   }
   if (element) {
     if (typeof element === 'string') {
@@ -187,15 +197,22 @@ function warnIfRenderPropLooksLikeComponent(renderFn: { name?: string }) {
 
 function renderTag(Tag: string, props: Record<string, any>) {
   // v2：h()（vue createVNode）——children 必须是第三参（vnode 子节点），
-  // 不能留在 props（vue patchProp 会报「Failed setting prop children」）
-  const { children, key, ...rest } = props
+  // 不能留在 props（vue patchProp 会报「Failed setting prop children」）。
+  // v2.1：children 来自 render 期 slots.default()（无 props.children 桥接）
+  const { key, ...rest } = props
+  const children = renderSlots()
   if (Tag === 'button') {
-    return h('button', { type: 'button', ...rest, key: key ?? undefined }, children ?? null)
+    return h('button', { type: 'button', ...rest, key: key ?? undefined }, children)
   }
   if (Tag === 'img') {
-    return h('img', { alt: '', ...rest, key: key ?? undefined }, children ?? null)
+    return h('img', { alt: '', ...rest, key: key ?? undefined }, children)
   }
-  return h(Tag, { ...rest, key: key ?? undefined }, children ?? null)
+  return h(Tag, { ...rest, key: key ?? undefined }, children)
+}
+
+/** render 期取默认插槽内容（useSlots 在渲染函数上下文调用，依赖追踪正常） */
+function renderSlots(): any {
+  return useSlots().default?.() ?? null
 }
 
 /**
