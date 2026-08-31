@@ -12,18 +12,27 @@ import {
   isExcludedTransform,
   transformWithBabel,
 } from '../src/babel-host'
-import defineComponentPlugin from '../src/babel-plugin'
 
-const item = createBabelItem(defineComponentPlugin)
+// 内联最小插件：babel-host 测试的是「宿主壳」（排除规则/transformSync 参数），
+// 不依赖任何具体编译插件
+const inlinePlugin = () => ({
+  visitor: {
+    Identifier(p: any) {
+      p.node.name = p.node.name.toUpperCase()
+    },
+  },
+})
+
+const item = createBabelItem(inlinePlugin)
 
 describe('babel-host：node_modules 硬排除', () => {
   it('node_modules 下的文件返回 null（不转换）', () => {
-    const transform = createBabelTransform(defineComponentPlugin)
+    const transform = createBabelTransform(inlinePlugin)
     expect(
-      transform('function A() { return <div/> }', 'E:/proj/node_modules/pkg/A.tsx'),
+      transform('const a = 1', 'E:/proj/node_modules/pkg/A.tsx'),
     ).toBeNull()
     expect(
-      transform('function A() { return <div/> }', 'E:/proj/node_modules/@scope/pkg/A.tsx'),
+      transform('const a = 1', 'E:/proj/node_modules/@scope/pkg/A.tsx'),
     ).toBeNull()
   })
 
@@ -33,52 +42,52 @@ describe('babel-host：node_modules 硬排除', () => {
   })
 
   it('include 白名单无法覆盖 node_modules 硬排除', () => {
-    const transform = createBabelTransform(defineComponentPlugin, {
+    const transform = createBabelTransform(inlinePlugin, {
       include: [/node_modules\/my-lib/],
     })
     expect(
-      transform('function A() { return <div/> }', 'E:/proj/node_modules/my-lib/A.tsx'),
+      transform('const abc = 1', 'E:/proj/node_modules/my-lib/A.tsx'),
     ).toBeNull()
   })
 
   it('项目内源码正常转换', () => {
-    const transform = createBabelTransform(defineComponentPlugin)
-    const r = transform('function A() { return <div>hi</div> }', 'E:/proj/src/A.tsx')
-    expect(r?.code).toContain('defineComponent')
+    const transform = createBabelTransform(inlinePlugin)
+    const r = transform('const abc = 1', 'E:/proj/src/A.tsx')
+    expect(r?.code).toContain('ABC')
   })
 
   it('路径脱离 node_modules（alias 后形态）即恢复转换', () => {
     // 库需要现场编译时的标准解法：vite/rollup alias 到包源码，路径不再含
     // node_modules 段 → 进入源码管线正常转换
-    const transform = createBabelTransform(defineComponentPlugin)
+    const transform = createBabelTransform(inlinePlugin)
     const r = transform(
-      'function A() { return <div>hi</div> }',
+      'const abc = 1',
       'E:/proj/.vite-deps/my-lib/src/A.tsx',
     )
-    expect(r?.code).toContain('defineComponent')
+    expect(r?.code).toContain('ABC')
   })
 })
 
 describe('babel-host：include / exclude 规则', () => {
   it('exclude 黑名单：命中任一规则即跳过（优先级高于 include）', () => {
-    const transform = createBabelTransform(defineComponentPlugin, {
+    const transform = createBabelTransform(inlinePlugin, {
       include: [/^E:\/proj\//],
       exclude: [/\.test\.tsx$/, 'vendor'],
     })
     expect(transform('x', 'E:/proj/src/A.test.tsx')).toBeNull()
     expect(transform('x', 'E:/proj/src/vendor/x.tsx')).toBeNull()
     expect(
-      transform('function A() { return <div/> }', 'E:/proj/src/A.tsx'),
+      transform('const abc = 1', 'E:/proj/src/A.tsx'),
     ).not.toBeNull()
   })
 
   it('include 白名单：未命中不转换', () => {
-    const transform = createBabelTransform(defineComponentPlugin, {
+    const transform = createBabelTransform(inlinePlugin, {
       include: [/^E:\/proj\/src\//],
     })
     expect(transform('x', 'E:/proj/other/A.tsx')).toBeNull()
     expect(
-      transform('function A() { return <div/> }', 'E:/proj/src/A.tsx'),
+      transform('const abc = 1', 'E:/proj/src/A.tsx'),
     ).not.toBeNull()
   })
 
@@ -86,10 +95,10 @@ describe('babel-host：include / exclude 规则', () => {
     expect(transformWithBabel('x', 'E:/proj/node_modules/pkg/A.tsx', item)).toBeNull()
     expect(
       transformWithBabel(
-        'function A() { return <div/> }',
+        'const abc = 1',
         'E:/proj/src/A.tsx',
         item,
       )?.code,
-    ).toContain('defineComponent')
+    ).toContain('ABC')
   })
 })

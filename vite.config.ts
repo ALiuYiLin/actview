@@ -4,9 +4,10 @@ import { actviewScopedPlugin } from '@actview/plugin-scoped'
 
 export default defineConfig({
   plugins: [
-    // v2 管线：React 语义 JSX 编译（全量接管；node_modules 由 babel-host 硬排除）
-    actviewJsxPlugin(),
+    // ⚠️ 顺序：scoped 先注入 data-v-* 属性（JSX 源码形态），
+    // actviewJsxPlugin 后转 createVNode（保留注入的属性）
     ...actviewScopedPlugin(),
+    actviewJsxPlugin(),
   ],
   test: {
     environment: 'happy-dom',
