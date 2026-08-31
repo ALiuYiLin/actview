@@ -1,25 +1,25 @@
 // ============================================================
 // v2 自动 defineComponent 包装（React 函数组件语义）
-//   function App() { return () => <JSX/> }  免手动包装——
+//   React 形态组件免手动包装——
 //   @actview/plugin-jsx 编译期自动包 defineComponent
 // ============================================================
 import { describe, expect, it } from 'vitest'
 import { createApp, defineComponent, nextTick, ref } from 'actview'
 
-// 形态 1：setup 返回 render（免包装）
+// React 语义形态 1：函数声明 + 直接 return JSX（编译期包成 render）
 function Counter(props: { step?: number }) {
   const count = ref(0)
-  return () => (
+  return (
     <button className="c" onClick={() => (count.value += props.step ?? 1)}>
       {count.value}
     </button>
   )
 }
 
-// 形态 2：箭头 expression body（直接返回 JSX）
+// React 语义形态 2：箭头 expression body（直接返回 JSX）
 const Badge = ({ label }: { label: string }) => <span className="b">{label}</span>
 
-// 形态 3：直接 return JSX（简写，编译期包成 render）
+// 形态 3：带 children 的组件（children 桥接）
 function Card(props: { title?: string; children?: any }) {
   return (
     <div className="card" data-t={props.title}>
@@ -30,7 +30,7 @@ function Card(props: { title?: string; children?: any }) {
 
 // 手动 defineComponent：跳过自动包装
 const Manual = defineComponent(function () {
-  return () => <i className="m">m</i>
+  return <i className="m">m</i>
 })
 
 function mount(App: any): HTMLElement {

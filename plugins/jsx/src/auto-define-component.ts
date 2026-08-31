@@ -1,12 +1,19 @@
 // ============================================================
 // auto-define-component — React 函数组件语义（自动包装）
 //
-//   function App(props) { return () => <JSX/> }   （setup 返回 render）
-//   const App = (props) => <JSX/>                  （箭头 expression body）
-//   function App(props) { return <JSX/> }          （直接返回 JSX 简写）
+//   React 形态组件免手动 defineComponent：
+//     function App(props) { return <JSX/> }    （函数声明 + 直接 return JSX）
+//     const App = (props) => <JSX/>            （箭头 expression body）
+//     export default function App() { ... }    （默认导出）
 //
 //   → const App = defineComponent(function App(props) { ... })
 //     （直接 return JSX 的形态包成 render：return () => <JSX/>）
+//
+//   ⚠️ 组件契约（vue 模型）：函数体 = setup（只执行一次，ref/生命周期
+//   在这里创建）；return 的 JSX = render（每次渲染执行，响应式依赖
+//   在此收集）。与 React「函数体每次渲染执行」的差异是 v2 的架构取舍。
+//   ⚠️ return () => <JSX/>（setup 返回 render）是【非法写法】——React 里
+//   返回函数是非法 child；编译期直接抛错，请写直接 return <JSX/>。
 //
 //   defineComponent 来自 actview（选项 defineComponentSource，默认 'actview'），
 //   其桥接层提供 props.children（React 语义）。
@@ -44,24 +51,67 @@ function hasJSX(node: any): boolean {
   return found
 }
 
+/** 非法形态错误消息：setup 返回 render（React 语义禁止） */
+const ILLEGAL_RENDER_MSG =
+  '非法组件写法：return () => <JSX/>（setup 返回 render）是 vue 形态，React 语义禁止。' +
+  '请直接 return <JSX/>（组件函数体 = setup，return 的 JSX 自动包成 render）'
+
 /**
  * 函数体「最后 return 直接是 VNode 调用」→ 包成 render 函数。
- * 组件契约：setup 必须返回 render（`return () => <JSX/>`）；
- * 直接 `return <JSX/>` 的简写在此转成 `return () => <JSX/>`。
+ * 组件契约：直接 `return <JSX/>` 的 React 形态在此转成
+ * `return () => <JSX/>`（render 每次渲染执行、收集响应式依赖）。
+ * ⚠️ 最后 return 是函数（`return () => <JSX/>`）→ 编译期抛错（非法形态）。
  */
-function ensureRenderReturn(body: t.BlockStatement) {
+function ensureRenderReturn(body: t.BlockStatement, path?: NodePath<any>) {
   for (let i = body.body.length - 1; i >= 0; i--) {
     const stmt = body.body[i]
     if (!t.isReturnStatement(stmt) || !stmt.argument) continue
     const arg = stmt.argument
     if (t.isArrowFunctionExpression(arg) || t.isFunctionExpression(arg)) {
-      return // 已是 render 函数
+      // 非法：setup 返回 render——React 里返回函数是非法 child，v2 直接编译报错
+      throw (
+        path?.buildCodeFrameError(ILLEGAL_RENDER_MSG) ??
+        new Error(`[actview/plugin-jsx] ${ILLEGAL_RENDER_MSG}`)
+      )
     }
     if (t.isCallExpression(arg) || t.isJSXElement(arg)) {
       // JSX 转换后是 _createVNode(...) 调用；转换前（异常路径）是 JSXElement
       stmt.argument = t.arrowFunctionExpression([], arg)
+      return
+    }
+    if (t.isConditionalExpression(arg) || t.isLogicalExpression(arg)) {
+      // `return cond ? <A/> : <B/>` / `return cond && <A/>`（条件渲染常见形态）：
+      // 转换后是三元/逻辑表达式（含 _createVNode 分支）——同样包成 render
+      stmt.argument = t.arrowFunctionExpression([], arg)
+      return
     }
     return
+  }
+}
+
+/**
+ * React 语义：setup 函数规范化——直接 return JSX（或箭头 expression body
+ * 返回 JSX）包成 render。auto-define 包装与显式 defineComponent 共用。
+ * ⚠️ 仅在 JSX 转换后（exit 阶段）调用：新建的箭头函数不会被再遍历，
+ * 包入的必须是已转换的 _createVNode 调用。
+ */
+export function normalizeSetupFunction(
+  fn: t.FunctionExpression | t.ArrowFunctionExpression,
+  path?: NodePath<any>,
+) {
+  if (t.isArrowFunctionExpression(fn) && !t.isBlockStatement(fn.body)) {
+    if (t.isArrowFunctionExpression(fn.body) || t.isFunctionExpression(fn.body)) {
+      // 非法：`() => () => <JSX/>`——setup 返回 render
+      throw (
+        path?.buildCodeFrameError(ILLEGAL_RENDER_MSG) ??
+        new Error(`[actview/plugin-jsx] ${ILLEGAL_RENDER_MSG}`)
+      )
+    }
+    // 箭头函数 expression body（`() => <JSX/>`）：包一层 render——
+    // defineComponent(() => () => <JSX/>)
+    fn.body = t.arrowFunctionExpression([], fn.body)
+  } else if (t.isArrowFunctionExpression(fn) || t.isFunctionExpression(fn)) {
+    ensureRenderReturn(fn.body as t.BlockStatement, path)
   }
 }
 
@@ -69,6 +119,7 @@ function ensureRenderReturn(body: t.BlockStatement) {
 function buildDefineComponentCall(
   fn: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
   options?: t.ObjectExpression,
+  path?: NodePath<any>,
 ): t.CallExpression {
   let expr: t.FunctionExpression | t.ArrowFunctionExpression
   if (t.isFunctionDeclaration(fn)) {
@@ -77,13 +128,7 @@ function buildDefineComponentCall(
   } else {
     expr = fn
   }
-  // 箭头函数 expression body（`() => <JSX/>`）：包一层 render——
-  // defineComponent(() => () => <JSX/>)
-  if (t.isArrowFunctionExpression(expr) && !t.isBlockStatement(expr.body)) {
-    expr.body = t.arrowFunctionExpression([], expr.body)
-  } else if (t.isArrowFunctionExpression(expr) || t.isFunctionExpression(expr)) {
-    ensureRenderReturn(expr.body as t.BlockStatement)
-  }
+  normalizeSetupFunction(expr, path)
   const args: t.Expression[] = [expr]
   if (options) args.push(options)
   return t.callExpression(t.identifier('defineComponent'), args)
@@ -133,7 +178,11 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
           t.variableDeclaration('const', [
             t.variableDeclarator(
               id,
-              buildDefineComponentCall(path.node, buildOptions(state, path.node)),
+              buildDefineComponentCall(
+                path.node,
+                buildOptions(state, path.node),
+                path,
+              ),
             ),
           ]),
         )
@@ -171,6 +220,7 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
             state,
             init as t.FunctionExpression | t.ArrowFunctionExpression,
           ),
+          path,
         )
       },
     },
@@ -192,6 +242,7 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
         path.node.declaration = buildDefineComponentCall(
           decl,
           buildOptions(state, decl),
+          path,
         )
       },
     },

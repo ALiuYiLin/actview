@@ -11,12 +11,12 @@ import { createApp } from 'actview'
 
 // 类型注解组件：step 被声明 → 消费；未声明属性 → 透传落根
 function Widget(props: { step?: number }) {
-  return () => <button className="w">{props.step ?? 1}</button>
+  return <button className="w">{props.step ?? 1}</button>
 }
 
 // children 在类型里：编译期剔除（slots 桥接键），不落根、桥接正常
 function Panel(props: { title?: string; children?: any }) {
-  return () => (
+  return (
     <div className="p" data-t={props.title}>
       {props.title}
       {props.children}
@@ -34,12 +34,12 @@ const Card = (props: CardProps) => (
 
 // 默认值参数形态（props = {}）：类型注解在 left 上
 function WithDefault(props: { count?: number } = { count: 0 }) {
-  return () => <b className="d">{props.count ?? 1}</b>
+  return <b className="d">{props.count ?? 1}</b>
 }
 
 // any 注解：类型不可提取 → 无 props 声明 → 维持不透传（inheritAttrs false）
 function Plain(props: any) {
-  return () => <i className="pl">{props.step ?? 1}</i>
+  return <i className="pl">{props.step ?? 1}</i>
 }
 
 function mount(App: any): HTMLElement {

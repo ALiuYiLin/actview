@@ -50,7 +50,7 @@ describe('v2: JSX 类型层', () => {
       title?: string
       children?: any
     }) {
-      return () => (
+      return (
         <section className="card" data-title={props.title ?? ''}>
           {props.children}
         </section>
@@ -93,7 +93,7 @@ describe('v2: JSX 类型层', () => {
 
   it('负向：组件未知 prop 报错（React 严格语义）', () => {
     const Card = defineComponent(function (props: { title?: string }) {
-      return () => <div>{props.title}</div>
+      return <div>{props.title}</div>
     })
     // @ts-expect-error 组件未声明 foo prop
     const Bad = <Card foo="x" />

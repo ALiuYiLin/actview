@@ -9,11 +9,12 @@
   - `htmlFor` → `for`（JSX 保留字）
   - `onChange` → `onInput`（text-like input/textarea；checkbox/radio/select 保留——React 里本就是 change 事件）
   - `dangerouslySetInnerHTML={{ __html }}` → `innerHTML`
-- **自动 defineComponent 包装**（React 函数组件语义）：PascalCase 且含 JSX 的函数自动包 `defineComponent`——三种形态：
-  - `function App() { return () => <JSX/> }`（setup 返回 render）
-  - `const App = () => <JSX/>`（箭头 expression body）
-  - `function App() { return <JSX/> }`（直接 return JSX 简写）
+- **自动 defineComponent 包装**（React 函数组件语义）：PascalCase 且含 JSX 的 React 形态组件自动包 `defineComponent`：
+  - `function App(props) { return <JSX/> }`（函数声明 + 直接 return JSX）
+  - `const App = (props) => <JSX/>`（箭头 expression body）
+  - `export default function App() { ... }`（默认导出）
   - 手动 `defineComponent` 包装跳过；小写函数不处理；自动注入 `import { defineComponent } from 'actview'`
+  - ⚠️ 组件函数体 = setup（只执行一次，`ref`/生命周期在此创建），`return` 的 JSX = render（每次渲染执行）——vue 组件模型；`return () => <JSX/>`（setup 返回 render）是**非法写法**（React 里返回函数是非法 child），编译期直接报错——统一写直接 return JSX
 - **编译期 props 提取**（自动落根的前提）：组件函数第一参的类型注解（内联对象 / 同文件 `interface` / `type` / 默认值参数）经 `@vue/compiler-sfc` 的 `extractRuntimeProps` 降级为运行时 props 声明——`defineComponent(fn, { props: { step: { type: Number, required: false } } })`；actview 桥接按「有 props 声明」开启 `inheritAttrs`，未消费 attrs（class / data-* / 事件 / 透传属性）自动落到根元素，scoped 注入的 `data-v-*` 对 actview 组件生效
   - `children` 声明自动剔除（slots 桥接键，不能进 props 声明）
   - 类型不可解析（跨文件 import 类型 / 复杂类型 / `any`）→ warn 并跳过，组件退回无声明语义（不落根）

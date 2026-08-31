@@ -25,7 +25,7 @@ function ErrorBoundary(props: { fallback: any; children?: any }) {
     hasError.value = true
     return false // 阻止继续冒泡
   })
-  return () => (hasError.value ? props.fallback : props.children)
+  return (hasError.value ? props.fallback : props.children)
 }
 
 // 模拟异步加载：1 秒后 resolve 一个组件（vue defineAsyncComponent）
@@ -39,7 +39,7 @@ const AsyncCard = defineAsyncComponent(
             // ActViewComponent 是类型层自定义形状（无构造签名），
             // 断言回 vue Component 兼容 defineAsyncComponent loader 类型
             default: defineComponent(function Loaded() {
-              return () => <div class="child-box" style={{ background: "#fef3c7", borderRadius: "6px", padding: "12px 14px" }}>异步组件加载完成 🎉</div>;
+              return <div class="child-box" style={{ background: "#fef3c7", borderRadius: "6px", padding: "12px 14px" }}>异步组件加载完成 🎉</div>;
             }),
           } as any),
         1000,

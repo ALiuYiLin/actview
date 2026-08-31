@@ -3,7 +3,7 @@ import { declare } from '@babel/helper-plugin-utils'
 import syntaxJsx from '@babel/plugin-syntax-jsx'
 import template from '@babel/template'
 import * as t from '@babel/types'
-import { createAutoDefineVisitor, type AutoDefineComponentState } from './auto-define-component.ts'
+import { createAutoDefineVisitor, normalizeSetupFunction, type AutoDefineComponentState } from './auto-define-component.ts'
 import { resolveComponentProps } from './resolve-props.ts'
 import sugarFragment from './sugar-fragment.ts'
 import transformVueJSX from './transform-vue-jsx.ts'
@@ -51,8 +51,15 @@ const plugin: (
         ...sugarFragment,
         ...autoDefineVisitor,
         CallExpression: {
-          // 显式 defineComponent(fn)（用户手写包装）：同样提取 props 运行时声明
-          enter(path, state) {
+          // 显式 defineComponent(fn)：React 语义规范化（直接 return JSX
+          // 包成 render）+ 提取 props 运行时声明。
+          // exit 阶段执行：JSX 已转为 _createVNode 调用，normalize 包入的
+          // 是已转换节点（新建箭头函数不会被再次遍历）。
+          exit(path, state) {
+            // 编译器生成节点（auto-define 注入的 defineComponent，无源码 loc）
+            // 跳过：Babel 8 replaceWith 会 requeue 新节点，二次处理会把
+            // 已包装的 render（return () => _createVNode(...)）误判为非法形态
+            if (path.node.loc == null) return
             const callee = path.node.callee
             if (!t.isIdentifier(callee) || callee.name !== 'defineComponent') {
               return
@@ -68,6 +75,9 @@ const plugin: (
 
             const fn = path.node.arguments[0]
             if (!fn || !t.isFunction(fn)) return
+            if (t.isFunctionExpression(fn) || t.isArrowFunctionExpression(fn)) {
+              normalizeSetupFunction(fn, path)
+            }
             const propsOption = resolveComponentProps(fn, state.file)
             if (!propsOption) return
 

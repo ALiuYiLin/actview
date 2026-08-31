@@ -17,7 +17,7 @@ function mount(App: any): HTMLElement {
 describe('v2: React 语义 JSX on Vue', () => {
   it('className 映射 + children 桥接 + 响应式更新', async () => {
     const Card = defineComponent(function (props: { title?: string; children?: any }) {
-      return () => (
+      return (
         <div className="card" data-title={props.title ?? ''}>
           {props.children}
         </div>
@@ -26,7 +26,7 @@ describe('v2: React 语义 JSX on Vue', () => {
 
     const App = defineComponent(function () {
       const count = ref(0)
-      return () => (
+      return (
         <div className="app">
           <Card title={`n=${count.value}`}>
             <button className="btn" onClick={() => count.value++}>
@@ -52,7 +52,7 @@ describe('v2: React 语义 JSX on Vue', () => {
   it('onChange → onInput：输入事件触发更新', async () => {
     const App = defineComponent(function () {
       const text = ref('')
-      return () => (
+      return (
         <input
           className="field"
           value={text.value}
@@ -76,11 +76,11 @@ describe('v2: React 语义 JSX on Vue', () => {
 
     const Themed = defineComponent(function () {
       const theme = ThemeCtx.use()
-      return () => <span className="themed" style={{ color: theme.color }} />
+      return <span className="themed" style={{ color: theme.color }} />
     })
 
     const App = defineComponent(function () {
-      return () => (
+      return (
         <ThemeCtx.Provider value={reactive({ color: 'blue' })}>
           <Themed />
         </ThemeCtx.Provider>
@@ -93,7 +93,7 @@ describe('v2: React 语义 JSX on Vue', () => {
 
   it('htmlFor 映射', () => {
     const App = defineComponent(function () {
-      return () => (
+      return (
         <div>
           <label htmlFor="inp">L</label>
           <input id="inp" />
@@ -107,7 +107,7 @@ describe('v2: React 语义 JSX on Vue', () => {
   it('v-model 语法（Vue 原生指令）在 JSX 中可用', async () => {
     const App = defineComponent(function () {
       const text = ref('hi')
-      return () => (
+      return (
         <div>
           <input v-model={text.value} className="vm" />
           <span className="show">{text.value}</span>
