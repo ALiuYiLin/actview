@@ -1,20 +1,14 @@
 # @actview/plugin-babel
 
-> **迁移记录**：本包原为 `@actview/babel-plugin-actview`（目录 `plugins/babel-plugin-actview`），现更名为 `@actview/plugin-babel`（目录 `plugins/babel`），与 `@actview/plugin-vite` / `@actview/plugin-scoped` 统一为 `@actview/plugin-*` 命名。旧包名已弃用，请使用新包名安装与引用。
+**共享 Babel 宿主壳** —— 统一 `transformSync` 调用参数与排除规则，供 `@actview/plugin-vite` 与 `@actview/plugin-scoped` 复用。
 
-**ActView 编译核心（Babel 插件）** —— 把 JSX 组件函数自动转换为 `defineComponent`，独立于 Vite 宿主。
-
-Babel 插件 `defineComponentPlugin` 是 ActView 编译链的**核心**：将大写开头的函数 / 箭头 / 默认导出组件包装为 `defineComponent` 产物（`{ __setup }`），并完成具名插槽提取、props 白名单、早退 return 包装等转换。`@actview/plugin-vite` 与 `@actview/plugin-scoped` 都基于它。
-
-同时本包导出**共享 Babel 宿主壳**（`createBabelTransform` / `createBabelItem` / `transformWithBabel`），供各 Vite 插件复用统一的 `transformSync` 调用参数。
+（v1 的 `defineComponentPlugin` / `solidPlugin` 已随 ActView v2 移除——v2 的 JSX 编译由 `@actview/plugin-jsx` 承担。）
 
 ## 核心功能
 
-- **组件自动转换**：函数 / 箭头 / 默认导出组件 → `defineComponent`（自动注入 `import { defineComponent } from '@actview/core'`）
-- **具名插槽**：`<template slot>` → `slots` prop（编译期提取）
-- **props 白名单**：从 `defineComponent({ props })` 声明提取 `__props`
-- **早退 return**：组件渲染函数中的 `if / 三元 / &&` 早退分支包装（`isRenderExpr`）
-- **共享宿主壳**：`createBabelTransform` 等，统一 `parserOpts` / `retainLines` / `sourceMaps` / `babelrc:false` / `configFile:false`
+- **统一参数**：`parserOpts(jsx+typescript)` / `retainLines` / `sourceMaps` / `babelrc:false` / `configFile:false`
+- **排除规则**：node_modules 硬排除（include 不可覆盖）/ include 白名单 / exclude 黑名单
+- **性能**：`createBabelTransform` 模块级创建一次 ConfigItem（Babel 8 同步），跨多次 `transformSync` 复用
 
 ## 安装
 
@@ -22,26 +16,10 @@ Babel 插件 `defineComponentPlugin` 是 ActView 编译链的**核心**：将大
 pnpm add -D @actview/plugin-babel
 ```
 
-## 快速开始
-
-```ts
-import { defineComponentPlugin } from '@actview/plugin-babel'
-import * as babel from '@babel/core'
-
-const result = babel.transformSync(code, {
-  filename: 'App.tsx',
-  plugins: [[defineComponentPlugin, {}]],
-  parserOpts: { plugins: ['jsx', 'typescript'] },
-})
-```
-
-> 大多数场景不需要直接使用 —— 接入 `@actview/plugin-vite`（Vite 项目）即可自动完成转换。
-
 ## API
 
 | 导出 | 说明 |
 |---|---|
-| `defineComponentPlugin`（默认导出同） | Babel 插件工厂：组件 → `defineComponent` 转换 |
 | `createBabelTransform(plugin, options?)` | 宿主壳工厂：模块级创建一次 ConfigItem，返回 `(code, filename) => { code, map } \| null` |
 | `createBabelItem(plugin)` | 把插件工厂预编译为 ConfigItem（Babel 8 同步） |
 | `transformWithBabel(code, filename, pluginItem, options?)` | 统一参数的 `transformSync` |
@@ -50,7 +28,7 @@ const result = babel.transformSync(code, {
 
 ## 排除规则（node_modules 硬排除）
 
-宿主壳**硬排除 node_modules 下的文件**（返回 `null` 不转换）：依赖是第三方代码，属依赖管线（esbuild 预构建），不是源码管线——`babel-loader` / `@rollup/plugin-babel` 同款默认。`BabelTransformOptions`：
+宿主壳**硬排除 node_modules 下的文件**（返回 `null` 不转换）：依赖是第三方代码，属依赖管线（esbuild 预构建），不是源码管线。`BabelTransformOptions`：
 
 ```ts
 {
@@ -59,14 +37,14 @@ const result = babel.transformSync(code, {
 }
 ```
 
-**源码分发库包 / 主题包（node_modules 下）需要现场编译时**，不在插件层开洞，而是在宿主构建配置里做**路径转换**，让文件解析路径脱离 node_modules 段、进入源码管线：
+**源码分发库包（node_modules 下）需要现场编译时**，在宿主构建配置里做**路径转换**，让文件解析路径脱离 node_modules 段：
 
 ```ts
 // vite.config.ts
 resolve: {
   alias: { 'my-lib': 'node_modules/my-lib/src' }, // 路径不再含 node_modules 段 → 正常转换
 },
-optimizeDeps: { exclude: ['my-lib'] },            // 不预构建，保持源码形态
+optimizeDeps: { exclude: ['my-lib'] },
 ```
 
 ## 依赖关系
@@ -78,7 +56,7 @@ optimizeDeps: { exclude: ['my-lib'] },            // 不预构建，保持源码
 
 ```bash
 pnpm build   # tsup 打包 dist
-pnpm test    # vitest（test/plugin.test.ts：组件转换/插槽/props/早退等 30 用例）
+pnpm test    # vitest（test/babel-host.test.ts：排除规则/宿主壳行为）
 ```
 
 ## License

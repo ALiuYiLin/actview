@@ -1,62 +1,90 @@
 # actview
 
-**ActView 框架统一入口（聚合包）** —— 从 `actview` 一个包拿到全部核心 API。
+**ActView v2 — Vue 引擎 + React 语义 JSX**
 
-`actview` 是面向使用者的聚合包：re-export `@actview/core` 的全部公开 API 与类型，`import { createApp, reactive } from 'actview'` 即可开始开发，无需分别安装/引用 `@actview/core`。
+运行时基于 `vue` 官方包（零自研）：响应式 / 调度 / patch / diff / 内置组件 / SSR 全部复用。JSX 语法层面对齐 React：`className` / `htmlFor` / `onChange` 语义、`{}` 表达式、受控组件、`props.children` 直读。
 
 ## 核心功能
 
-- 统一 re-export `@actview/core` 的运行时 API（响应式、组件、生命周期、内置组件、SSR）
-- 统一导出类型（`App` / `SetupContext` / `ComponentOptions`）
-
-> 不含 `@actview/router`（路由是独立包，按需安装，对齐 Vue 生态中 vue-router 的模型）。
+- **vue 运行时 re-export**：响应式（`ref` / `reactive` / `computed` / `watch` / `effectScope`）、组件（`defineComponent` / `createApp` / `h`）、生命周期、内置组件（`KeepAlive` / `Teleport` / `Suspense` / `Transition` / `TransitionGroup`）
+- **defineComponent 桥接**（React 语义）：`ctx.slots` → `props.children`（读时求值），props 读不到时从 attrs 兜底，`inheritAttrs: false`
+- **createContext**：React 语义（`.Provider` / `.use()`），基于 vue `provide/inject`
+- **JSX 类型层**：全局 `IntrinsicElements` 完整标签表（React 语义属性）+ vue 组件兼容；组件 props 严格检查（未声明 prop 报错）
 
 ## 安装
 
 ```bash
-pnpm add actview
+pnpm add actview vue
+pnpm add -D @actview/plugin-vite
+```
+
+`vite.config.ts`：
+
+```ts
+import { defineConfig } from 'vite'
+import { actviewJsxPlugin } from '@actview/plugin-vite'
+
+export default defineConfig({
+  plugins: [actviewJsxPlugin()],
+})
+```
+
+`tsconfig.json`：
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "actview"
+  }
+}
 ```
 
 ## 快速开始
 
 ```tsx
-import { createApp, reactive, defineComponent, onMounted } from 'actview'
+import { createApp, ref } from 'actview'
 
-const App = defineComponent({
-  setup() {
-    const state = reactive({ count: 0 })
-    onMounted(() => console.log('mounted'))
-    return () => <div onClick={() => state.count++}>{state.count}</div>
-  },
-})
+// 函数组件：编译期自动包 defineComponent（React 函数组件语义）
+function App() {
+  const count = ref(0)
+  return () => (
+    <button className="c" onClick={() => count.value++}>
+      {count.value}
+    </button>
+  )
+}
 
-createApp(<App />).mount('#app')
+createApp(App).mount('#app')
 ```
 
-## API（re-export 自 @actview/core）
+JSX 由 `@actview/plugin-jsx` 编译（Babel 直出 `createVNode`）：
+- `className` → `class`、`htmlFor` → `for`、`onChange` → `onInput`（text-like input/textarea）
+- `dangerouslySetInnerHTML={{ __html }}` → `innerHTML`
+- `v-model` / `v-show` 等 Vue 指令属性可直接使用
+- `props.children` 桥接：组件内直接读 `props.children`（React 语义）
+
+## 生态复用（不重复造轮子）
+
+| 需求 | 方案 |
+|---|---|
+| 路由 | `vue-router` |
+| 状态管理 | `pinia` |
+| 测试 | `@testing-library/vue` |
+| devtools | vue devtools（浏览器插件） |
+| hooks | vue 原语（`ref` / `computed` / `watch` 内联组合） |
+
+## API（re-export 自 vue）
 
 | 分组 | 导出 |
 |---|---|
 | 应用 | `createApp` |
-| 组件 | `defineComponent` |
-| 响应式 | `reactive` / `shallowReactive` / `readonly` / `markRaw` / `ref` / `isRef` / `unref` / `toRef` / `toRefs` / `computed` / `watch` / `watchEffect` / `nextTick` |
-| 生命周期 | `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` |
-| 依赖注入 | `provide` / `useInjects` |
-| 内置组件 | `Teleport` / `Transition` / `KeepAlive` / `ErrorBoundary` / `Suspense` / `lazy` |
-| SSR / 其他 | `renderToString` / `getCurrentScope` |
-| 类型 | `App` / `SetupContext` / `ComponentOptions` |
-
-## 依赖关系
-
-- `@actview/core`（全部 API 来源）
-- `@actview/jsx`（类型契约；实际使用时还需在 `tsconfig` 配 `jsxImportSource: "@actview/jsx"`）
-
-## 开发
-
-```bash
-pnpm build   # tsup 打包 dist（薄壳，仅 re-export）
-pnpm test    # 走根目录 vitest
-```
+| 组件 | `defineComponent`（桥接版）/ `h` / `createVNode` / `mergeProps` / `defineAsyncComponent` |
+| 响应式 | `ref` / `reactive` / `computed` / `watch` / `watchEffect` / `customRef` / `proxyRefs` / `effectScope` / `nextTick` |
+| 生命周期 | `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` / `onErrorCaptured` / `onServerPrefetch` |
+| 依赖注入 | `provide` / `inject` / `createContext` |
+| 内置组件 | `KeepAlive` / `Teleport` / `Suspense` / `Transition` / `TransitionGroup` / `Fragment` / `Text` |
+| 其他 | `useId` / `useTemplateRef` / `useAttrs` / `useSlots` / `version` |
 
 ## License
 

@@ -1,16 +1,13 @@
 # @actview/plugin-vite
 
-> **迁移记录**：包名 `@actview/plugin-vite` 未变，源码目录由 `plugins/plugin-vite` 迁移至 `plugins/vite`（与 `@actview/plugin-*` 命名风格统一）。
-
-**ActView 的 Vite 插件** —— `.tsx` / `.js` 在 esbuild 之前过一遍 Babel 做 `defineComponent` 转换（编译核心见 `@actview/plugin-babel`）。
-
-`actviewPlugin()` 是一个薄壳 Vite 插件：`transform` hook 过滤 `.tsx` / `.js` 文件（剥掉 rolldown-vite 的 `?t=` HMR query），调用 Babel 执行 `defineComponentPlugin` 转换，返回代码与 sourcemap。
+**ActView v2 的 Vite 插件** —— `actviewJsxPlugin()` 将 `.tsx` / `.ts` / `.jsx` / `.js` 过 Babel（`@actview/plugin-jsx`）：React 语义 JSX 编译（直出 `createVNode`）+ 自动 `defineComponent` 包装。
 
 ## 核心功能
 
-- **编译接入**：`defineComponentPlugin` 的 Vite 宿主壳（编译核心在 `@actview/plugin-babel`）
-- **`.tsx` / `.js` 双扩展**：`.js` 覆盖 tsc 降级产物（vitepress 等 dist/client 在 node_modules 下，**不按 node_modules 跳过**）
-- **性能**：模块级只创建一次 Babel `ConfigItem`（`createBabelTransform` 内部缓存）
+- **React 语义 JSX**：`className` / `htmlFor` / `onChange` 映射、`dangerouslySetInnerHTML`、`v-model` 等指令属性
+- **自动组件包装**：`function App() { return () => <JSX/> }` 免手动 `defineComponent`（React 函数组件语义）
+- **node_modules 硬排除**：依赖走 esbuild 预构建管线（`@actview/plugin-babel` 宿主壳）
+- **性能**：模块级只创建一次 Babel `ConfigItem`
 
 ## 安装
 
@@ -24,33 +21,44 @@ pnpm add -D @actview/plugin-vite
 
 ```ts
 import { defineConfig } from 'vite'
-import { actviewPlugin } from '@actview/plugin-vite'
-import actviewScopedPlugin from '@actview/plugin-scoped'
+import { actviewJsxPlugin } from '@actview/plugin-vite'
 
 export default defineConfig({
-  plugins: [actviewPlugin(), ...actviewScopedPlugin()],
+  plugins: [actviewJsxPlugin()],
 })
 ```
 
-之后 `.tsx` 中的组件函数会被自动转换为 `defineComponent` 产物，直接使用 `@actview/core` 渲染。
+配 scoped CSS 时注意顺序——**scoped 插件在前**（先注入 `data-v-*` 属性，JSX 源码形态），JSX 编译在后（保留注入属性）：
+
+```ts
+import { defineConfig } from 'vite'
+import { actviewJsxPlugin } from '@actview/plugin-vite'
+import { actviewScopedPlugin } from '@actview/plugin-scoped'
+
+export default defineConfig({
+  plugins: [...actviewScopedPlugin(), actviewJsxPlugin()],
+})
+```
+
+`tsconfig.json` 配 `jsxImportSource: "actview"`。之后 `.tsx` 中即可用 React 语义写组件，运行时为 vue。
 
 ## API
 
 | 导出 | 说明 |
 |---|---|
-| `actviewPlugin()`（默认导出同） | Vite 插件：`{ name: 'actview-transform', enforce: 'pre', transform }` |
+| `actviewJsxPlugin(options?)`（默认导出同） | Vite 插件：`{ name: 'actview-v2-jsx', enforce: 'pre', transform }`；`options.babel` 透传宿主壳排除规则（include/exclude） |
 
 ## 依赖关系
 
-- `@actview/plugin-babel`（编译核心 + 宿主壳）
-- `@babel/core`（^8）
+- `@actview/plugin-jsx`（React 语义 JSX 编译）
+- `@actview/plugin-babel`（babel 宿主壳）
 - `peerDependencies`：`vite ^6.0.0 || ^7.0.0 || ^8.0.0`（必需）
 
 ## 开发
 
 ```bash
 pnpm build   # tsup 打包 dist
-pnpm test    # 走根目录 vitest（集成测试经 test/**）
+pnpm test    # 走根目录 vitest（test/v2 集成）
 ```
 
 ## License
