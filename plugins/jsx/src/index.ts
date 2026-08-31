@@ -3,6 +3,7 @@ import { declare } from '@babel/helper-plugin-utils'
 import syntaxJsx from '@babel/plugin-syntax-jsx'
 import template from '@babel/template'
 import * as t from '@babel/types'
+import { createAutoDefineVisitor, type AutoDefineComponentState } from './auto-define-component.ts'
 import sugarFragment from './sugar-fragment.ts'
 import transformVueJSX from './transform-vue-jsx.ts'
 import type { State, VueJSXPluginOptions } from './interface.ts'
@@ -34,14 +35,23 @@ const plugin: (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (api, _opt, _dirname) => {
     const { types } = api
+    // React 函数组件语义：自动 defineComponent 包装（默认开启）
+    const autoDefine: AutoDefineComponentState = { usedDefineComponent: false }
+    const autoDefineVisitor =
+      _opt.autoDefineComponent === false
+        ? {}
+        : createAutoDefineVisitor(autoDefine)
+    const defineComponentSource = _opt.defineComponentSource ?? 'actview'
     return {
       name: '@actview/plugin-jsx',
       inherits: syntaxJsx,
       visitor: {
         ...transformVueJSX,
         ...sugarFragment,
+        ...autoDefineVisitor,
         Program: {
           enter(path, state) {
+            autoDefine.usedDefineComponent = false
             if (!hasJSX(path)) return
             const importNames = [
               'createVNode',
@@ -169,6 +179,33 @@ const plugin: (
                   state.set('createVNode', () => t.identifier(jsxMatches[1]))
                 }
               }
+            }
+          },
+          exit(path) {
+            // React 函数组件语义：注入 defineComponent import（仅自动包装用过时）
+            if (!autoDefine.usedDefineComponent) return
+            const alreadyImported = (path.node.body as any[]).some(
+              (n) =>
+                t.isImportDeclaration(n) &&
+                n.source.value === defineComponentSource &&
+                n.specifiers.some(
+                  (s) =>
+                    t.isImportSpecifier(s) &&
+                    (s.imported as t.Identifier).name === 'defineComponent',
+                ),
+            )
+            if (!alreadyImported) {
+              path.node.body.unshift(
+                t.importDeclaration(
+                  [
+                    t.importSpecifier(
+                      t.identifier('defineComponent'),
+                      t.identifier('defineComponent'),
+                    ),
+                  ],
+                  t.stringLiteral(defineComponentSource),
+                ),
+              )
             }
           },
         },

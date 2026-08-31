@@ -1,12 +1,12 @@
 import { defineConfig } from 'vitest/config'
 import path from 'path'
-import { actviewPlugin } from '@actview/plugin-vite'
+import { actviewJsxPlugin, actviewPlugin } from '@actview/plugin-vite'
 import { actviewScopedPlugin } from '@actview/plugin-scoped'
-import { v2JsxPlugin } from './test/v2/plugin-v2-jsx'
 
 export default defineConfig({
   plugins: [
-    v2JsxPlugin(),
+    // v2 管线：React 语义 JSX 编译（当前仅 test/v2；demo 区迁移后接管全部）
+    actviewJsxPlugin({ babel: { include: ['/test/v2/'] } }),
     // v1 管线排除 test/v2/（v2 的 JSX 由 @actview/plugin-jsx 编译，组件是 vue 组件，
     // 不能被 v1 的 defineComponentPlugin 包装）
     actviewPlugin({ babel: { exclude: ['/test/v2/'] } }),

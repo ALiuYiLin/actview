@@ -21,4 +21,15 @@ export interface VueJSXPluginOptions {
   enableObjectSlots?: boolean
   /** Replace the function used when compiling JSX expressions */
   pragma?: string
+  /**
+   * React 函数组件语义：PascalCase 且含 JSX 的函数自动包 defineComponent
+   * （function App() { return () => <JSX/> } 免手动包装）
+   * @default true
+   */
+  autoDefineComponent?: boolean
+  /**
+   * 自动包装时 defineComponent 的 import 来源
+   * @default 'actview'
+   */
+  defineComponentSource?: string
 }
