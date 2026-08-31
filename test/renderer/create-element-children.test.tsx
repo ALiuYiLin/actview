@@ -9,7 +9,6 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { createApp, defineComponent } from '@actview/core'
-import { render as testingRender } from '@actview/testing'
 import { createElement } from '@actview/jsx'
 
 let mountSeq = 0
@@ -88,16 +87,6 @@ describe('createElement 组件 children', () => {
     })
     const host = mount(CEApp)
     expect(host.querySelector('.control')!.textContent).toBe('ctrl')
-  })
-
-  it('F: testing render(SliderRoot, { children }) — 第二参是 options 不是 props', () => {
-    // @actview/testing 的 render(component, options?)：第二参只读 options.container，
-    // 不是 props —— children 被整体忽略，两种写法表现完全一致（都不传 props）
-    const { container } = testingRender(SliderRoot, {
-      // @ts-expect-error testingRender 第二参是 options 不含 children（测试故意传，运行时被忽略）
-      children: <div>plain</div>,
-    })
-    expect(container.querySelector('.slider')!.textContent).toBe('')
   })
 
   it('G: 未转换组件（小写变量）→ PD-07 兜底识别后经错误链上报，不再当原生元素', () => {

@@ -9,7 +9,6 @@ import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, comp
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
-import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** verify 风格 mount（2 参：containerId + component） */
 function mount(containerId: string, component: any) {

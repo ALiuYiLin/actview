@@ -12,10 +12,6 @@ export default defineConfig({
     actviewPlugin({ babel: { exclude: ['/test/v2/'] } }),
     ...actviewScopedPlugin(),
   ],
-  optimizeDeps: {
-    // workspace 包走源码 transform（含 Babel 插件），不做 esbuild 预构建
-    exclude: ['@actview/router'],
-  },
   resolve: {
     alias: {
       // workspace 包 exports 已指向 src（dev 免构建）；jsx 子路径别名是历史保留

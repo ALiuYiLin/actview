@@ -8,7 +8,6 @@ import { createApp, reactive, readonly, shallowReactive, markRaw, nextTick, comp
 import { jsx } from '@actview/jsx'
 import { patch } from '@actview/core'
 import { runEffect } from '@actview/core'
-import { createRouter, createMemoryHistory, RouterLink, RouterView } from '@actview/router'
 
 /** 创建带 id 的宿主元素并挂载组件 */
 function mount(containerId: string, component: any) {

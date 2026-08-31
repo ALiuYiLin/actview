@@ -11,12 +11,6 @@ importers:
       '@actview/core':
         specifier: workspace:*
         version: link:packages/core
-      '@actview/devtools':
-        specifier: workspace:*
-        version: link:packages/devtools
-      '@actview/hooks-react':
-        specifier: workspace:*
-        version: link:packages/hooks-react
       '@actview/jsx':
         specifier: workspace:*
         version: link:packages/jsx
@@ -32,15 +26,6 @@ importers:
       '@actview/plugin-vite':
         specifier: workspace:*
         version: link:plugins/vite
-      '@actview/router':
-        specifier: workspace:*
-        version: link:packages/router
-      '@actview/store':
-        specifier: workspace:*
-        version: link:packages/store
-      '@actview/testing':
-        specifier: workspace:*
-        version: link:packages/testing
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -89,40 +74,7 @@ importers:
 
   packages/core: {}
 
-  packages/devtools:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  packages/hooks-react:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
   packages/jsx: {}
-
-  packages/router:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-      '@actview/jsx':
-        specifier: workspace:^
-        version: link:../jsx
-
-  packages/store:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  packages/testing:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
 
   plugins/babel:
     devDependencies:

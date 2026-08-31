@@ -73,19 +73,35 @@ setup(props, ctx) {
 
 ## 5. 包结构（v2 目标）
 
+**生态全部复用 vue 官方/社区，不自研**：
+
+| 需求 | 方案 | 说明 |
+|---|---|---|
+| 路由 | **vue-router**（官方） | composables 与模板无关，JSX 组件直接用 |
+| 状态管理 | **pinia**（官方） | defineStore 返回 composable，setup 里调用 |
+| 测试工具 | **@testing-library/vue** | React Testing Library 风格（render/screen/userEvent） |
+| devtools | **vue devtools**（浏览器插件） | v2 组件就是 vue 组件，天然识别 |
+| hooks | **vue 原语**（ref/computed/watch 内联组合） | 不封装 React hooks 风格 API |
+
+**actview 自研的只有两件**：
+
 | 包 | 内容 |
 |---|---|
-| `@actview/plugin-jsx` | fork @vue/babel-plugin-jsx + §3 映射（新） |
-| `actview` | 依赖 vue + re-export + defineComponent 桥接（改造） |
-| `@actview/hooks-react` | 基于 vue reactivity 封装 React hooks 风格 API（v2 重写） |
-| `@actview/router` / `@actview/store` / `@actview/testing` / `@actview/devtools` | 基于 vue 基座（后续迁移） |
-| `packages/core` 等 v1 包 | 冻结归档 |
+| `@actview/plugin-jsx` | React 语义 JSX 编译器（vue 生态没有：@vitejs/plugin-vue-jsx 是 vue 语义） |
+| `actview` | vue re-export + defineComponent 桥接 + createContext + JSX 类型层 |
+
+**v1 生态包（router/store/testing/hooks-react/devtools）已移除**——v1 的
+core/jsx 保留冻结（v1 测试依赖，研究参考）。
 
 ## 6. 迁移路径
 
 1. ✅ 决策：冻结 core、vue 基座、运行时桥接
-2. plugin-jsx fork + 映射改造（本轮）
-3. actview 包 vue 化 + 桥接（本轮）
-4. 冒烟测试：React 风格组件编译+运行（本轮）
-5. hooks-react / testing / router / store 迁移（后续轮）
-6. base-ui / floating-ui 移植决策（后续轮）
+2. ✅ plugin-jsx fork + 映射改造
+3. ✅ actview 包 vue 化 + 桥接
+4. ✅ 冒烟测试 + JSX 类型层
+5. ✅ 移除 v1 生态包（router/store/testing/hooks-react/devtools），生态改用
+   vue-router / pinia / @testing-library/vue / vue devtools
+6. 编译体验层：plugin-jsx 自动 defineComponent 包装、@actview/plugin-vite v2 管线
+7. src/ demo 区迁移 v2（改用 vue-router 等）
+8. base-ui / floating-ui 移植决策
+9. v1 冻结收尾（README/npm 标注）+ 发布（actview 2.0.0、@actview/plugin-jsx 0.x）
