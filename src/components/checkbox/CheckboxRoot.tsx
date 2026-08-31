@@ -16,7 +16,7 @@
 // 读/写自身 ref)→ onChange 回调。disabled 时注册函数收到 null(Group 反注册)。
 // ============================================================
 
-import { computed, ref, toRefs, type Ref } from 'actview'
+import { computed, ref, toRefs, type Ref } from '@actview/core'
 import { useRenderElement } from '../internals/useRenderElement'
 import { useMergedRefs } from '../internals/useMergedRefs'
 import type { BaseUIComponentProps } from '../internals/types'

@@ -17,7 +17,7 @@
 // ref 对象,消费端得写 .value 链,反而绕远。
 // ============================================================
 
-import { createContext } from 'actview'
+import { createContext } from '@actview/core'
 import type { ImageLoadingStatus } from './AvatarRoot'
 
 export interface AvatarRootContext {

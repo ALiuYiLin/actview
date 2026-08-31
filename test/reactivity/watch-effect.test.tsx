@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive, ref, watchEffect, nextTick, createApp } from 'actview'
+import { reactive, ref, watchEffect, nextTick, createApp } from '@actview/core'
 
 /** 创建带 id 的宿主元素并挂载组件——拆分自 verify.test.tsx L15-21 */
 function mount(containerId: string, component: any) {

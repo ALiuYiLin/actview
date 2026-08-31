@@ -28,7 +28,7 @@ import {
   computed,
   nextTick,
   createApp
-} from 'actview'
+} from '@actview/core'
 import { runEffect } from '@actview/core'
 
 /** p0 风格 mount：创建带唯一 id 的宿主元素并挂载组件 */

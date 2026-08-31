@@ -15,7 +15,7 @@ import {
   shallowReactive,
   useProp,
   useProps
-} from 'actview'
+} from '@actview/core'
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
 

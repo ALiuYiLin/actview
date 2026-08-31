@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, nextTick, Suspense, lazy, defineComponent } from 'actview'
+import { createApp, nextTick, Suspense, lazy, defineComponent } from '@actview/core'
 
 // ---------- helpers（来自 test/runtime-enhance.test.tsx）----------
 const flush = () => new Promise((r) => setTimeout(r, 0))

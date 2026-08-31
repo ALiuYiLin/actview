@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref } from 'actview'
+import { createApp, ref } from '@actview/core'
 import {
   AvatarRoot,
   useAvatarRootContext,

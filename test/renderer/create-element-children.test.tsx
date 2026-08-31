@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, defineComponent } from 'actview'
+import { createApp, defineComponent } from '@actview/core'
 import { render as testingRender } from '@actview/testing'
 import { createElement } from '@actview/jsx'
 

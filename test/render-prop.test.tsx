@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp } from 'actview'
+import { createApp } from '@actview/core'
 
 function Child(props: any) {
   return !props.render ? <div class="default"></div> : <>{props.render({})}</>
@@ -48,7 +48,7 @@ describe('render prop runtime', () => {
     const host = document.createElement('div')
     host.id = 'rp-host3'
     document.body.appendChild(host)
-    const { reactive } = await import('actview')
+    const { reactive } = await import('@actview/core')
     function App() {
       const state = reactive({ n: 0 })
       return (

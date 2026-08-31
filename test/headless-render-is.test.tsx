@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, ref } from 'actview'
+import { createApp, defineComponent, ref } from '@actview/core'
 
 // 方案 B：render = string | ComponentType | function，string/组件用 <component is> 统一
 function Headless(props: any) {

@@ -25,7 +25,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, nextTick, ref, computed, defineComponent } from 'actview'
+import { createApp, reactive, nextTick, ref, computed, defineComponent } from '@actview/core'
 import userEvent from '@testing-library/user-event'
 import {
   useFloating,

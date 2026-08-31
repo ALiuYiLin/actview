@@ -5,7 +5,7 @@
 // 运行：pnpm exec vitest run test/renderer/nested-children.test.tsx
 // ============================================================
 import { describe, it, expect } from 'vitest'
-import { createApp, ref, nextTick, defineComponent } from 'actview'
+import { createApp, ref, nextTick, defineComponent } from '@actview/core'
 
 function mount(containerId: string, component: any) {
   const host = document.createElement('div')

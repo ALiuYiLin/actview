@@ -20,6 +20,7 @@
     "@actview/hooks-react": "workspace:*",
     "@actview/jsx": "workspace:*",
     "@actview/plugin-babel": "workspace:*",
+    "@actview/plugin-jsx": "workspace:*",
     "@actview/plugin-scoped": "workspace:*",
     "@actview/plugin-vite": "workspace:*",
     "@actview/router": "workspace:*",
@@ -36,6 +37,7 @@
     "tsup": "^8.5.1",
     "typescript": "~6.0.2",
     "vite": "^6.4.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "vue": "^3.5.0"
   }
 }

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, reactive, nextTick, ErrorBoundary } from 'actview'
+import { createApp, reactive, nextTick, ErrorBoundary } from '@actview/core'
 
 /** 创建带 id 的宿主元素并挂载组件 */
 function mount(containerId: string, component: any) {

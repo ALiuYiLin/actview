@@ -18,7 +18,7 @@ import {
   toRefs,
   reactive,
   rawRef
-} from 'actview'
+} from '@actview/core'
 import { jsx, createElement } from '@actview/jsx'
 
 let mountSeq = 0

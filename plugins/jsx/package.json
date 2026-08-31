@@ -1,0 +1,42 @@
+{
+  "name": "@actview/plugin-jsx",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "React 语义 JSX 编译器 for ActView（fork @vue/babel-plugin-jsx v3.0.0：className/htmlFor/onChange/dangerouslySetInnerHTML 对齐 React，产物直出 createVNode，运行时为 vue 官方包）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "@babel/core": "^8.0.0"
+  },
+  "dependencies": {
+    "@babel/helper-module-imports": "^8.0.0",
+    "@babel/helper-plugin-utils": "^8.0.0",
+    "@babel/plugin-syntax-jsx": "^8.0.0",
+    "@babel/template": "^8.0.0",
+    "@babel/types": "^8.0.0",
+    "@vue/shared": "^3.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^8.0.1"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "files": [
+    "dist"
+  ]
+}

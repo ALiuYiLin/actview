@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, reactive, useRootElement } from 'actview'
+import { createApp, defineComponent, reactive, useRootElement } from '@actview/core'
 
 // Toggle →（group 分支）→ CompositeItem（组件）→ button
 function CompositeItem(props: any) {

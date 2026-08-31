@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, rawRef, ref } from 'actview'
+import { createApp, reactive, rawRef, ref } from '@actview/core'
 import {
   CheckboxRoot,
   CheckboxGroup,

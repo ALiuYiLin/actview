@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, onUpdated, reactive, watch } from 'actview'
+import { createApp, onUpdated, reactive, watch } from '@actview/core'
 import { queueJob, runEffect } from '../../packages/core/src/reactivity/reactive-system'
 
 const flush = () => new Promise((r) => setTimeout(r, 0))

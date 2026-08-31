@@ -22,7 +22,7 @@ import {
   onRenderTriggered,
   renderToString,
   defineComponent
-} from 'actview'
+} from '@actview/core'
 
 // ---------- helpers（来自 test/runtime-enhance.test.tsx）----------
 const flush = () => new Promise((r) => setTimeout(r, 0))

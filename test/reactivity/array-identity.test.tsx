@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive } from 'actview'
+import { reactive } from '@actview/core'
 
 // ------------------------------------------------------------
 // 以下 it 块拷贝自 p0.test.tsx — P0: 数组 identity 方法（toRaw 比较）（L335-350，2 用例）

@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, reactive, useRootElement } from 'actview'
+import { createApp, defineComponent, reactive, useRootElement } from '@actview/core'
 
 // CompositeItem（新约定）：渲染体依赖每次渲染的新鲜 props 解构 / 用户传入
 // render 回调的立即调用，故拆为小写分发函数；尾随「三元链」交给插件包进

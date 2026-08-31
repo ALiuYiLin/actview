@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive, readonly, shallowReactive, shallowRef, markRaw, toRaw, isReactive, isReadonly, isProxy, isShallow } from 'actview'
+import { reactive, readonly, shallowReactive, shallowRef, markRaw, toRaw, isReactive, isReadonly, isProxy, isShallow } from '@actview/core'
 
 // ------------------------------------------------------------
 // 以下 it 块拷贝自 p0.test.tsx — P0: toRaw / isReactive / isReadonly / isProxy / isShallow（L166-215，6 用例）

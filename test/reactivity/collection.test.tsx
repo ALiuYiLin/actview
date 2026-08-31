@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive } from 'actview'
+import { reactive } from '@actview/core'
 import { runEffect } from '@actview/core'
 
 // ------------------------------------------------------------

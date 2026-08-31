@@ -16,7 +16,7 @@ import {
   onUpdated,
   nextTick,
   defineComponent
-} from 'actview'
+} from '@actview/core'
 
 // ---------- helpers（来自 test/props-reactive.test.tsx）----------
 const flush = () => new Promise((r) => setTimeout(r, 0))

@@ -7,7 +7,7 @@
 // 这类群体逻辑有据可查,focusFirst 演示群体操作 DOM。
 // ============================================================
 
-import { reactive, type Reactive, type Ref } from 'actview'
+import { reactive, type Reactive, type Ref } from '@actview/core'
 import {
   CheckboxGroupContext,
   type CheckboxRegistration,

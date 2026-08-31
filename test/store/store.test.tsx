@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { reactive, computed, createApp, nextTick } from 'actview'
+import { reactive, computed, createApp, nextTick } from '@actview/core'
 import {
   defineStore,
   applyPlugin,

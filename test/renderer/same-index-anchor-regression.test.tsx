@@ -7,8 +7,8 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive } from 'actview'
-import { Teleport } from 'actview'
+import { createApp, reactive } from '@actview/core'
+import { Teleport } from '@actview/core'
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
 

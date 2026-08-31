@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, reactive, useRootElement } from 'actview'
+import { createApp, defineComponent, reactive, useRootElement } from '@actview/core'
 
 export const Separator = defineComponent(function (componentProps: any) {
   // ref 契约恒为根 DOM：useRootElement 封装 subTree.el 推导 + 生命周期同步

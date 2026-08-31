@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, ref, watch, watchEffect, nextTick } from 'actview'
+import { createApp, reactive, ref, watch, watchEffect, nextTick } from '@actview/core'
 
 let mountSeq = 0
 function mount(component: any) {

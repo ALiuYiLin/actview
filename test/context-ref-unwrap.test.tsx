@@ -13,7 +13,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref, rawRef, createContext, type Ref } from 'actview'
+import { createApp, ref, rawRef, createContext, type Ref } from '@actview/core'
 
 const NumCtx = createContext<Ref<number> | undefined>(undefined)
 const ObjCtx = createContext<Ref<{ k: { n: number } }> | undefined>(undefined)

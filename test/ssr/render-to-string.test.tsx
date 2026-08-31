@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { createApp, renderToString, onMounted } from 'actview'
+import { createApp, renderToString, onMounted } from '@actview/core'
 import PageComponent, { __pageData } from '../fixtures/actview-page.js'
 
 describe('acceptance: markdownToActView 产物 → renderToString 静态生成', () => {

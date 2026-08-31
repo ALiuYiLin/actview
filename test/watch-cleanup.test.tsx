@@ -10,7 +10,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, ref, watch, watchEffect, onWatcherCleanup } from 'actview'
+import { createApp, reactive, ref, watch, watchEffect, onWatcherCleanup } from '@actview/core'
 
 function mount(app: any) {
   const host = document.createElement('div')

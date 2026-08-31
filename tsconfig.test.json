@@ -17,5 +17,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["test"]
+  "include": ["test"],
+  // v2（vue 基座）测试暂不纳入类型检查：v2 的 JSX 类型层（vue 组件 +
+  // React 语义属性）是独立类型工程，见 docs/architecture-v2-vue-base.md §6
+  "exclude": ["test/v2"]
 }

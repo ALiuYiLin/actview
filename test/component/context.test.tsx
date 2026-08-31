@@ -9,7 +9,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, createContext, rawRef, reactive, ref, renderToString } from 'actview'
+import { createApp, createContext, rawRef, reactive, ref, renderToString } from '@actview/core'
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
 

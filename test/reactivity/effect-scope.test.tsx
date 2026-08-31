@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive, ref, computed, watch, nextTick, createApp, effectScope, onScopeDispose } from 'actview'
+import { reactive, ref, computed, watch, nextTick, createApp, effectScope, onScopeDispose } from '@actview/core'
 import { runEffect } from '@actview/core'
 
 /** 创建带 id 的宿主元素并挂载组件——拆分自 verify.test.tsx L15-21 */

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive, ref, computed, watch, watchEffect, onWatcherCleanup, nextTick } from 'actview'
+import { reactive, ref, computed, watch, watchEffect, onWatcherCleanup, nextTick } from '@actview/core'
 
 /** 等所有微任务（含定时器）执行完，用于异步 watch — 拆分自 p0.test.tsx L38 */
 const flush = () => new Promise((r) => setTimeout(r, 0))

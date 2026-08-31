@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 import * as babel from '@babel/core'
-import { createApp, renderToString, defineComponent, ref, nextTick } from 'actview'
+import { createApp, renderToString, defineComponent, ref, nextTick } from '@actview/core'
 import {
   actviewScopedPlugin,
   scopedBabelPlugin,

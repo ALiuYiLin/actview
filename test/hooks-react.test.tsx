@@ -10,7 +10,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, createContext, ref, reactive } from 'actview'
+import { createApp, createContext, ref, reactive } from '@actview/core'
 import {
   useState,
   useReducer,

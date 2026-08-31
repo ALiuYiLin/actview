@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, createContext, ref, nextTick } from 'actview'
+import { createApp, createContext, ref, nextTick } from '@actview/core'
 
 function mount(app: any) {
   const host = document.createElement('div')

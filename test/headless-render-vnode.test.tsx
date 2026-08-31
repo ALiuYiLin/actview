@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, useRootElement } from 'actview'
+import { createApp, defineComponent, useRootElement } from '@actview/core'
 
 function Headless(props: any) {
   const rootRef = useRootElement()

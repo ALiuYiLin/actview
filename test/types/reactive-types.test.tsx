@@ -23,7 +23,7 @@ import {
   type ReactiveFactory,
   type ComputedFactory,
   type WatchFactory
-} from 'actview'
+} from '@actview/core'
 
 interface User {
   name: string
@@ -86,7 +86,9 @@ describe('Reactive / ShallowReactive 类型', () => {
 
   it('工厂函数类型（typeof ref 等）：作为形参注入后照常工作', async () => {
     // 工厂注入:测试替身/高阶封装可以把「创建响应式对象的能力」整体替换
-    function makePair(create: RefFactory<number>, toReactive: ReactiveFactory) {
+    // 注：typeof 泛型函数是「泛型函数类型」，TS 不支持类型实例化
+    // （RefFactory<number> 报 TS2315，任何版本皆然），这里直接传泛型工厂
+    function makePair(create: RefFactory, toReactive: ReactiveFactory) {
       const n = create(1)
       const s = toReactive({ n: n.value })
       return { n, s }

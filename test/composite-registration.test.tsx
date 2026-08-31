@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, reactive, watch, useRootElement } from 'actview'
+import { createApp, defineComponent, reactive, watch, useRootElement } from '@actview/core'
 
 // useCompositeItem 注册模式：elementRef 生命周期驱动 listRef 注册/注销
 function useCompositeItem(

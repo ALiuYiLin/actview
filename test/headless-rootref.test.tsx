@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, defineComponent, useRootElement } from 'actview'
+import { createApp, defineComponent, useRootElement } from '@actview/core'
 
 // 方案：rootRef 由 useRootElement 推导（subTree.el + 生命周期同步）→
 // 无论默认元素 / VNode 元素 / 组件 VNode，ref 恒为根 DOM

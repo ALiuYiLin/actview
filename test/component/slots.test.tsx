@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp } from 'actview'
+import { createApp } from '@actview/core'
 
 /** 创建带 id 的宿主元素并挂载组件 */
 function mount(containerId: string, component: any) {

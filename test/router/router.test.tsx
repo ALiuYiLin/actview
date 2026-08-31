@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, nextTick, Suspense } from 'actview'
+import { createApp, nextTick, Suspense } from '@actview/core'
 import {
   createRouter,
   createMemoryHistory,

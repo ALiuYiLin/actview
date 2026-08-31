@@ -12,7 +12,7 @@ import {
   defineComponent,
   reactive,
   useRootElement
-} from 'actview'
+} from '@actview/core'
 
 function isButtonElement(el: any): el is HTMLButtonElement {
   return !!el && el.tagName === 'BUTTON'

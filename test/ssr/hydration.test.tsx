@@ -24,7 +24,7 @@ import {
   lazy,
   defineComponent,
   Teleport,
-} from 'actview'
+} from '@actview/core'
 
 function makeHost() {
   const host = document.createElement('div')

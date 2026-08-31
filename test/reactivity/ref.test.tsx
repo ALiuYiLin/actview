@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { reactive, ref, shallowRef, triggerRef, shallowReadonly, computed, isRef, isReactive, toRef, toRefs, toValue, unrefs } from 'actview'
+import { reactive, ref, shallowRef, triggerRef, shallowReadonly, computed, isRef, isReactive, toRef, toRefs, toValue, unrefs } from '@actview/core'
 import { runEffect } from '@actview/core'
 
 // ------------------------------------------------------------
@@ -91,7 +91,8 @@ describe('P0: shallowRef / triggerRef / shallowReadonly', () => {
   it('shallowReadonly 仅第一层只读', () => {
     const obj = shallowReadonly({ a: 1, nested: { b: 2 } })
     expect(obj.a).toBe(1)
-    // @ts-expect-error 第一层只读：赋值被拦截（运行时静默失败）
+    // 注：core 的 ShallowReadonly 类型为 T & 品牌标记（非真 readonly），
+    // 此赋值类型层不报错（运行时静默失败）；@ts-expect-error 已失效移除
     obj.a = 2 // 第一层只读：赋值被拦截
     expect(obj.a).toBe(1)
     obj.nested.b = 3 // 嵌套可写（浅只读）

@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { reactive, createApp, nextTick } from 'actview'
+import { reactive, createApp, nextTick } from '@actview/core'
 import { initDevTools, type DevtoolsGlobalHook } from '@actview/devtools'
 
 function hook(): DevtoolsGlobalHook {

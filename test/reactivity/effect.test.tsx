@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { reactive, createApp } from 'actview'
+import { reactive, createApp } from '@actview/core'
 import { runEffect } from '@actview/core'
 
 /** 收集元素文本（含文本节点）—— 拆分自 verify.test.tsx L24-28 */

@@ -27,7 +27,7 @@ import {
   computed,
   nextTick,
   createApp
-} from 'actview'
+} from '@actview/core'
 import { runEffect } from '@actview/core'
 
 /** 等待所有微任务（含定时器）执行完毕，用于异步 watch */

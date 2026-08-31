@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { reactive, watch, nextTick } from 'actview'
+import { reactive, watch, nextTick } from '@actview/core'
 
 describe('watch stop 后 stale 微任务', () => {
   it('stop 后已排队的普通 watch 不触发回调（修复前会收到 undefined）', async () => {

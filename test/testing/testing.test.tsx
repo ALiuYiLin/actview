@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { reactive } from 'actview'
+import { reactive } from '@actview/core'
 import { render, fireEvent, waitFor, screen, cleanup } from '@actview/testing'
 
 afterEach(cleanup)

@@ -28,7 +28,7 @@
 //      （新编译契约）。
 // ============================================================
 
-import { computed, reactive, toRefs, type Ref } from 'actview'
+import { computed, reactive, toRefs, type Ref } from '@actview/core'
 import { useRenderElement } from '../../internals/useRenderElement'
 import { AvatarRootContext } from './AvatarRootContext'
 import { avatarStateAttributesMapping } from './stateAttributesMapping'

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { ref, watch } from 'actview'
+import { ref, watch } from '@actview/core'
 
 describe('watch immediate 首次值为 undefined（Vue 3 哨兵语义）', () => {
   it('A：ref 首次值为 undefined → immediate 首次回调应执行一次', () => {

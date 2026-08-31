@@ -5,7 +5,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref, defineComponent } from 'actview'
+import { createApp, ref, defineComponent } from '@actview/core'
 
 // ---------- helpers（来自 test/template-ref.test.tsx）----------
 const flush = () => new Promise((r) => setTimeout(r, 0))

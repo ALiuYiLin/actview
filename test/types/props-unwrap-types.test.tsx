@@ -7,7 +7,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { ref, computed } from 'actview'
+import { ref, computed } from '@actview/core'
 
 describe('JSX props 自动解包（类型层）', () => {
   it('children 顶层接受 ref（<div>{text}</div>）', () => {

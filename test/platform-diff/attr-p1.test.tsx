@@ -6,7 +6,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, renderToString } from 'actview'
+import { createApp, renderToString } from '@actview/core'
 
 let mountSeq = 0
 function mount(component: any) {

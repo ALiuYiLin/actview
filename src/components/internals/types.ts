@@ -8,7 +8,7 @@
 //  - ReactElement 对应 ActView 的 VNode 形态（RenderableNode 结构化最小形状）。
 // ============================================================
 
-import type { Ref } from 'actview'
+import type { Ref } from '@actview/core'
 
 export type HTMLProps = JSX.IntrinsicElements['div']
 

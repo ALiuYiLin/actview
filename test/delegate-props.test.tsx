@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { createElement } from '@actview/jsx'
-import { createApp, defineComponent, reactive } from 'actview'
+import { createApp, defineComponent, reactive } from '@actview/core'
 
 function mount(app: any) {
   const host = document.createElement('div')

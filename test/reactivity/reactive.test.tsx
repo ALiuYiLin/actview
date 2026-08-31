@@ -4,7 +4,7 @@
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest'
-import { reactive, readonly, shallowReactive, markRaw, ref, nextTick, createApp } from 'actview'
+import { reactive, readonly, shallowReactive, markRaw, ref, nextTick, createApp } from '@actview/core'
 import { runEffect } from '@actview/core'
 
 /** 创建带 id 的宿主元素并挂载组件——拆分自 verify.test.tsx L15-21 */
