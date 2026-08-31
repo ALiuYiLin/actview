@@ -207,6 +207,9 @@ export function defineComponent<
           )
         },
         ownKeys(t) {
+          // children 是 slots 桥接键：保留在遍历中（Base UI 移植件的
+          // toRefs(props) 依赖它产出 render prop 的 p.children；显式渲染
+          // p.children 时内容来自表达式而非 vnode props）
           return [
             ...new Set([
               ...Reflect.ownKeys(t),
@@ -251,8 +254,8 @@ export function defineComponent<
 export interface Context<T> {
   /** 内部唯一键（Symbol）：对象身份即键 */
   readonly _key: symbol
-  /** <Ctx value={v}> 直接作组件用（React 19 风格） */
-  __setup: (props: any, ctx: any) => any
+  /** vue 组件对象形态的 setup——<Ctx value={v}> 直接作组件用（React 19 风格） */
+  setup: (props: any, setupCtx: any) => any
   name?: string
   /** <Ctx.Provider value={v}> 经典风格 */
   Provider: Context<T>
@@ -278,9 +281,17 @@ export function createContext(defaultValue: any): Context<any> {
 
   const ctx = {
     _key: key,
-    __setup: (provider as any).__setup,
     name: 'ActViewContext',
     Provider: provider as any,
+    // React 19 风格 <Ctx value={v}>：Context 直接作组件——
+    // vue 组件对象 setup 形态（provide + 渲染 children）
+    setup(props: any, setupCtx: any) {
+      // 无 props 声明的组件：传入属性在 attrs（props.value 兜底 attrs）
+      const value = props.value ?? setupCtx.attrs?.value ?? defaultValue
+      provide(key, value)
+      return () =>
+        h(_Fragment, null, setupCtx.slots?.default?.() ?? null)
+    },
     use() {
       return inject(key, defaultValue)
     },
