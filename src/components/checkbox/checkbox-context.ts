@@ -8,8 +8,8 @@
 //   - 反注册(卸载/disabled 时从注册表移除——函数 ref 收到 null)
 // ============================================================
 
-import { createContext } from '@actview/core'
-import type { Reactive, Ref } from '@actview/core'
+import { createContext } from 'actview'
+import type { Reactive, Ref } from 'actview'
 
 /** 单个成员的注册信息(el 为 null 表示「已卸载/反注册」) */
 export interface CheckboxRegistration {

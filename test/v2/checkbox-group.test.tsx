@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, rawRef, ref } from '@actview/core'
+import { createApp, reactive, ref } from 'actview'
 import {
   CheckboxRoot,
   CheckboxGroup,
@@ -45,7 +45,7 @@ describe('多 ref 合并（Checkbox）', () => {
         <CheckboxGroup groupRef={undefined}>
           <Status />
           <CheckboxRoot
-            inputRef={rawRef(userInputRef)}
+            inputRef={userInputRef}
             ref={rootRef}
             value="apple"
             defaultChecked={false}
@@ -65,18 +65,18 @@ describe('多 ref 合并（Checkbox）', () => {
     await new Promise((r) => setTimeout(r, 0))
     expect((hiddenInput as HTMLInputElement).checked).toBe(true) // 内部 ref 写入
     expect(host.querySelector('[aria-checked="true"]')).toBeTruthy()
-    // ④:转发 ref = 根按钮 DOM
-    expect(rootRef.value).toBe(host.querySelector('[role="checkbox"]'))
+    // ④:转发 ref = 组件实例（vue 语义）；根按钮渲染由 DOM 查询验证
+    expect(rootRef.value).toBeTruthy()
+    expect(host.querySelector('[role="checkbox"]')).toBeTruthy()
   })
 
   it('T2: 卸载 → 注册函数收到 null → 反注册；重挂载 → 再注册', async () => {
-    // ⚠️ groupApi 本身是 ref——经 JSX 传 ref 必须用 rawRef 包裹,
-    // 否则会被 unwrapProps 解包成 null 快照(组件侧拿不到真 ref)
+    // v2：JSX 无顶层 ref 解包——ref 本体直接传（无 rawRef 概念）
     const groupApi = ref<CheckboxGroupApi | null>(null)
     const state = reactive({ show: true })
     function App() {
       return (
-        <CheckboxGroup groupRef={rawRef(groupApi)}>
+        <CheckboxGroup groupRef={groupApi}>
           {state.show ? (
             <CheckboxRoot value="x" id="cb1" />
           ) : null}

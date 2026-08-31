@@ -1,5 +1,5 @@
 import { Suspense } from "actview";
-import { RouterLink, RouterView } from "@actview/router";
+import { RouterLink, RouterView } from "vue-router";
 import './index.css?scoped'
 
 // ============================================================
@@ -17,7 +17,9 @@ export function App({x1}:{x1?:any}) {
           actview — 响应式前端框架检验页
         </RouterLink>
       </h1>
-      <Suspense fallback={<p style={{ color: "#94a3b8", fontSize: 13 }}>页面加载中…</p>}>
+      {/* vue 的 Suspense fallback 是 slot——v-slots 语法（React 语义的
+          fallback prop 由后续桥接层提供） */}
+      <Suspense v-slots={{ fallback: () => <p style={{ color: "#94a3b8", fontSize: 13 }}>页面加载中…</p> }}>
         <RouterView />
       </Suspense>
       <p>

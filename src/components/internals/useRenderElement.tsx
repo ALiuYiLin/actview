@@ -26,7 +26,7 @@
 // （详见 docs/babel-defineComponent.md 的简写组件契约）。
 // ============================================================
 
-import { jsx as _jsx } from '@actview/jsx'
+import { h, type VNode } from 'actview'
 import type {
   BaseUIComponentProps,
   ComponentRenderFn,
@@ -70,7 +70,7 @@ export interface UseRenderElementParameters<State> {
 
 export interface UseRenderElementComponentProps<State> {
   className?: string | ((state: State) => string | undefined) | undefined
-  render?: JSX.Element | ComponentRenderFn<HTMLProps, State> | undefined
+  render?: VNode | ComponentRenderFn<HTMLProps, State> | undefined
   style?:
     | Record<string, any>
     | ((state: State) => Record<string, any> | undefined)
@@ -158,10 +158,12 @@ function evaluateRenderProp<S extends Record<string, any>>(
     // 节点形态 = cloneElement(mergeProps(props, render.props), ref 覆盖为合并链,
     // key 透传)。注意 Base UI 的展开顺序:render 自带 props 为右侧（覆盖出口
     // props）,仅 ref 强制使用合并链——移植保持同序。
-    const node = render as JSX.Element
+    // v2：h()（vue createVNode），children 作第三参、key 并入 props
+    const node = render as VNode
     const mergedProps = mergeProps(props, node.props)
     mergedProps.ref = props.ref
-    return _jsx(node.type as any, mergedProps, node.key ?? undefined)
+    const { children, key, ...rest } = mergedProps
+    return h(node.type as any, { ...rest, key: key ?? node.key ?? undefined }, children ?? null)
   }
   if (element) {
     if (typeof element === 'string') {
@@ -184,13 +186,16 @@ function warnIfRenderPropLooksLikeComponent(renderFn: { name?: string }) {
 }
 
 function renderTag(Tag: string, props: Record<string, any>) {
+  // v2：h()（vue createVNode）——children 必须是第三参（vnode 子节点），
+  // 不能留在 props（vue patchProp 会报「Failed setting prop children」）
+  const { children, key, ...rest } = props
   if (Tag === 'button') {
-    return _jsx('button', { type: 'button', ...props }, props.key ?? undefined)
+    return h('button', { type: 'button', ...rest, key: key ?? undefined }, children ?? null)
   }
   if (Tag === 'img') {
-    return _jsx('img', { alt: '', ...props }, props.key ?? undefined)
+    return h('img', { alt: '', ...rest, key: key ?? undefined }, children ?? null)
   }
-  return _jsx(Tag, props, props.key ?? undefined)
+  return h(Tag, { ...rest, key: key ?? undefined }, children ?? null)
 }
 
 /**

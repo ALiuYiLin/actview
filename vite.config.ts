@@ -3,13 +3,21 @@ import path from 'path'
 import { actviewJsxPlugin, actviewPlugin } from '@actview/plugin-vite'
 import { actviewScopedPlugin } from '@actview/plugin-scoped'
 
+const SRC_DIR = path.resolve(__dirname, 'src').replace(/\\/g, '/')
+const V2_TEST_DIR = path.resolve(__dirname, 'test/v2').replace(/\\/g, '/')
+
 export default defineConfig({
   plugins: [
-    // v2 管线：React 语义 JSX 编译（当前仅 test/v2；demo 区迁移后接管全部）
-    actviewJsxPlugin({ babel: { include: ['/test/v2/'] } }),
-    // v1 管线排除 test/v2/（v2 的 JSX 由 @actview/plugin-jsx 编译，组件是 vue 组件，
-    // 不能被 v1 的 defineComponentPlugin 包装）
-    actviewPlugin({ babel: { exclude: ['/test/v2/'] } }),
+    // v2 管线：React 语义 JSX 编译（仓库根 src/ demo 区 + test/v2）
+    // ⚠️ include/exclude 规则需正斜杠（babel-host 会把 filename 归一为正斜杠）；
+    // 且用绝对路径——'/src/' 会误匹配 packages/*/src（v1 包源码）
+    actviewJsxPlugin({
+      babel: { include: [SRC_DIR, V2_TEST_DIR] },
+    }),
+    // v1 管线：仅 v1 测试（test/ 下非 v2 文件）；src/ 与 test/v2/ 已由 v2 接管
+    actviewPlugin({
+      babel: { exclude: [SRC_DIR, V2_TEST_DIR] },
+    }),
     ...actviewScopedPlugin(),
   ],
   resolve: {

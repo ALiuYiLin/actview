@@ -16,7 +16,7 @@
 // 读/写自身 ref)→ onChange 回调。disabled 时注册函数收到 null(Group 反注册)。
 // ============================================================
 
-import { computed, ref, toRefs, type Ref } from '@actview/core'
+import { computed, ref, toRefs, type Ref } from 'actview'
 import { useRenderElement } from '../internals/useRenderElement'
 import { useMergedRefs } from '../internals/useMergedRefs'
 import type { BaseUIComponentProps } from '../internals/types'
@@ -83,7 +83,7 @@ export function CheckboxRoot(props: CheckboxRootProps) {
   // 透传 props(排除框架消费键);渲染期 .value 取值保持活引用
   const EXCLUDE = new Set([
     'className', 'render', 'style', 'inputRef', 'defaultChecked',
-    'onCheckedChange', 'value', 'disabled', 'ref', 'children',
+    'onCheckedChange', 'value', 'disabled', 'ref', 'slots',
   ])
   const elementProps = computed<Record<string, any>>(() => {
     const out: Record<string, any> = {}

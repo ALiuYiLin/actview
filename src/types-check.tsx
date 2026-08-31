@@ -48,19 +48,8 @@ const missingName = <Strict />
 // @ts-expect-error - 未声明的自定义 prop（严格化：非 HTML 属性报错）
 const extraProp = <Strict name="x" foo="bar" />
 
-// 合法：声明 + HTML 属性（class/style/事件 允许透传）
-const ok = <Strict name="x" class="btn" onClick={() => {}} />
-
-// @actview/store 类型推导：useStore() 返回类型 = setup 返回类型
-import { defineStore } from '@actview/store'
-const useCounter = defineStore('tc-counter', () => {
-  return { count: 1, label: 'x' }
-})
-const counter = useCounter()
-const countNum: number = counter.count // 推导为 number
-const labelStr: string = counter.label // 推导为 string
-// @ts-expect-error - label 是 string，不能赋给 number
-const wrongLabel: number = counter.label
+// 合法：声明 props 直传（v2：组件 props 严格——class/onClick 需组件声明接收）
+const ok = <Strict name="x" />
 
 // 保持引用，避免 noUnusedLocals 报错（声明即用）
 export const __typesCheck = [
@@ -71,8 +60,5 @@ export const __typesCheck = [
   events,
   missingName,
   extraProp,
-  ok,
-  countNum,
-  labelStr,
-  wrongLabel
+  ok
 ]

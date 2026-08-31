@@ -8,7 +8,6 @@
 import {
   computed,
   createContext,
-  rawRef,
   reactive,
   ref,
   toRefs,
@@ -196,8 +195,8 @@ function DemoImperative() {
   const actionsRef = ref<{ reset(): void } | null>(null);
   return (
     <div>
-      {/* ⚠️ ref 值形态的 prop 须经 rawRef 直传（顶层解包陷阱） */}
-      <ActionChild actionsRef={rawRef(actionsRef)} text={text.value} />
+      {/* v2：JSX 无顶层 ref 解包——ref 本体直接传（无 rawRef 概念） */}
+      <ActionChild actionsRef={actionsRef} text={text.value} />
       <span style={hintStyle}>当前:{text.value}</span>
       <button style={btnStyle} onclick={() => actionsRef.value?.reset()}>
         调用子组件 reset()

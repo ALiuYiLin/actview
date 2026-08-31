@@ -8,7 +8,7 @@
 //  - ReactElement 对应 ActView 的 VNode 形态（RenderableNode 结构化最小形状）。
 // ============================================================
 
-import type { Ref } from '@actview/core'
+import type { Ref, VNode } from 'actview'
 
 export type HTMLProps = JSX.IntrinsicElements['div']
 
@@ -39,8 +39,8 @@ export type BaseUIComponentProps<
 > = Omit<JSX.IntrinsicElements[Tag], 'className' | 'style' | 'ref'> & {
   /** CSS class;支持基于 state 的函数形态（resolveClassName 求值） */
   className?: string | ((state: State) => string | undefined) | undefined
-  /** 接管渲染:节点实例（clone 合并）或渲染函数 */
-  render?: JSX.Element | ComponentRenderFn<RenderFunctionProps, State> | undefined
+  /** 接管渲染:节点实例（clone 合并）或渲染函数（v2：vue VNode） */
+  render?: VNode | ComponentRenderFn<RenderFunctionProps, State> | undefined
   /** 样式对象;支持基于 state 的函数形态（resolveStyle 求值） */
   style?:
     | Record<string, any>

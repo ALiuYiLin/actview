@@ -6,7 +6,7 @@
 // 但全部可以用原生原语【内联组合】表达(不定义 hooks 包装函数)。
 // ============================================================
 
-import { RouterLink, RouterView } from "@actview/router";
+import { RouterLink, RouterView } from "vue-router";
 import { cardStyle, hintStyle } from "../../styles";
 
 export function PatternsPage() {

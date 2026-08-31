@@ -5,7 +5,7 @@
 //   核心差异:无 hooks 规则、无依赖数组(自动追踪)、setup 即返回 JSX 简写
 // ============================================================
 
-import { RouterLink, RouterView } from "@actview/router";
+import { RouterLink, RouterView } from "vue-router";
 import { cardStyle, hintStyle } from "../../styles";
 
 export function ReactMigrationPage() {

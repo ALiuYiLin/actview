@@ -28,7 +28,7 @@
 //      （新编译契约）。
 // ============================================================
 
-import { computed, reactive, toRefs, type Ref } from '@actview/core'
+import { computed, reactive, toRefs, type Ref } from 'actview'
 import { useRenderElement } from '../../internals/useRenderElement'
 import { AvatarRootContext } from './AvatarRootContext'
 import { avatarStateAttributesMapping } from './stateAttributesMapping'
@@ -80,7 +80,13 @@ export function AvatarRoot(props: AvatarRootProps) {
   }))
   const elementProps = computed<Record<string, any>>(() => {
     const out: Record<string, any> = {}
-    for (const k in elementRefs) out[k] = elementRefs[k].value
+    for (const k in elementRefs) {
+      // v2：bridge 暴露的框架键——slots 不透传（vue 会把未知 prop
+      // setAttribute）；children 保留（render prop 的 p.children 语义，
+      // renderTag 已负责抽取为 h 第三参）
+      if (k === 'slots' || k === 'ref' || k === 'key') continue
+      out[k] = elementRefs[k].value
+    }
     return out
   })
 

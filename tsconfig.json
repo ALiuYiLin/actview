@@ -1,11 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // v2：src/ demo 区已迁移——JSX 类型用 actview（vue 组件 + React 语义）
+    "jsxImportSource": "actview"
+  },
   "include": [
     "src",
-    "packages/jsx/src/global.ts",
     "packages/core",
-    "packages/hooks-react",
-    "packages/router",
     "plugins/*/src",
     "plugins/*/test"
   ]

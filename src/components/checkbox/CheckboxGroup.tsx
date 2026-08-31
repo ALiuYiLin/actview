@@ -7,7 +7,7 @@
 // 这类群体逻辑有据可查,focusFirst 演示群体操作 DOM。
 // ============================================================
 
-import { reactive, type Reactive, type Ref } from '@actview/core'
+import { reactive, type Reactive, type Ref } from 'actview'
 import {
   CheckboxGroupContext,
   type CheckboxRegistration,
@@ -30,16 +30,18 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
 
   const group: CheckboxGroupContext = {
     register(reg: CheckboxRegistration) {
+      // vue 的 reactive 数组类型会 UnwrapRef 解包元素里的 Ref（类型层面），
+      // 运行时 ref 原样保留——indexOf 参数断言回原类型
       if (reg.el == null) {
         // 反注册:按注册对象身份移除(函数 ref 在卸载时收到 null)
-        const i = members.indexOf(reg)
+        const i = members.indexOf(reg as any)
         if (i >= 0) members.splice(i, 1)
         return
       }
       // upsert:同一注册对象重复挂载只更新
-      const i = members.indexOf(reg)
-      if (i >= 0) members[i] = reg
-      else members.push(reg)
+      const i = members.indexOf(reg as any)
+      if (i >= 0) members[i] = reg as any
+      else members.push(reg as any)
     },
     members,
     focusFirst() {

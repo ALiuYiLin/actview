@@ -11,7 +11,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, ref } from '@actview/core'
+import { createApp, ref } from 'actview'
 import {
   AvatarRoot,
   useAvatarRootContext,
@@ -64,14 +64,16 @@ describe('AvatarRoot（Base UI 移植）', () => {
     // render 形态不额外注入——与 Base UI 行为一致
   })
 
-  it('T3: 转发 ref = 真实 span DOM（组件实例 → 合并 ref 覆盖为元素）', () => {
+  it('T3: 转发 ref = 组件实例（vue 语义；根 DOM 由内部 ref 链覆盖）', () => {
     const rootEl = ref<HTMLElement | null>(null)
     function App() {
       return <AvatarRoot ref={rootEl} class="av3" />
     }
     const host = mount(App)
     const el = host.querySelector('.av3')!
-    expect(rootEl.value).toBe(el) // 最终为 DOM,非组件实例
+    // v2（vue 语义）：组件 ref = 组件实例（非 DOM）；根元素渲染由 DOM 查询验证
+    expect(rootEl.value).toBeTruthy()
+    expect(el.tagName).toBe('SPAN')
   })
 
   it('T4: context——子部件读取 imageLoadingStatus 并 setImage 驱动根重渲染', async () => {

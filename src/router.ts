@@ -1,16 +1,16 @@
-import { createRouter, createWebHistory } from "@actview/router";
+import { createRouter, createWebHistory } from "vue-router";
 import { HomePage } from "./pages/HomePage";
 
 // ============================================================
-// 路由配置 — 路由切换 =》 组件切换
+// 路由配置 — vue-router（v2 生态复用）
 //
 // 懒加载：除首页外全部动态 import（按路由分包，进页面才拉取 chunk）。
-// 页面为命名导出，RouterView 的 lazy() 需要 { default } 形态，故用
-// .then((m) => ({ default: m.XxxPage })) 包装；首次导航显示 Suspense fallback。
+// 页面为命名导出，vue-router 的懒加载需要 { default } 形态，故用
+// .then((m) => ({ default: m.XxxPage })) 包装。
 //
 // 嵌套：/react-migration 与 /react-patterns 为父布局（简介 + 子导航 +
 // 嵌套 <RouterView/> 出口），hook demo 挂 children；/react-migration
-// 精确路径由 path:'' 索引子路由渲染速查表。URL 与扁平结构完全一致。
+// 精确路径由 path:'' 索引子路由渲染速查表。
 // ============================================================
 
 const lazyPage =

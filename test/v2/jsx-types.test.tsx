@@ -85,10 +85,10 @@ describe('v2: JSX 类型层', () => {
     expect(Ok).toBeDefined()
   })
 
-  it('未知标签：vue 全局 IntrinsicElements 索引放行（vue 生态宽松语义）', () => {
-    // vue 的 jsx.d.ts 声明 [elem: string]: any——未知小写标签可用（对齐 vue JSX）
-    const Ok = <unknown-tag foo="x" />
-    expect(Ok).toBeDefined()
+  it('未知标签报错（React 严格语义：IntrinsicElements 无索引兜底）', () => {
+    // @ts-expect-error 未知小写标签（v2 全局 IntrinsicElements 是完整表，无 [tag: string] 索引）
+    const Bad = <unknown-tag foo="x" />
+    expect(Bad).toBeDefined()
   })
 
   it('负向：组件未知 prop 报错（React 严格语义）', () => {

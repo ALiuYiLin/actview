@@ -1,4 +1,4 @@
-import { RouterLink } from "@actview/router";
+import { RouterLink } from "vue-router";
 import { cardStyle } from "../styles";
 
 // ============================================================
