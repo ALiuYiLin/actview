@@ -152,7 +152,40 @@ import {
 //   JSX 显式 children（第三参非 null）优先，不抽。
 //   ⚠️ 只影响「props 显式含 children 键」的场景（vue 正常产物无此键）——
 //      零干扰；代价是每次调用多一次 in 检查。
+//
+//   插槽求值深度（渲染期判定扩展）：组件 JSX children 会被插件转成
+//   惰性插槽对象 { default: () => [...] }——插槽函数在【组件子树渲染
+//   时】才执行，此时创建 vnode 的组件早已结束自身 render（词法标记
+//   失效），桥接的 props.children 读取会被误判为「非渲染期」。这里把
+//   插槽函数包一层深度计数：插槽求值期间 activeRenderDepth > 0，
+//   桥接 children 读取视为渲染期（React 语义：JSX 子内容即渲染内容）。
 // ============================================================
+let activeRenderDepth = 0
+
+function wrapSlots(children: any): any {
+  if (
+    children &&
+    typeof children === 'object' &&
+    !Array.isArray(children) &&
+    !isVNode(children)
+  ) {
+    for (const k in children) {
+      const fn = children[k]
+      if (typeof fn === 'function') {
+        children[k] = (...args: any[]) => {
+          activeRenderDepth++
+          try {
+            return fn(...args)
+          } finally {
+            activeRenderDepth--
+          }
+        }
+      }
+    }
+  }
+  return children
+}
+
 export function createVNode(type: any, props: any, children?: any): VueVNode {
   if (props && 'children' in props) {
     if (children == null) {
@@ -166,7 +199,7 @@ export function createVNode(type: any, props: any, children?: any): VueVNode {
   if (children != null && !Array.isArray(children) && isVNode(children)) {
     children = [children]
   }
-  return vueCreateVNode(type, props, children)
+  return vueCreateVNode(type, props, wrapSlots(children))
 }
 
 // ============================================================
@@ -267,7 +300,12 @@ export function defineComponent<
         get(t, k) {
           if (k === 'slots') return ctx.slots
           if (k === 'children') {
-            if (renderPhase) return ctx.slots.default?.() ?? null
+            // 渲染期判定：① 本组件 render 区间（词法标记）② 插槽求值区间
+            //（模块级深度——组件 JSX children 被插件惰性化为插槽函数，执行
+            //  时机在本组件 render 结束之后，见 createVNode 的 wrapSlots）
+            if (renderPhase || activeRenderDepth > 0) {
+              return ctx.slots.default?.() ?? null
+            }
             if (!warnedNonRenderRead) {
               warnedNonRenderRead = true
               console.warn(

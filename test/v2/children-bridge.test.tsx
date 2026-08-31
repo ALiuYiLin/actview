@@ -8,7 +8,7 @@
 //   ⑥ 判断有无子内容：props.slots.default != null（静态，任何时机）
 // ============================================================
 import { describe, expect, it, vi } from 'vitest'
-import { createApp, createVNode } from 'actview'
+import { createApp, createVNode, createContext } from 'actview'
 
 function mount(App: any): HTMLElement {
   const host = document.createElement('div')
@@ -68,6 +68,22 @@ describe('v2.1: children 桥接（React 对齐）', () => {
     const withoutKid = mount(() => <Panel />)
     expect(withKid.querySelector('.panel')?.getAttribute('data-has')).toBe('true')
     expect(withoutKid.querySelector('.panel')?.getAttribute('data-has')).toBe('false')
+  })
+
+  it('props.children 作为组件 children（惰性插槽化）→ 插槽求值期仍为渲染期', () => {
+    // 组件 JSX children 被插件转成惰性插槽对象 { default: () => [...] }，
+    // 读取点（本组件 props.children）在【组件子树渲染时】才执行——本组件
+    // 自身 render 早已结束（词法标记失效），须靠插槽求值深度判定渲染期
+    const Ctx = createContext<string | undefined>(undefined)
+    function Outer(props: any) {
+      return <Ctx.Provider value="v">{props.children}</Ctx.Provider>
+    }
+    const host = mount(() => (
+      <Outer>
+        <b>lazy-kid</b>
+      </Outer>
+    ))
+    expect(host.querySelector('b')?.textContent).toBe('lazy-kid')
   })
 })
 

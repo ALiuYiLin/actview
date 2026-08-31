@@ -122,7 +122,7 @@ export function CheckboxGroup(props: CheckboxGroupProps) {
   return (
     <CheckboxGroupContext.Provider value={group}>
       <div role="group" data-checkbox-group="" {...passthrough.value}>
-        {props.slots?.default?.()}
+        {props.children}
       </div>
     </CheckboxGroupContext.Provider>
   )
