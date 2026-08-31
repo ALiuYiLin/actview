@@ -7,7 +7,7 @@
 ## 核心功能
 
 - **vue 运行时 re-export**：响应式（`ref` / `reactive` / `computed` / `watch` / `effectScope`）、组件（`defineComponent` / `createApp` / `h`）、生命周期、内置组件（`KeepAlive` / `Teleport` / `Suspense` / `Transition` / `TransitionGroup`）
-- **defineComponent 桥接**（React 语义）：`ctx.slots` → `props.children`（读时求值），props 读不到时从 attrs 兜底，`inheritAttrs: false`
+- **defineComponent 桥接**（React 语义）：`ctx.slots` → `props.children`（读时求值），props 读不到时从 attrs 兜底；**有 props 声明时自动落根**（`inheritAttrs` 开启，未消费 attrs 透传到根元素 + scoped data-v 生效），无声明时保持不透传（React 语义，避免 props 污染 DOM）
 - **createContext**：React 语义（`.Provider` / `.use()`），基于 vue `provide/inject`
 - **JSX 类型层**：全局 `IntrinsicElements` 完整标签表（React 语义属性）+ vue 组件兼容；组件 props 严格检查（未声明 prop 报错）
 

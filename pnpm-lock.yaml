@@ -77,6 +77,9 @@ importers:
       '@babel/helper-plugin-utils':
         specifier: ^8.0.0
         version: 8.0.1(@babel/core@8.0.1)
+      '@babel/parser':
+        specifier: ^8.0.0
+        version: 8.0.0
       '@babel/plugin-syntax-jsx':
         specifier: ^8.0.0
         version: 8.0.1(@babel/core@8.0.1)
@@ -86,6 +89,9 @@ importers:
       '@babel/types':
         specifier: ^8.0.0
         version: 8.0.0
+      '@vue/compiler-sfc':
+        specifier: ^3.5.0
+        version: 3.5.42
       '@vue/shared':
         specifier: ^3.5.0
         version: 3.5.42
@@ -937,10 +943,6 @@ packages:
     resolution: {integrity: sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==}
     engines: {node: '>=0.4.0'}
     hasBin: true
-
-  agent-base@7.1.0:
-    resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
-    engines: {node: '>= 14'}
 
   agent-base@7.1.2:
     resolution: {integrity: sha512-JVzqkCNRT+VfqzzgPWDPnwvDheSAUdiMUn3NoLXpDJF5lRqeJqyC9iGsAxIOAW+mzIdq+uP1TvcX6bMtrH0agg==}
@@ -2393,13 +2395,6 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  agent-base@7.1.0(supports-color@7.1.0):
-    dependencies:
-      debug: 4.4.3(supports-color@7.1.0)
-    transitivePeerDependencies:
-      - supports-color
-    optional: true
-
   agent-base@7.1.2(supports-color@7.1.0):
     dependencies:
       debug: 4.4.3(supports-color@7.1.0)
@@ -2639,7 +2634,7 @@ snapshots:
 
   http-proxy-agent@7.0.2(supports-color@7.1.0):
     dependencies:
-      agent-base: 7.1.0(supports-color@7.1.0)
+      agent-base: 7.1.2(supports-color@7.1.0)
       debug: 4.4.3(supports-color@7.1.0)
     transitivePeerDependencies:
       - supports-color

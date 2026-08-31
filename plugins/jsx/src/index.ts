@@ -4,6 +4,7 @@ import syntaxJsx from '@babel/plugin-syntax-jsx'
 import template from '@babel/template'
 import * as t from '@babel/types'
 import { createAutoDefineVisitor, type AutoDefineComponentState } from './auto-define-component.ts'
+import { resolveComponentProps } from './resolve-props.ts'
 import sugarFragment from './sugar-fragment.ts'
 import transformVueJSX from './transform-vue-jsx.ts'
 import type { State, VueJSXPluginOptions } from './interface.ts'
@@ -49,9 +50,63 @@ const plugin: (
         ...transformVueJSX,
         ...sugarFragment,
         ...autoDefineVisitor,
+        CallExpression: {
+          // 显式 defineComponent(fn)（用户手写包装）：同样提取 props 运行时声明
+          enter(path, state) {
+            const callee = path.node.callee
+            if (!t.isIdentifier(callee) || callee.name !== 'defineComponent') {
+              return
+            }
+            // vue 系 import 的 defineComponent（用户显式走 vue 原生）不处理
+            const binding = path.scope.getBinding('defineComponent')
+            const importSource =
+              binding?.path.parentPath?.isImportDeclaration()
+                ? (binding.path.parentPath.node as t.ImportDeclaration)
+                    .source.value
+                : undefined
+            if (importSource && /^@?vue(?:\/|$)/.test(importSource)) return
+
+            const fn = path.node.arguments[0]
+            if (!fn || !t.isFunction(fn)) return
+            const propsOption = resolveComponentProps(fn, state.file)
+            if (!propsOption) return
+
+            const args = path.node.arguments
+            if (args.length < 2) {
+              args.push(
+                t.objectExpression([
+                  t.objectProperty(t.identifier('props'), propsOption),
+                ]),
+              )
+              return
+            }
+            const second = args[1]
+            if (t.isObjectExpression(second)) {
+              const hasProps = second.properties.some(
+                (p) =>
+                  t.isObjectProperty(p) &&
+                  t.isIdentifier(p.key) &&
+                  p.key.name === 'props',
+              )
+              if (!hasProps) {
+                second.properties.push(
+                  t.objectProperty(t.identifier('props'), propsOption),
+                )
+              }
+            } else if (t.isStringLiteral(second)) {
+              // defineComponent(fn, 'Name') → { name: 'Name', props }
+              args[1] = t.objectExpression([
+                t.objectProperty(t.identifier('name'), second),
+                t.objectProperty(t.identifier('props'), propsOption),
+              ])
+            }
+            // 其他形态（变量引用等）保守跳过
+          },
+        },
         Program: {
           enter(path, state) {
             autoDefine.usedDefineComponent = false
+            autoDefine.file = state.file
             if (!hasJSX(path)) return
             const importNames = [
               'createVNode',

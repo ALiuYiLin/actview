@@ -161,16 +161,31 @@ export type ActViewComponent<
   __vccOpts?: any
 }
 
+export interface ActViewDefineComponentOptions {
+  name?: string
+  /**
+   * 运行时 props 声明（@actview/plugin-jsx 编译期从类型注解提取注入，
+   * 也可手写）。存在时开启自动落根：未消费的 attrs（class / data-v-* /
+   * 事件 / 透传属性）自动 apply 到根元素。
+   */
+  props?: Record<string, any>
+}
+
 export function defineComponent<
   Props extends Record<string, any> = Record<string, any>,
 >(
   setup: (props: Props, ctx: SetupContext) => unknown,
-  name?: string,
+  options?: ActViewDefineComponentOptions | string,
 ): ActViewComponent<Props> {
+  const opts: ActViewDefineComponentOptions =
+    typeof options === 'string' ? { name: options } : (options ?? {})
   return vueDefineComponent({
-    name,
-    // 未消费 props 不自动落根 DOM（React 语义；Vue 默认 inheritAttrs 会落）
-    inheritAttrs: false,
+    name: opts.name,
+    // 编译期提取的 props 声明（无则 undefined——组件保持「任意 props 兜底」）
+    props: opts.props as any,
+    // 有 props 声明 → 开启自动落根（透传 + scoped data-v 生效）；
+    // 无声明 → false（React 语义：避免未消费 props 以 DOM 属性形式污染根元素）
+    inheritAttrs: !!opts.props,
     setup(props, ctx) {
       // Vue：未声明 props 的组件所有传入属性进 ctx.attrs（props 对象为空）。
       // 桥接：读 props 失败时从 attrs 兜底——React 语义「任意 props 都在 props 上」

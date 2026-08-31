@@ -16,7 +16,8 @@
 // ============================================================
 
 import * as t from '@babel/types'
-import type { NodePath } from '@babel/core'
+import type { File, NodePath } from '@babel/core'
+import { resolveComponentProps } from './resolve-props.ts'
 
 const COMPONENT_RE = /^[A-Z]/
 
@@ -64,9 +65,10 @@ function ensureRenderReturn(body: t.BlockStatement) {
   }
 }
 
-/** 构造 defineComponent(fn) 调用 */
+/** 构造 defineComponent(fn[, options]) 调用 */
 function buildDefineComponentCall(
   fn: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
+  options?: t.ObjectExpression,
 ): t.CallExpression {
   let expr: t.FunctionExpression | t.ArrowFunctionExpression
   if (t.isFunctionDeclaration(fn)) {
@@ -82,11 +84,35 @@ function buildDefineComponentCall(
   } else if (t.isArrowFunctionExpression(expr) || t.isFunctionExpression(expr)) {
     ensureRenderReturn(expr.body as t.BlockStatement)
   }
-  return t.callExpression(t.identifier('defineComponent'), [expr])
+  const args: t.Expression[] = [expr]
+  if (options) args.push(options)
+  return t.callExpression(t.identifier('defineComponent'), args)
+}
+
+/**
+ * 编译期 props 提取：组件函数第一参有类型注解 →
+ * 生成 { props: { ... } } 运行时声明（见 resolve-props.ts）。
+ * 不可解析/无注解 → undefined（不注入）。
+ */
+function buildOptions(
+  state: AutoDefineComponentState,
+  fn:
+    | t.FunctionDeclaration
+    | t.FunctionExpression
+    | t.ArrowFunctionExpression,
+): t.ObjectExpression | undefined {
+  if (!state.file) return undefined
+  const props = resolveComponentProps(fn, state.file)
+  if (!props) return undefined
+  return t.objectExpression([
+    t.objectProperty(t.identifier('props'), props),
+  ])
 }
 
 export interface AutoDefineComponentState {
   usedDefineComponent: boolean
+  /** Babel File（Program.enter 注入，供 props 类型解析） */
+  file?: File
 }
 
 export function createAutoDefineVisitor(state: AutoDefineComponentState) {
@@ -105,7 +131,10 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
         state.usedDefineComponent = true
         path.replaceWith(
           t.variableDeclaration('const', [
-            t.variableDeclarator(id, buildDefineComponentCall(path.node)),
+            t.variableDeclarator(
+              id,
+              buildDefineComponentCall(path.node, buildOptions(state, path.node)),
+            ),
           ]),
         )
       },
@@ -138,6 +167,10 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
         state.usedDefineComponent = true
         path.node.init = buildDefineComponentCall(
           init as t.FunctionExpression | t.ArrowFunctionExpression,
+          buildOptions(
+            state,
+            init as t.FunctionExpression | t.ArrowFunctionExpression,
+          ),
         )
       },
     },
@@ -156,7 +189,10 @@ export function createAutoDefineVisitor(state: AutoDefineComponentState) {
         if (!path.getData('avComponent')) return
         const decl = path.node.declaration as t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression
         state.usedDefineComponent = true
-        path.node.declaration = buildDefineComponentCall(decl)
+        path.node.declaration = buildDefineComponentCall(
+          decl,
+          buildOptions(state, decl),
+        )
       },
     },
   }

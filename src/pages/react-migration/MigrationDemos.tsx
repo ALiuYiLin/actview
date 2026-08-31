@@ -196,7 +196,7 @@ function DemoImperative() {
   return (
     <div>
       {/* v2：JSX 无顶层 ref 解包——ref 本体直接传（无 rawRef 概念） */}
-      <ActionChild actionsRef={actionsRef} text={text.value} />
+      <ActionChild actionsRef={ actionsRef} text={text.value} />
       <span style={hintStyle}>当前:{text.value}</span>
       <button style={btnStyle} onclick={() => actionsRef.value?.reset()}>
         调用子组件 reset()

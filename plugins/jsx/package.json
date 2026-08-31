@@ -12,9 +12,11 @@
   "dependencies": {
     "@babel/helper-module-imports": "^8.0.0",
     "@babel/helper-plugin-utils": "^8.0.0",
+    "@babel/parser": "^8.0.0",
     "@babel/plugin-syntax-jsx": "^8.0.0",
     "@babel/template": "^8.0.0",
     "@babel/types": "^8.0.0",
+    "@vue/compiler-sfc": "^3.5.0",
     "@vue/shared": "^3.5.0"
   },
   "devDependencies": {

@@ -14,6 +14,10 @@
   - `const App = () => <JSX/>`（箭头 expression body）
   - `function App() { return <JSX/> }`（直接 return JSX 简写）
   - 手动 `defineComponent` 包装跳过；小写函数不处理；自动注入 `import { defineComponent } from 'actview'`
+- **编译期 props 提取**（自动落根的前提）：组件函数第一参的类型注解（内联对象 / 同文件 `interface` / `type` / 默认值参数）经 `@vue/compiler-sfc` 的 `extractRuntimeProps` 降级为运行时 props 声明——`defineComponent(fn, { props: { step: { type: Number, required: false } } })`；actview 桥接按「有 props 声明」开启 `inheritAttrs`，未消费 attrs（class / data-* / 事件 / 透传属性）自动落到根元素，scoped 注入的 `data-v-*` 对 actview 组件生效
+  - `children` 声明自动剔除（slots 桥接键，不能进 props 声明）
+  - 类型不可解析（跨文件 import 类型 / 复杂类型 / `any`）→ warn 并跳过，组件退回无声明语义（不落根）
+  - 显式 `defineComponent(fn)` 同样提取
 - **Vue 指令属性**：`v-model` / `v-show` / `v-html` / `v-text` / `v-slots` 编译期展开/保留
 - **产物形态**：`createVNode(tag, props, children, patchFlag?, dynamicProps?)`（`optimize` 选项开启 patchFlag 静态分析）
 
@@ -60,13 +64,14 @@ interface VueJSXPluginOptions {
 
 ## 与 @vue/babel-plugin-jsx 的差异
 
-- 移除 `resolveType`（TS 类型推断）与 `transformOn`（`on:` 对象语法）
+- `resolveType` 重实现为**编译期 props 提取**（聚焦 auto-define 包装 + 显式 `defineComponent`，自动剔除 `children`，失败容错跳过——官方版对不可解析类型直接报错）
+- 移除 `transformOn`（`on:` 对象语法）
 - 新增 React 语义映射（见上）与自动 defineComponent 包装
 
 ## 依赖关系
 
 - `@babel/core`（^8，peer）
-- `@babel/helper-module-imports` / `@babel/helper-plugin-utils` / `@babel/plugin-syntax-jsx` / `@babel/template` / `@babel/types` / `@vue/shared`
+- `@babel/helper-module-imports` / `@babel/helper-plugin-utils` / `@babel/plugin-syntax-jsx` / `@babel/template` / `@babel/types` / `@babel/parser` / `@vue/compiler-sfc` / `@vue/shared`
 
 ## License
 
