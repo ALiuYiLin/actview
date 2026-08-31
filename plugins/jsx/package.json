@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-jsx",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "React 语义 JSX 编译器 for ActView（fork @vue/babel-plugin-jsx v3.0.0：className/htmlFor/onChange/dangerouslySetInnerHTML 对齐 React，产物直出 createVNode，运行时为 vue 官方包）",
   "exports": {
