@@ -107,7 +107,7 @@ latest 回退到低版本。本仓库已完成对齐，之后由 changesets 正�
 
 | 字段 | 值 |
 | --- | --- |
-| Organization or user | `ALiuYiLin` |
+| Organization or user | `actview` |
 | Repository | `actview` |
 | Workflow filename | `release.yml`（只填文件名，不带路径） |
 | Environment name | 留空 |
@@ -127,7 +127,7 @@ latest 回退到低版本。本仓库已完成对齐，之后由 changesets 正�
 
 ```bash
 npm login --registry=https://registry.npmjs.org
-npm trust github actview --repo ALiuYiLin/actview --file release.yml --yes
+npm trust github actview --repo actview/actview --file release.yml --yes
 # 其余包同样执行，把 actview 换成对应包名
 ```
 
@@ -136,6 +136,11 @@ npm trust github actview --repo ALiuYiLin/actview --file release.yml --yes
 - 工作流文件名必须与 `.github/workflows/release.yml` 完全一致；以后重命名工作流文件，
   必须回来更新这里，否则 OIDC 校验失败。
 - 已创建的信任配置不能修改、只能删除重建。
+- **仓库已从个人账号迁移到 `actview` 组织**：Trusted Publisher 绑定的是 **owner/repo**，
+  旧的 `ALiuYiLin/actview` 配置会因 OIDC 校验失败而无法再发布。需要在 npm 上**删除旧配置、
+  按 `actview/actview` 重建**（重建后需在 2 天内完成一次成功发布，可用 pending changeset 触发）。
+- 各包 `package.json` 的 `repository.url` 已统一改为 `git+https://github.com/actview/actview.git`；
+  npm provenance 会校验它与实际运行发布的仓库一致，**不要改回旧地址**。
 
 ### 2. 打开仓库 Actions 的 PR 权限
 
@@ -144,33 +149,22 @@ GitHub 仓库 → Settings → Actions → General → 勾选
 否则 `version` job 无法创建 Version Packages PR（报
 `GitHub Actions is not permitted to create or approve pull requests`）。
 
-### 3. 第一次推送会发生什么
+> 仓库迁移到组织后，如果组织级 Actions 策略做了限制，还需要组织 Owner 在
+> **Org Settings → Actions → General → Workflow permissions** 里一并允许，否则同样报错。
 
-仓库里已有 2 个未发布的 changeset（`core-renderer-vue-align.md` 给 core minor，
-`peer-range-unify.md` 给 actview/router/store/testing/hooks-react/devtools patch），
-所以第一次推送 `release.yml` 会走 **version** 模式：创建 / 更新 Version Packages PR，
+### 3. 当前发布状态（仓库迁移后）
 
-预期 bump 结果（版本号；被 bump 的包同时生成/更新 `CHANGELOG.md`）：
+已发布（2026-11-07）：`actview@4.0.1`、`@actview/core@1.5.0`、`@actview/router@1.0.17`、
+`@actview/store@0.0.5`、`@actview/testing@0.1.2`、`@actview/hooks-react@1.1.2`、
+`@actview/devtools@0.0.5`、`@actview/plugin-babel@2.2.1`、`@actview/plugin-vite@1.3.1`。
 
-| 包 | 当前 | Version PR 后 |
-| --- | --- | --- |
-| `@actview/core` | 1.4.4 | 1.5.0（minor） |
-| `actview` | 4.0.0 | 4.0.1（patch） |
-| `@actview/router` | 1.0.16 | 1.0.17 |
-| `@actview/hooks-react` | 1.1.1 | 1.1.2 |
-| `@actview/store` | 0.0.4 | 0.0.5 |
-| `@actview/testing` | 0.1.1 | 0.1.2 |
-| `@actview/devtools` | 0.0.4 | 0.0.5 |
+待发布 changeset：`peer-range-restore.md` —— 把 6 个运行时包的
+`peerDependencies.@actview/core` 恢复为 `^1.0.0`（`actview` / `@actview/router` /
+`@actview/store` / `@actview/testing` / `@actview/hooks-react` / `@actview/devtools`
+各 patch），随下次 `main → master` 发布。
 
-合并该 PR 后，下一次 push 走 publish 模式：发布上表的新版本，并顺带发布已对齐但
-不在 changeset 里的 `@actview/plugin-babel@2.2.1` 和 `@actview/plugin-vite@1.3.1`。
-
-> 因为 actview 有一条 pending 的 patch changeset，`actview@4.0.0` 这个中间版本不会
-> 单独出现在 npm 上，实际首发是 `4.0.1`（`^4.0.0` 照常可用）。若希望首发正好是
-> `4.0.0`，删掉 `peer-range-unify.md` 里 `'actview': patch` 一行再推送即可。
-
-**所以请先完成第 1 步（配置 npm Trusted Publisher）再推送**，否则合并 Version PR
-后的发布步骤会因 OIDC 校验失败而中止。
+> 迁移前发布过的包在 npm 上仍保留旧 `repository` 元数据（只有被重新发布时才会更新）；
+> 下一次发布前请务必先完成上面的 Trusted Publisher 重建，否则 OIDC 校验会失败。
 
 ## 发布流程（本地手动，备用）
 

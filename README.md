@@ -22,7 +22,7 @@ npm install
 npm run dev
 ```
 
-> 脚手架文档：[actview-cli/README.md](https://github.com/ALiuYiLin/actview-cli)
+> 脚手架文档：[actview-cli/README.md](https://github.com/actview/actview-cli)
 
 ### 方式二：手动引入
 
@@ -70,8 +70,8 @@ createApp(Counter).mount('#app')
 
 ## 文档
 
-- **框架文档**：[ActView Docs](https://github.com/ALiuYiLin/actview-docs)（基于 ActPress 构建的官方文档站）
-- **快速创建项目**：[actview-cli/README.md](https://github.com/ALiuYiLin/actview-cli)
+- **框架文档**：[ActView Docs](https://github.com/actview/docs)（基于 ActPress 构建的官方文档站）
+- **快速创建项目**：[actview-cli/README.md](https://github.com/actview/actview-cli)
 
 ## 包结构
 
@@ -85,7 +85,7 @@ createApp(Counter).mount('#app')
 
 ## 开发与贡献
 
-本仓库（[ActView](https://github.com/ALiuYiLin/actview)）同时是 ActView 的开发与验证仓库：
+本仓库（[ActView](https://github.com/actview/actview)）同时是 ActView 的开发与验证仓库：
 
 ```bash
 pnpm install

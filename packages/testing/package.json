@@ -33,7 +33,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ALiuYiLin/actview.git",
+    "url": "git+https://github.com/actview/actview.git",
     "directory": "packages/testing"
   }
 }
