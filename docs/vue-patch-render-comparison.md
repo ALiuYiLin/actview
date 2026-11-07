@@ -38,7 +38,7 @@ patch(n1, n2, container, anchor, ...)          // renderer.ts:379-389，anchor �
 
 ## 三、当前 bug 的直接根因对照
 
-`useListNavigation` 的 NotFoundError（列表过滤 + 动态变化）与 Teleport 验证用例同源：
+浮层列表导航（combobox / select 的下方向键导航）的 NotFoundError（列表过滤 + 动态变化）与 Teleport 验证用例同源：
 
 ```
 Vue:   anchor = c2[nextPos].el ?? parentAnchor     // 新列表 + 父贯穿 fallback

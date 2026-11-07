@@ -1,0 +1,171 @@
+# 自动发布：推送到 master 后
+#   - 存在 changeset   → 生成 / 更新 "Version Packages" PR（只改版本号）
+#   - 不存在 changeset → 打包并发布 registry 上尚不存在的版本（日常发布）
+#   - 两者都没有       → 什么都不做
+#
+# 发布使用 npm Trusted Publishing（OIDC），不需要 NPM_TOKEN。
+# 前提：已在 npmjs.com 为要发布的包配置 GitHub Actions 信任发布者（见 .changeset/README.md）。
+name: Release
+
+on:
+  push:
+    branches: [master]
+  # 手动触发用于补发 / 重跑：在 Actions 页面选择 Release → Run workflow → master
+  workflow_dispatch:
+
+# 默认不给任何权限，各 job 按需声明最小权限
+permissions: {}
+
+# 同一分支串行执行，避免两次发布同时写版本号 / 发布同一个版本
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # 1. 判断这次该做什么：version（有待发 changeset）/ publish（有未发布版本）/ none（什么都不做）
+  select-mode:
+    name: Select mode
+    # 只允许从 master 发布（手动触发选错分支时直接跳过）
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # actions/checkout
+    outputs:
+      mode: ${{ steps.select-mode.outputs.mode }}
+      publish-plan-artifact-id: ${{ steps.select-mode.outputs.publish-plan-artifact-id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        # 不写 version：从仓库根 package.json 的 packageManager 字段读取（pnpm@11.22.0）
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        # Trusted Publishing 要求 Node >= 22.14、npm >= 11.5.1；Node 24 自带的 npm 满足要求
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          # 发布流程不启用依赖缓存，避免缓存投毒
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Select mode
+        id: select-mode
+        uses: changesets/action/select-mode@v2
+
+  # 2. 有 changeset：升版本（.changeset/config.json 里 commit: false，由 action 统一提交），
+  #    并创建 / 更新 "Version Packages" PR。合并该 PR 会在 master 产生新的 push，
+  #    从而进入下面的 pack → publish。
+  version:
+    name: Version packages
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 提交版本改动
+      pull-requests: write # 创建 / 更新 PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Version packages
+        id: version
+        uses: changesets/action/version@v2
+
+  # 3. 有未发布版本：先构建 dist/、跑测试，再把要发布的包打成 tarball（只读权限，不能发布）
+  pack:
+    name: Pack packages
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      pack-dir-artifact-id: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # dist/ 不进仓库（.gitignore），发布前必须构建所有 packages/* + plugins/*
+      - name: Build workspace packages
+        run: pnpm build:packages
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Pack
+        id: pack
+        uses: changesets/action/pack@v2
+        with:
+          publish-plan-artifact-id: ${{ needs.select-mode.outputs.publish-plan-artifact-id }}
+
+  # 4. 发布 tarball 到 npm，并推送 git tag、创建 GitHub Release
+  #    只有这个 job 需要 id-token: write（OIDC 凭证只交给真正执行发布的步骤）
+  publish:
+    name: Publish to npm
+    needs: pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 推送 git tag / 创建 GitHub Release
+      id-token: write # npm Trusted Publishing（OIDC），不要用于其他 job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+          # 使用 Trusted Publishing 时不设置 registry-url / NODE_AUTH_TOKEN：
+          # npm 会自动检测 OIDC 环境并交换短期凭证，同时自动生成 provenance
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish
+        uses: changesets/action/publish@v2
+        with:
+          pack-dir-artifact-id: ${{ needs.pack.outputs.pack-dir-artifact-id }}
+          # 如需退回 token 方式，删除上面一行并改为：
+          # env:
+          #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # （同时要在 setup-node 里加 registry-url: https://registry.npmjs.org）

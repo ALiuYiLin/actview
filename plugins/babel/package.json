@@ -1,6 +1,6 @@
 {
   "name": "@actview/plugin-babel",
-  "version": "2.1.0",
+  "version": "2.2.1",
   "type": "module",
   "description": "Babel 插件：JSX 组件自动 defineComponent 转换（ActView 编译核心，独立于 Vite 宿主）",
   "exports": {
@@ -28,9 +28,15 @@
     },
     "main": "./dist/index.js",
     "module": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    "types": "./dist/index.d.ts",
+    "registry": "https://registry.npmjs.org/"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ALiuYiLin/actview.git",
+    "directory": "plugins/babel"
+  }
 }

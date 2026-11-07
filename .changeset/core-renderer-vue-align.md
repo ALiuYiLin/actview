@@ -14,10 +14,10 @@
   collectDomEls 会取到 target 容器（body）里的 DOM 作 anchor——jsdom/真实
   浏览器 insertBefore 抛 NotFoundError → 组件更新中断（props 不响应 /
   provide 断链）。修复：遍历 __avChildren 时跳过 __builtin==='teleport'
-  （base-ui FloatingPortal 场景；复现 test/renderer/teleport-anchor-repro.test.tsx）。
+  （浮层 Teleport 到 body 的场景；复现 test/renderer/teleport-anchor-repro.test.tsx）。
 - **sameIndexAnchor 归属校验**：同索引 diff 挂载锚点只取「仍在本容器内」的
   旧 DOM（container.contains）——旧节点已卸载/跨容器（Teleport/keep-alive/
-  过滤列表）时取容器外 DOM 会抛 NotFoundError（useListNavigation 场景）。
+  过滤列表）时取容器外 DOM 会抛 NotFoundError（浮动列表导航场景）。
 - **组件更新锚点重算**（对齐 Vue :1544-1554）：oldSubTree 非 null 时每次
   getNextHostNode(oldSubTree)；删除补丁式 nextSiblingVnode/firstDomEl。
 - **lazy placeholder**：lazy 未加载时渲染零宽空格占位文本节点（对齐 Vue

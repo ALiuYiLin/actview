@@ -3,8 +3,7 @@
 // 受控还原（restoreControlledState）时序缺陷 —— 回归用例
 //
 // 历史缺陷（已修复 fa3959c）：
-//   旧 patchEvent 在每个事件 handler（含 useInteractions 绑定的
-//   onPointerDown/onMouseDown/onFocus/onKeyDown/onChange）后都无条件
+//   旧 patchEvent 在每个事件 handler 后都无条件
 //   queueMicrotask(restoreControlledState)。userEvent 输入 'a' 的事件序列
 //   （pointerdown→focus→keydown→input）里，前序事件的 restore 裸微任务先
 //   入队（此时渲染 flush 尚未入队），input 事件才把 DOM 改成 'a' → 前序
@@ -13,26 +12,19 @@
 //   修复：restore 只挂 input/change 事件，且用 nextTick 延迟到渲染提交后。
 //
 // 用例分工：
-//   - E：combobox 受控输入框（useListNavigation typeable + computed 过滤链）
-//     —— 修复前稳定失败（'ppla'），修复后通过（回归保护）。
-//   - A/B/D：裸受控 input 基线（无 useInteractions 事件，本就不触发缺陷）。
+//   - A/B：手动派发 input 事件，验证逐字符输入顺序与光标保位。
+//   - D：userEvent 复现完整事件链（pointerdown→focus→keydown→input）。
 //
 // ⚠️ 本文件用 jsdom 环境：缺陷症状依赖「设置 input.value 后 selection
 //   truncation」的浏览器行为（jsdom 与真实浏览器一致，happy-dom 会掩盖）。
 //
 // 运行：pnpm exec vitest run test/renderer/controlled-input-restore.test.tsx
-//   —— 期望：4 个用例全部通过。
+//   —— 期望：3 个用例全部通过。
 // ============================================================
 
 import { describe, it, expect } from 'vitest'
-import { createApp, reactive, nextTick, ref, computed, defineComponent } from 'actview'
+import { createApp, reactive } from 'actview'
 import userEvent from '@testing-library/user-event'
-import {
-  useFloating,
-  useInteractions,
-  useListNavigation,
-  FloatingPortal,
-} from '@floating-ui/actview'
 
 function mount(component: any) {
   const host = document.createElement('div')
@@ -132,92 +124,6 @@ describe('受控 input 逐字符输入（还原时序）', () => {
     // 与 React 对齐的受控语义：用户逐字符输入应保持顺序（'appl'）。
     // 缺陷表现：restore 先于渲染 job 把 value 拉回旧值，光标被重置到 0，
     // 后续字符插到开头 → 'ppla'。
-    expect(input.value).toBe('appl')
-    expect(input.selectionStart).toBe(4)
-  })
-
-  it('E（缺陷复现）：combobox 受控输入框逐字符输入保持顺序', async () => {
-    const emojis = [
-      { name: 'apple', emoji: '🍎' },
-      { name: 'orange', emoji: '🍊' },
-      { name: 'watermelon', emoji: '🍉' },
-      { name: 'strawberry', emoji: '🍓' },
-      { name: 'pear', emoji: '🍐' },
-      { name: 'banana', emoji: '🍌' },
-    ]
-
-    const open = ref(true)
-    const search = ref('')
-    const activeIndex = ref<number | null>(null)
-    const listRef = ref<Array<HTMLElement | null>>([])
-
-    const { refs, context } = useFloating({
-      open,
-      onOpenChange: (o: boolean) => {
-        open.value = o
-      },
-    })
-
-    // input 的 value 渲染依赖 computed 链（过滤列表），受控值变化时渲染
-    // flush 晚于 restore 的微任务 → 缺陷触发。
-    const filtered = computed(() =>
-      emojis.filter(({ name }) => name.includes(search.value)),
-    )
-
-    const { getReferenceProps: getInputProps } = useInteractions([
-      useListNavigation(context, {
-        listRef,
-        activeIndex,
-        onNavigate: (i: number) => {
-          activeIndex.value = i
-        },
-        orientation: 'horizontal',
-        loop: true,
-        openOnArrowKeyDown: false,
-      }),
-    ])
-
-    const App = defineComponent(function () {
-      return () => (
-        <FloatingPortal>
-          {open.value && (
-            <div
-              ref={refs.setFloating}
-              style={{ position: 'absolute', top: 0, left: 0 }}
-            >
-              <input
-                aria-label="search-input"
-                value={search.value}
-                {...getInputProps({
-                  onChange: (e: any) => {
-                    activeIndex.value = null
-                    search.value = e.target.value
-                  },
-                })}
-              />
-              {filtered.value.map(({ name }, i) => (
-                <button key={name} role="option" data-index={i}>
-                  {name}
-                </button>
-              ))}
-            </div>
-          )}
-        </FloatingPortal>
-      )
-    })
-
-    const host = mount(App)
-    // FloatingPortal（Teleport to body）：input 在 body 下而非 host 内；
-    // 用唯一 aria-label 避免命中同文件其他用例的残留 input
-    const input = document.querySelector('[aria-label="search-input"]') as HTMLInputElement
-    expect(input).toBeTruthy()
-    input.focus()
-
-    const user = userEvent.setup()
-    await user.keyboard('appl')
-
-    // 回归断言（fa3959c 修复后）：restore 不再先于受控值渲染执行，
-    // 逐字符输入保持顺序 'appl'、光标在末尾。
     expect(input.value).toBe('appl')
     expect(input.selectionStart).toBe(4)
   })

@@ -3,9 +3,14 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:packages": "pnpm --filter \"./packages/*\" --filter \"./plugins/*\" run build",
     "preview": "vite preview",
     "test": "vitest run",
     "changeset": "changeset",
@@ -27,7 +32,6 @@
     "@actview/testing": "workspace:*",
     "@babel/core": "^8.0.1",
     "@changesets/cli": "^3.0.0",
-    "@floating-ui/actview": "link:../floating-ui/packages/actview",
     "@testing-library/user-event": "^14.6.6",
     "@types/node": "^26.0.1",
     "actview": "workspace:*",

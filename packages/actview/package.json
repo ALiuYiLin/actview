@@ -1,6 +1,6 @@
 {
   "name": "actview",
-  "version": "1.1.1",
+  "version": "4.0.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -29,6 +29,12 @@
     },
     "main": "./dist/index.js",
     "module": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    "types": "./dist/index.d.ts",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ALiuYiLin/actview.git",
+    "directory": "packages/actview"
   }
 }

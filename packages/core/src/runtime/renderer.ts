@@ -876,8 +876,8 @@ function patchEvent(el: any, key: string, value: any) {
       //
       // ⚠️ 两个时序约束（缺一不可）：
       // 1) 只挂在 input/change 事件后（真正可能改 value/checked 的事件）。
-      //    pointerdown/mousedown/focus/keydown 等 handler（useInteractions 的
-      //    onPointerDown/onFocus/onKeyDown…）不还原：它们不改值，但会在
+      //    pointerdown/mousedown/focus/keydown 等 handler（浮层/列表导航等
+      //    交互库绑定的 onPointerDown/onFocus/onKeyDown…）不还原：它们不改值，但会在
       //    「用户输入（input 事件）→ 渲染」之前把 restore 微任务排入队列，
       //    拿到旧受控值把用户刚输入的内容拉回、光标重置（逐字符错乱）。
       // 2) 延迟到渲染提交之后（nextTick = 当前渲染 flush 完成后，对齐 React
@@ -1254,7 +1254,7 @@ export function unmount(vnode: any, container?: Element, index?: number) {
   } else {
     // 原生元素 / Fragment / 文本：递归 children——嵌套在元素/Fragment 里的
     // 组件同样要触发 onUnmounted。此前只递归组件 subTree 一层，会漏掉更深层
-    // 组件（例如渲到 body 的 FloatingPortal 无法执行 portalNode 清理）。
+    // 组件（例如 Teleport 到 body 的浮层内容无法执行清理）。
     if (vnode.el) controlledEls.delete(vnode.el) // 受控元素移出还原表（幂等）
     unmountChildren(vnode)
   }
