@@ -1,0 +1,54 @@
+# PR / 分支 CI —— 只验证，不发布
+#   - pull_request → main / master：PR 检查（合并前跑构建 + 测试）
+#   - push 到任意非 master 分支（含 main）：直接验证该分支
+#
+# 分支模型：fix/* feat/* --PR--> main（集成/预演） --手动 PR--> master（发布）
+# 发布由 release.yml 负责（仅 push 到 master 触发）；本 workflow 只有
+# contents: read，不执行 changeset / publish，也不会接触 id-token。
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches-ignore: [master]
+
+# 最小权限：只需读代码
+permissions:
+  contents: read
+
+# 同一分支的 push / PR 运行归为一组，新运行取消旧运行，避免重复占用 runner
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        # 版本来自仓库根 package.json 的 packageManager 字段（pnpm@11.22.0）
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # dist/ 不进仓库，构建后才能验证打包产物/类型声明
+      - name: Build workspace packages
+        run: pnpm build:packages
+
+      - name: Run tests
+        run: pnpm test

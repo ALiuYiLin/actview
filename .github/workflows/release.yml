@@ -3,6 +3,10 @@
 #   - 不存在 changeset → 打包并发布 registry 上尚不存在的版本（日常发布）
 #   - 两者都没有       → 什么都不做
 #
+# 分支模型：fix/* feat/* --PR--> main（集成/预演） --手动 PR--> master（发布）
+# 只有 master 的 push 会触发本 workflow；发布成功后 sync-main job 会把 master
+# 回合并到 main，避免下次 main → master 在版本号/CHANGELOG/.changeset 上冲突。
+#
 # 发布使用 npm Trusted Publishing（OIDC），不需要 NPM_TOKEN。
 # 前提：已在 npmjs.com 为要发布的包配置 GitHub Actions 信任发布者（见 .changeset/README.md）。
 name: Release
@@ -169,3 +173,31 @@ jobs:
           # env:
           #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           # （同时要在 setup-node 里加 registry-url: https://registry.npmjs.org）
+
+  # 5. 发布成功后回合并：master → main（main 是集成分支）
+  #    发布会在 master 产生版本号 / CHANGELOG / 删除 changeset 等提交；不回合并的话
+  #    下次 main → master 会在这些文件上冲突。
+  #    ⚠️ 用 GITHUB_TOKEN push 到 main 不会再次触发 CI（GitHub 对 token 触发的事件
+  #       去重），内容已在 pack 阶段构建 + 测试过。
+  #    前提：main 上没有开启 “Require a pull request before merging”，否则直接 push
+  #       会被分支保护拒绝（发布本身已成功，但本 job 会报错）——见 .changeset/README.md。
+  sync-main:
+    name: Back-merge master into main
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push 回 main
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Merge master into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin master
+          git merge --no-edit origin/master
+          git push origin main
