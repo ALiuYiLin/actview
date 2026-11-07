@@ -16,10 +16,21 @@ function cleanId(id: string): string {
   return id.split('?')[0].replace(/\\/g, '/')
 }
 
-/** import 源 → 绝对路径（相对 importer 所在目录解析） */
+/**
+ * import 源 → 绝对路径（相对 importer 所在目录解析）。
+ * 按路径自身形态选择解析器（posix `/…` 或 windows `E:/…`），与宿主平台无关：
+ * 否则在 Linux 上 windows 形态的绝对 id 会被当成相对路径拼上 cwd，
+ * 导致 css 侧 `cleanId(id)` 与 jsx 侧解析结果的 hash 不一致。
+ */
 function resolveCssPath(importSource: string, importer: string): string {
-  const dir = path.dirname(importer.split('?')[0])
-  return path.resolve(dir, importSource).split('?')[0].replace(/\\/g, '/')
+  const importerClean = importer.split('?')[0].replace(/\\/g, '/')
+  const dir = path.posix.dirname(importerClean)
+  const resolver = /^[A-Za-z]:\//.test(dir)
+    ? path.win32
+    : dir.startsWith('/')
+      ? path.posix
+      : path
+  return resolver.resolve(dir, importSource).split('?')[0].replace(/\\/g, '/')
 }
 
 export function actviewScopedPlugin(options: ScopedPluginOptions = {}) {

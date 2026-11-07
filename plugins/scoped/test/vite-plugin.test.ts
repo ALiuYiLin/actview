@@ -84,4 +84,16 @@ describe('actviewScopedPlugin：alias 后形态（源码路径）', () => {
     const cssHash = (cssOut.code.match(/data-v-([0-9a-f]{8})/)?.[1] ?? '') as string
     expect(jsxOut.code).toContain(`data-v-${cssHash}`)
   })
+
+  it('跨平台：posix 形态绝对路径 id 也按自身形态解析（Linux 行为）', async () => {
+    const [css, jsx] = actviewScopedPlugin() as any[]
+    const cssOut = await css.transform('.a { color: red }', '/proj/src/a.css?scoped')
+    const jsxOut = await jsx.transform(
+      `import './a.css?scoped'\nexport const C = () => <div class="a">x</div>`,
+      '/proj/src/C.tsx',
+    )
+    const cssHash = (cssOut.code.match(/data-v-([0-9a-f]{8})/)?.[1] ?? '') as string
+    expect(cssHash).toBe(getHash('/proj/src/a.css'))
+    expect(jsxOut.code).toContain(`data-v-${cssHash}`)
+  })
 })
