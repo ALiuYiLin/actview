@@ -4,6 +4,48 @@
 本地用 [`@changesets/cli`](https://github.com/changesets/changesets) 记录变更，线上由
 [`.github/workflows/release.yml`](../.github/workflows/release.yml) 自动发布到 npm。
 
+## 分支模型（main 集成 → master 发布）
+
+```
+fix/xxx  feat/xxx
+   │ push（CI：构建 + 测试，不发布）
+   ▼
+  PR → main          # 集成分支：CI 必须绿；可先在 main 上预演 / 试用
+   │
+   │ 手动 PR（你决定发版时）
+   ▼
+ master              # 发布分支：只接受来自 main 的 PR
+   │ push → release.yml
+   ├─ 有 changeset → Version Packages PR → 合并 → npm publish + tag / GitHub Release
+   └─ 无 changeset → 什么都不做
+   │
+   └─ 发布成功后 → sync-main job 自动把 master 回合并到 main
+```
+
+- **CI**（[ci.yml](../.github/workflows/ci.yml)）在 `push` 到任意非 master 分支、
+  以及 `pull_request` 指向 `main` / `master` 时运行：只做
+  `install → build:packages → test`，权限只有 `contents: read`，不发布。
+- **发布**只由 `master` 的 push 触发。feature 分支和 `main` 上的改动都**不会**发 npm。
+- 想发版：开 PR `main → master` 合并 → Release 判定 →（有 changeset 时）合并
+  Version Packages PR 才真正 publish。
+- 发布完成后 `sync-main` job 自动执行 `git merge origin/master` 并 push 回 `main`，
+  避免下次 `main → master` 在 `package.json` 版本号 / `CHANGELOG.md` / `.changeset/`
+  上冲突。该 push 用 `GITHUB_TOKEN`，**不会再触发 CI**（GitHub 对 token 触发的事件去重）；
+  内容已在 pack 阶段构建 + 测试过。
+- 热修复：允许直接开 PR → `master` 发 patch，发布后同样自动回合并到 `main`。
+
+### 分支保护（GitHub 设置，建议）
+
+| 分支 | 建议 |
+| --- | --- |
+| `main` | 要求 `Build & test` 检查通过（可以不开“Require a pull request”） |
+| `master` | 只允许 PR 合并：Version Packages PR 由 bot 创建、你手动 approve |
+
+> ⚠️ 如果给 `main` 开启 **Require a pull request before merging**，`sync-main` 的
+> 直接 push 会被拦截，release 运行会显示失败（但 npm 发布已经成功）。此时三选一：
+> 关闭该选项、在 ruleset 里允许 GitHub Actions bypass、或把 `sync-main` 改成用
+> PAT（`secrets.SYNC_TOKEN`）推送。
+
 ## 日常开发
 
 改动代码后，为本次改动登记一个变更集：
@@ -27,7 +69,10 @@ pnpm changeset:status
 
 ## 发布流程（GitHub Actions 自动，推荐）
 
-推送到 `master`（或在 Actions 页面手动触发 `Release`）后：
+只有推送到 `master`（或在 Actions 页面手动触发 `Release`）才进入发布判定；
+`main` 和 feature 分支的 push 只跑 CI，不发版。
+
+推送到 `master` 后：
 
 - 存在带 release 的 changeset → 生成 / 更新 **Version Packages** PR（版本号 + 各包
   `CHANGELOG.md`）；
