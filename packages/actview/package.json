@@ -1,12 +1,12 @@
 {
   "name": "actview",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "@actview/core": "^1.0.0",
+    "@actview/core": "^1.5.0",
     "@actview/jsx": "^1.0.0"
   },
   "devDependencies": {
