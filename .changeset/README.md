@@ -144,8 +144,10 @@ pnpm changeset:publish   # 发布 registry 上尚不存在的版本（prepublish
 
 - `EOTP` / `401 Unauthorized` / `need auth`：Trusted Publisher 的仓库、工作流文件名
   或 Environment 对不上，或 `Allowed actions` 没勾 `npm publish`，或配置已过期。
-- `Resource not accessible by integration`（version job）：没打开上面的
-  “允许 GitHub Actions 创建和批准 PR”。
+- `Error: GitHub Actions is not permitted to create or approve pull requests` /
+  `Resource not accessible by integration`（version job）：没打开上面的
+  “Allow GitHub Actions to create and approve pull requests”
+  （Settings → Actions → General → Workflow permissions 里勾选并 Save）。
 - `404`（publish）：包在 npm 上还不存在；Trusted Publishing 不能发布第一个版本，
   需要先本地手动发布。
 - version job 报 `Error: ENOENT: no such file or directory, open '.../packages/<pkg>/CHANGELOG.md'`：
