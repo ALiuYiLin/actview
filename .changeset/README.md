@@ -154,17 +154,15 @@ GitHub 仓库 → Settings → Actions → General → 勾选
 
 ### 3. 当前发布状态（仓库迁移后）
 
-已发布（2026-11-07）：`actview@4.0.1`、`@actview/core@1.5.0`、`@actview/router@1.0.17`、
-`@actview/store@0.0.5`、`@actview/testing@0.1.2`、`@actview/hooks-react@1.1.2`、
-`@actview/devtools@0.0.5`、`@actview/plugin-babel@2.2.1`、`@actview/plugin-vite@1.3.1`。
+最近一次发布（2026-11-07，发生在迁移到 `actview` 组织**之前**）：`actview@4.0.2`、
+`@actview/router@1.0.18`、`@actview/store@0.0.6`、`@actview/testing@0.1.3`、
+`@actview/hooks-react@1.1.3`、`@actview/devtools@0.0.6`。
 
-待发布 changeset：`peer-range-restore.md` —— 把 6 个运行时包的
-`peerDependencies.@actview/core` 恢复为 `^1.0.0`（`actview` / `@actview/router` /
-`@actview/store` / `@actview/testing` / `@actview/hooks-react` / `@actview/devtools`
-各 patch），随下次 `main → master` 发布。
-
-> 迁移前发布过的包在 npm 上仍保留旧 `repository` 元数据（只有被重新发布时才会更新）；
-> 下一次发布前请务必先完成上面的 Trusted Publisher 重建，否则 OIDC 校验会失败。
+- 这些版本的 npm 元数据里 `repository` 仍是旧的 `ALiuYiLin/actview`（发布发生在迁移前）；
+  **下一次发布起**才会带上新的 `actview/actview` 地址。
+- 当前 `master` 上没有 pending changeset。
+- 迁移后第一次发布前，务必先按上面的新 owner 重建 Trusted Publisher，否则 `publish`
+  步骤会因 OIDC 校验失败而中止。
 
 ## 发布流程（本地手动，备用）
 
