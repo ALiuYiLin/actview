@@ -29,7 +29,8 @@ pnpm changeset:status
 
 推送到 `master`（或在 Actions 页面手动触发 `Release`）后：
 
-- 存在带 release 的 changeset → 生成 / 更新 **Version Packages** PR（只改版本号）；
+- 存在带 release 的 changeset → 生成 / 更新 **Version Packages** PR（版本号 + 各包
+  `CHANGELOG.md`）；
 - 没有 changeset 但存在 registry 上还没有的版本 → 构建 `dist/`、跑 `pnpm test`，
   然后打包并发布到 npm，推送 git tag、创建 GitHub Release；
 - 两者都没有 → 什么都不做。
@@ -104,7 +105,7 @@ GitHub 仓库 → Settings → Actions → General → 勾选
 `peer-range-unify.md` 给 actview/router/store/testing/hooks-react/devtools patch），
 所以第一次推送 `release.yml` 会走 **version** 模式：创建 / 更新 Version Packages PR，
 
-预期 bump 结果（仅版本号变化）：
+预期 bump 结果（版本号；被 bump 的包同时生成/更新 `CHANGELOG.md`）：
 
 | 包 | 当前 | Version PR 后 |
 | --- | --- | --- |
@@ -147,6 +148,10 @@ pnpm changeset:publish   # 发布 registry 上尚不存在的版本（prepublish
   “允许 GitHub Actions 创建和批准 PR”。
 - `404`（publish）：包在 npm 上还不存在；Trusted Publishing 不能发布第一个版本，
   需要先本地手动发布。
+- version job 报 `Error: ENOENT: no such file or directory, open '.../packages/<pkg>/CHANGELOG.md'`：
+  `.changeset/config.json` 的 `changelog` 被设成了 `false`。`changesets/action` 的
+  version 步骤升完版本后会读取各包 `CHANGELOG.md` 拼 PR 内容，因此必须保留
+  changelog 生成器（当前为 `"@changesets/cli/changelog"`）。
 - 想退回 token 方式：在仓库 Secrets 中加 `NPM_TOKEN`，把 `publish` job 改为
   `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`，并在 `setup-node` 中设置
   `registry-url: https://registry.npmjs.org`。

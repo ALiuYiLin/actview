@@ -1,5 +1,5 @@
 # 自动发布：推送到 master 后
-#   - 存在 changeset   → 生成 / 更新 "Version Packages" PR（只改版本号）
+#   - 存在 changeset   → 生成 / 更新 "Version Packages" PR（版本号 + CHANGELOG）
 #   - 不存在 changeset → 打包并发布 registry 上尚不存在的版本（日常发布）
 #   - 两者都没有       → 什么都不做
 #
