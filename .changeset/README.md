@@ -8,7 +8,7 @@
 
 ```
 fix/xxx  feat/xxx
-   │ push（CI：构建 + 测试，不发布）
+   │ push + 开 PR（CI：构建 + 测试，不发布）
    ▼
   PR → main          # 集成分支：CI 必须绿；可先在 main 上预演 / 试用
    │
@@ -22,9 +22,16 @@ fix/xxx  feat/xxx
    └─ 发布成功后 → sync-main job 自动把 master 回合并到 main
 ```
 
-- **CI**（[ci.yml](../.github/workflows/ci.yml)）在 `push` 到任意非 master 分支、
-  以及 `pull_request` 指向 `main` / `master` 时运行：只做
-  `install → build:packages → test`，权限只有 `contents: read`，不发布。
+- **CI**（[ci.yml](../.github/workflows/ci.yml)）只在 `pull_request` 指向 `main` /
+  `master` 时触发：
+  - 只有改到 `packages/**`、`plugins/**`、`test/**` 或根构建配置（`package.json`、
+    `pnpm-lock.yaml`、`pnpm-workspace.yaml`、`vite.config.ts`、`tsconfig*.json`、
+    `ci.yml` 自身）时才跑 `install → build:packages → test`；
+  - 纯文档 / `.changeset` 等改动的 PR 只做变更检测，job 仍快速成功上报
+    （保证分支保护的 required check 不会卡住 PR）；
+  - **Version Packages PR**（`changeset-release/*`）不跑重活，发布前 `Release` 的
+    `pack` 阶段会再构建 + 测试一次；
+  - 权限只有 `contents: read`，不发布。**分支 push 不再触发任何 workflow。**
 - **发布**只由 `master` 的 push 触发。feature 分支和 `main` 上的改动都**不会**发 npm。
 - 想发版：开 PR `main → master` 合并 → Release 判定 →（有 changeset 时）合并
   Version Packages PR 才真正 publish。
@@ -70,7 +77,7 @@ pnpm changeset:status
 ## 发布流程（GitHub Actions 自动，推荐）
 
 只有推送到 `master`（或在 Actions 页面手动触发 `Release`）才进入发布判定；
-`main` 和 feature 分支的 push 只跑 CI，不发版。
+`main` 和 feature 分支的 push 不再触发 CI（只有 PR 才跑），也都不发版。
 
 推送到 `master` 后：
 
