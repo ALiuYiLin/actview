@@ -1,6 +1,11 @@
-# PR / 分支 CI —— 只验证，不发布
-#   - pull_request → main / master：PR 检查（合并前跑构建 + 测试）
-#   - push 到任意非 master 分支（含 main）：直接验证该分支
+# PR CI —— 只验证，不发布
+#   - 只在 pull_request → main / master 时触发（分支 push 不再跑 CI）
+#   - 只有 packages/ plugins/ test/ 及根配置变更时才跑「构建 + 测试」重活；
+#     纯文档 / .changeset 等改动只做变更检测，job 仍快速成功上报
+#   - Version Packages PR（changeset-release/*）不跑重活：发布时 Release 的
+#     pack 阶段会再构建 + 测试一次
+#   - job 始终运行并上报 "Build & test" 这个名字，因此分支保护里的
+#     required status check 不会出现「等待上报」而卡住 PR
 #
 # 分支模型：fix/* feat/* --PR--> main（集成/预演） --手动 PR--> master（发布）
 # 发布由 release.yml 负责（仅 push 到 master 触发）；本 workflow 只有
@@ -10,16 +15,14 @@ name: CI
 on:
   pull_request:
     branches: [main, master]
-  push:
-    branches-ignore: [master]
 
 # 最小权限：只需读代码
 permissions:
   contents: read
 
-# 同一分支的 push / PR 运行归为一组，新运行取消旧运行，避免重复占用 runner
+# 同一分支的 PR 运行归为一组，新运行取消旧运行
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,23 +35,53 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # 需要 base / head 两个 commit 才能算变更文件
+          fetch-depth: 0
+
+      # 判断这次 PR 需不需要跑重活。只认代码/测试/构建配置；
+      # 想再收紧成「只 packages + plugins」，把测试与根配置那几项从正则里删掉即可。
+      - name: Detect changed paths
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD_REF" == changeset-release/* ]]; then
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "Version Packages PR：跳过构建 + 测试（发布时 Release pack 阶段会再跑）"
+            exit 0
+          fi
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+              | grep -qE '^(packages|plugins|test)/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|vite\.config\.ts|tsconfig[^/]*\.json|\.github/workflows/ci\.yml)$'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "命中代码 / 测试 / 构建配置变更，执行构建 + 测试"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "仅文档或其它文件变更，跳过构建 + 测试"
+          fi
 
       - name: Setup pnpm
+        if: steps.changes.outputs.relevant == 'true'
         # 版本来自仓库根 package.json 的 packageManager 字段（pnpm@11.22.0）
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm install --frozen-lockfile
 
       # dist/ 不进仓库，构建后才能验证打包产物/类型声明
       - name: Build workspace packages
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm build:packages
 
       - name: Run tests
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm test
