@@ -1,0 +1,36 @@
+{
+  "name": "@actview/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "internal utils shared across @actview packages (derived from @vue/shared 3.5.39, MIT)",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/actview/actview.git",
+    "directory": "packages/shared"
+  },
+  "license": "MIT"
+}

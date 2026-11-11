@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // 派生自 Vue 源码：不强制可擦除语法（enum 等），也不因上游未使用局部变量报错
+    "strict": true,
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["node"]
+  },
+  "include": ["src", "../global.d.ts"]
+}

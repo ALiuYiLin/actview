@@ -1,0 +1,41 @@
+{
+  "name": "@actview/reactivity",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "ActView reactivity system (derived from @vue/reactivity 3.5.39, MIT)",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@actview/shared": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/actview/actview.git",
+    "directory": "packages/reactivity"
+  },
+  "license": "MIT"
+}
