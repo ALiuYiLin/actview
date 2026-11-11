@@ -11,14 +11,15 @@
 用户 TSX / 公开 API                     渲染器 / compiler 内部
 ──────────────────────────             ──────────────────────────
 JSX.Element  (公开 Element)     ←──    VNode  extends Element
-ComponentFunction<P>            ←──    Component<P>  { __setup, name? }
+ComponentFunction<P>            ←──    Component<P>  (setup 函数 + __actview_component 标记)
 ComponentTag<P>  (JSX 标签视图)         ComponentInternalInstance
 string | symbol (标签/Fragment)
 ```
 
 | 包 | 职责 | 入口 | 包含 |
 |---|---|---|---|
-| `@actview/runtime-core` | 平台无关的类型基础 + 最小元素工厂 | `.`（公开）/ `./internal`（内部） | 公开：`Element` / `ElementType` / `ComponentFunction` / `ComponentTag` / `ComponentProps` / `ElementChild(ren)` / `RenderFunction` / `SetupContext`；内部：`VNode` / `VNodeTypes` / `VNodeChild(ren)` / `createVNode` / `isVNode` / `Component` / `ComponentInternalInstance` / `SetupFunction` |
+| `@actview/runtime-core` | 平台无关的类型基础 + 最小元素工厂 | `.`（公开）/ `./internal`（内部） | 公开：`Element` / `ElementType` / `ComponentFunction` / `ComponentTag` / `ComponentProps` / `ElementChild(ren)` / `RenderFunction` / `SetupContext` / `defineComponent` / `isComponent`；内部：`VNode` / `VNodeTypes` / `VNodeChild(ren)` / `createVNode` / `isVNode` / `Component` / `ComponentInternalInstance` / `SetupFunction` |
+| `@actview/compiler` | 编译层 L1：组件函数 → `defineComponent(setup)`（JSX 降级交给宿主 automatic runtime） | `.` / `./vite` | `wrapComponentsPlugin` / `compileComponents()` / `actviewCompiler()`（Vite 宿主）；分层契约见 `docs/compiler-layers.md` |
 | `@actview/jsx` | JSX 作者层：用户写 TSX 看到的那一层 | `.` / `./jsx-runtime` / `./jsx-dev-runtime` | 全局 `JSX` 命名空间、DOM/SVG 属性类型、JSX runtime（`jsx` / `jsxs` / `jsxDEV` / `Fragment`），再导出 runtime-core 公开类型 |
 | `@actview/core` | DOM 运行时公开层（渲染器，当前占位） | `.` | 后续：`createApp` / `patch` / 生命周期 / 内置组件 |
 | `@actview/reactivity` / `@actview/shared` | 响应式 / 内部工具 | — | 与本分层无耦合 |
@@ -28,6 +29,7 @@ string | symbol (标签/Fragment)
 ```
 @actview/jsx ──→ @actview/runtime-core
 @actview/core ──→ @actview/runtime-core（渲染器落地时）
+@actview/compiler ──→ (无 runtime 依赖；编译产物 import @actview/runtime-core / @actview/jsx)
 @actview/runtime-core ──→ (无平台依赖；不 import @actview/jsx / @actview/core)
 ```
 
@@ -68,7 +70,7 @@ type ElementType = string | symbol | ComponentFunction<any> | ComponentTag<any>
 - `string`：原生标签（`<div>`）；
 - `symbol`：Fragment（`<></>` / `<Fragment>`）；
 - `ComponentFunction`：用户源码里的组件函数；
-- `ComponentTag`：编译产物（`defineComponent` 返回值）的 JSX 标签视图。
+- `ComponentTag`：编译产物（`defineComponent` 返回的带标记 setup 函数）的 JSX 标签视图。
 
 ### 2.3 组件两视图：`ComponentFunction` / `ComponentTag`
 
@@ -76,15 +78,19 @@ type ElementType = string | symbol | ComponentFunction<any> | ComponentTag<any>
 // 源码层（用户书写的组件，compiler 转换之前）
 type ComponentFunction<P> = (props: P) => Element | null
 
-// 编译产物（运行值是 { __setup, name? } 普通对象）
-interface Component<P> { readonly __setup: SetupFunction<P>; readonly name?: string }
+// 编译产物：setup 函数本体 + 标记（不再包 { __setup } 对象）
+type Component<P> = SetupFunction<P> & {
+  readonly __actview_component: true
+  readonly name?: string
+}
 // 公开层只给「JSX 标签视图」：调用签名仅用于通过 TS 的 JSX 检查
-interface ComponentTag<P> extends Component<P> { (props: P): any }
+type ComponentTag<P> = Component<P> & ((props: P) => any)
 ```
 
-- `Component`（内部，`/internal`）**没有调用签名**：核心/渲染器代码把组件当值持有，误调用会在类型期报错；
-- `ComponentTag`（公开）带调用签名：TS 要求 JSX 标签必须有 call / construct signature；命名与注释明确"仅标签视角、运行时不可调用"；
-- `ComponentProps<C>` 同时支持两种视图（`__setup` 优先，其次调用签名；`...rest` 吸收 `SetupContext` 参数）。
+- 运行值是**函数本体**：`defineComponent(setup, name?)` 用 `Object.defineProperty` 在 setup 上写 `__actview_component: true`（可选写 `name`）后原样返回，不再创建 `{ __setup }` 包装对象；
+- 渲染层判定组件用 `isComponent(value)`（`typeof value === 'function' && value.__actview_component === true`），然后直接调用该函数得到 render；
+- `ComponentTag`（公开）在 `Component` 上叠加 `(props: P) => any` 调用签名：TS 要求 JSX 标签可调用（实测非可调用对象报 TS2604）；该签名只是类型视图，运行时没有这层包装；
+- `ComponentProps<C>` 同时支持两种视图（标记函数优先，其次源码函数；`...rest` 吸收 `SetupContext` 参数）。
 
 ### 2.4 返回值检查
 
@@ -151,7 +157,7 @@ JSX runtime 只依赖公开 `createElement`（返回 `Element`），不接触 `V
 2. 公开入口不导出 `VNode`（`import('../src/index').VNode` 报错）；
 3. `Element` 无 `__v_isVNode` / `el` / `component` 字段；
 4. `ComponentTag` 可作 `ElementType`，`ComponentProps` 可推导 props；
-5. 内部 `Component` 不可调用（`component(...)` 报错）；
+5. `Component` 是带 `__actview_component` 标记的 setup 函数；`isComponent` 只认函数标记（对象不算）；公开入口不导出 `Component` 类型；
 6. `createElement` 返回 `Element`；`createVNode` 返回 `VNode`。
 
 `packages/jsx/type-tests/jsx.test-d.tsx`：
@@ -170,12 +176,14 @@ JSX runtime 只依赖公开 `createElement`（返回 `Element`），不接触 `V
 # 类型（含 type-tests）
 pnpm -C packages/runtime-core typecheck
 pnpm -C packages/jsx typecheck
+pnpm -C packages/compiler typecheck
 
 # 构建（esm + d.ts）
 pnpm -C packages/runtime-core build
 pnpm -C packages/jsx build
+pnpm -C packages/compiler build
 
-# 回归（当前仅 reactivity 套件）
+# 回归（reactivity + runtime-core + compiler）
 pnpm test
 ```
 
@@ -188,9 +196,9 @@ pnpm test
 | 项 | 状态 |
 |---|---|
 | JSX runtime 的 Ref 顶层解包（`MaybeRef` 属性形态） | 类型已就绪，运行时解包待 JSX runtime 下一步实现 |
-| `defineComponent` 实现 | 待实现；返回类型应为 `ComponentTag<P>`（运行时 `Component<P>`） |
+| `defineComponent` 实现 | 已实现（`runtime-core/src/component.ts`）：在 setup 函数上写 `__actview_component` 标记并原样返回，返回类型 `ComponentTag<P>`；渲染层用 `isComponent` 判定 |
 | DOM renderer（`createApp` / `patch`） | 待实现（`@actview/core`）；消费 `/internal` 的 `VNode` / `ComponentInternalInstance` |
-| compiler（TSX → `defineComponent` + `jsx()`） | 待实现；输出侧按 `/internal` 契约生成 |
+| compiler（TSX → `defineComponent`） | 已实现（`@actview/compiler`）：L1 `wrap.ts` + Vite 宿主；JSX 降级交给宿主 automatic runtime（esbuild/tsc），见 `docs/compiler-layers.md` |
 | 编译产物的 `.d.ts` 视角 | tsc 只看到源码（函数视角）。发布库若要暴露"编译后对象类型"，需要 compiler 附带声明改写（或显式 `defineComponent`），属后续阶段 |
 | 根 `tsconfig` / 构建脚本 | 需改为 project references（reactivity 与基础配置不一致） |
 | React 元素兼容标记（`$$typeof`） | 公开层不暴露；是否需要内部兼容层待定 |
@@ -205,3 +213,4 @@ pnpm test
 4. **内部类型走 `/internal` 子路径**：比"同一入口导出全部、靠文档自律"可检查（type-tests 反向断言），且发布产物可只带公开入口。
 5. **JSX 作者层单独成包（`@actview/jsx`）**：`jsxImportSource` 需要一个稳定的运行时/类型入口；DOM 渲染器（`@actview/core`）与作者层解耦，避免渲染器迭代影响编辑器类型体验。
 6. **旧 `@actview/jsx` 的 DOM 属性表整体迁移**：类型资产保留、VNode 依赖删除，避免重写回归。
+7. **组件 = 带标记的 setup 函数（不再包 `{ __setup }` 对象）**：`defineComponent(setup, name?)` 在函数本体上写 `__actview_component: true` 并原样返回；渲染层用 `isComponent` 判定。少一层对象、少一次字段读取，调用栈/DevTools 里也是原始函数；`ComponentTag` 的调用签名仍只作 TS 的 JSX 标签视图。

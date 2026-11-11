@@ -52,30 +52,26 @@ export type ComponentFunction<P = Record<string, any>> = (
 /**
  * 编译后组件的「JSX 标签视图」（公开层）。
  *
- * 运行时值是普通对象 { __setup, name? }，**不可调用**；但 TypeScript 要求
- * JSX 标签必须有 call / construct signature，所以公开类型把调用签名作为
- * 「仅用于 JSX 检查」的视图保留下来：
- *   - 命名用 ComponentTag（标签）而不是 Component（对象），提醒这只是标签视角；
- *   - 真正不可调用的运行时形状见 runtime-core/internal 的 Component。
+ * 运行时组件就是 setup 函数本体（defineComponent 产物，带
+ * `__actview_component` 标记，见 internal 的 Component）；TypeScript 的 JSX
+ * 标签检查要求 call signature，这里用交叉补上「(props: P) => any」的标签
+ * 视图 —— 纯类型层，运行时不会额外包装：
+ *   - 命名用 ComponentTag（标签）而不是 Component（运行时函数），提醒这是视图；
+ *   - 真正的运行时形状见 runtime-core/internal 的 Component（= setup 函数）。
  */
-export interface ComponentTag<P = Record<string, any>> extends Component<P> {
-  (props: P): any
-}
+export type ComponentTag<P = Record<string, any>> = Component<P> &
+  ((props: P) => any)
 
 /**
  * 从组件推导 props。同时支持两种视图：
- *   1) 编译产物：{ __setup: (props: P, ...) => RenderFunction }
- *   2) 源码函数：  (props: P) => Element | null
+ *   1) 标记组件：ComponentTag<P>（defineComponent 产物，内含 setup 签名）
+ *   2) 源码函数：ComponentFunction<P>（(props: P) => Element | null）
  *
  * 用 `...rest` 吸收 setup 的第二个参数（SetupContext），避免 infer 失配。
  */
-export type ComponentProps<C> = C extends {
-  readonly __setup: (props: infer P, ...rest: any[]) => any
-}
+export type ComponentProps<C> = C extends (props: infer P, ...rest: any[]) => any
   ? P
-  : C extends (props: infer P, ...rest: any[]) => any
-    ? P
-    : {}
+  : {}
 
 /** 单个子节点（渲染器会忽略 boolean / null / undefined） */
 export type ElementChild =

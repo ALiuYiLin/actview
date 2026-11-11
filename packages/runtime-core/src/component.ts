@@ -1,17 +1,15 @@
 // ============================================================
-// 组件运行时类型（internal）
+// 组件运行时类型与工厂（internal 类型 + 公开工厂）
 //
-// 本文件的类型描述「编译产物 / 渲染器」看到的世界，不直接从公开入口导出：
-//   - Component 是 defineComponent 的运行时产物（普通对象，不可调用）；
-//   - ComponentInternalInstance 是挂载后的实例（渲染器 / 生命周期用）；
-//   - 公开层能看到的组件类型是 element.ts 的 ComponentTag（JSX 标签视图）
-//     与 ComponentFunction（源码函数视图）。
+// 组件 = setup 函数本体：defineComponent 不包装、不改变函数形状，只在
+// 函数对象上写入 `__actview_component: true` 标记（以及可选的 name）：
+//   - Component / SetupFunction / ComponentInternalInstance 是内部类型，
+//     只经 ./internal 暴露；公开入口不导出 Component；
+//   - 公开层把 defineComponent 的返回值视为 ComponentTag（JSX 标签视图，
+//     见 element.ts）；运行时它就是可调用的 setup 函数。
 // ============================================================
 
-import type {
-  ComponentTag,
-  Element,
-} from './element'
+import type { ComponentTag, Element } from './element'
 import type { VNode } from './vnode'
 
 /** setup 上下文（provide/inject 等注入表；后续按需扩展） */
@@ -30,15 +28,63 @@ export type SetupFunction<P = Record<string, any>> = (
 ) => RenderFunction
 
 /**
- * 运行时组件对象（defineComponent 产物）。普通对象，**不可调用**。
+ * 运行时组件（internal）：就是 defineComponent 传入的 setup 函数本体。
  *
- * 公开层用 ComponentTag = Component & call signature 表达「JSX 标签视角」；
- * 任何真正持有组件值的内部代码都应使用本类型（禁止调用）。
+ * 用 `type` 交叉而不是 `interface extends`（interface 不能 extend 函数类型）。
+ * 公开层不导出本类型；JSX 标签视图见 element.ts 的 ComponentTag。
  */
-export interface Component<P = Record<string, any>> {
-  readonly __setup: SetupFunction<P>
+export type Component<P = Record<string, any>> = SetupFunction<P> & {
+  /** 组件标记（defineComponent 写入、isComponent 判定） */
+  readonly __actview_component: true
   /** 组件名（KeepAlive include/exclude、DevTools 等使用） */
   readonly name?: string
+}
+
+/** 组件标记字段名（defineComponent 写入 / isComponent 读取） */
+export const COMPONENT_MARKER = '__actview_component'
+
+/**
+ * 定义组件：返回**同一个 setup 函数对象**，并在其上写入组件标记。
+ *
+ * - 标记 `__actview_component: true`：`enumerable: false` / `writable: false` /
+ *   `configurable: true`；
+ * - 传入 name 时改写函数 `name`（`configurable: true`），便于调试 / DevTools；
+ * - 幂等：重复调用（含重复设置 name）不报错，仍返回同一函数；
+ * - 组件仍是普通函数，`setup(props, ctx)` 可直接调用并返回 render 函数。
+ */
+export function defineComponent<P = Record<string, any>>(
+  setup: SetupFunction<P>,
+  name?: string,
+): ComponentTag<P> {
+  const component = setup as unknown as ComponentTag<P>
+  Object.defineProperty(component, COMPONENT_MARKER, {
+    value: true,
+    enumerable: false,
+    configurable: true,
+    writable: false,
+  })
+  if (name !== undefined) {
+    Object.defineProperty(component, 'name', {
+      value: name,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    })
+  }
+  return component
+}
+
+/**
+ * 是否组件（渲染层判断「是不是组件函数」的唯一入口）。
+ *
+ * 只看函数对象上的 `__actview_component` 标记：普通函数、对象、仅带同名
+ * 标记但不可调用的对象都不是组件。
+ */
+export function isComponent(value: unknown): value is Component {
+  return (
+    typeof value === 'function' &&
+    (value as { __actview_component?: unknown }).__actview_component === true
+  )
 }
 
 /**

@@ -35,6 +35,8 @@
     "paths": {
       "@actview/runtime-core": ["./packages/runtime-core/src/index.ts"],
       "@actview/runtime-core/*": ["./packages/runtime-core/src/*"],
+      "@actview/compiler": ["./packages/compiler/src/index.ts"],
+      "@actview/compiler/*": ["./packages/compiler/src/*"],
       "@actview/jsx": ["./packages/jsx/src/index.ts"],
       "@actview/jsx/*": ["./packages/jsx/src/*"],
       "@actview/core": ["./packages/core/src/index.ts"],

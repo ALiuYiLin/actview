@@ -8,9 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@actview/compiler':
+        specifier: workspace:*
+        version: link:packages/compiler
+      '@actview/jsx':
+        specifier: workspace:*
+        version: link:packages/jsx
       '@actview/reactivity':
         specifier: workspace:*
         version: link:packages/reactivity
+      '@actview/runtime-core':
+        specifier: workspace:*
+        version: link:packages/runtime-core
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -43,6 +52,16 @@ importers:
         version: 4.1.10(@types/node@26.0.1)(happy-dom@20.11.1)(jsdom@27.4.0(supports-color@7.1.0))(vite@6.4.3(@types/node@26.0.1)(yaml@2.9.0))
 
   packages/actview: {}
+
+  packages/compiler:
+    dependencies:
+      '@babel/core':
+        specifier: ^8.0.1
+        version: 8.0.1
+    devDependencies:
+      vite:
+        specifier: ^6.4.3
+        version: 6.4.3(@types/node@26.0.1)(yaml@2.9.0)
 
   packages/core: {}
 

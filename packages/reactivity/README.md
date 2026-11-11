@@ -4,7 +4,7 @@ ActView 的响应式系统。**派生自 [`@vue/reactivity`](https://github.com/
 
 ## 为什么复用 Vue 的响应式
 
-响应式（`ref` / `reactive` / `computed` / `effect` / `effectScope` / `watch`）与视图层无关：它不依赖 JSX、不依赖 `.vue` 单文件组件、也不依赖组件运行时。ActView 的渲染模型（`__setup` 返回 render 函数 + runEffect 重渲染）与 Vue 3 的 setup/render 模型一致，因此这一层可以**原样复用**，只做包名与编译期常量的适配。
+响应式（`ref` / `reactive` / `computed` / `effect` / `effectScope` / `watch`）与视图层无关：它不依赖 JSX、不依赖 `.vue` 单文件组件、也不依赖组件运行时。ActView 的渲染模型（组件是带 `__actview_component` 标记的 setup 函数，setup 返回 render 函数 + runEffect 重渲染）与 Vue 3 的 setup/render 模型一致，因此这一层可以**原样复用**，只做包名与编译期常量的适配。
 
 ## 相对上游的改动（保持最小，便于跟随 Vue 升级）
 

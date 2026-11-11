@@ -1,0 +1,56 @@
+{
+  "name": "@actview/compiler",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "ActView compiler — layered TSX transform: defineComponent wrapping (L1) + JSX lowering (L2)",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./src/vite.ts"
+  },
+  "dependencies": {
+    "@babel/core": "^8.0.1"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "vite": "^6.4.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "import": "./dist/vite.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/actview/actview.git",
+    "directory": "packages/compiler"
+  },
+  "license": "MIT"
+}

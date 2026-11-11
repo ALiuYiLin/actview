@@ -11,6 +11,7 @@
     "packages/runtime-core/type-tests",
     "packages/jsx/src",
     "packages/jsx/type-tests",
+    "packages/compiler/src",
     "packages/core/src"
   ],
   "exclude": ["**/node_modules", "**/dist"]
