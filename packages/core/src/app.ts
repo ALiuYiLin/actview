@@ -1,0 +1,120 @@
+// ============================================================
+// createApp / mount / unmount（M1，docs/renderer-design.md §4）
+//
+// 应用对象持有 AppContext（config / app 反指），mount 时创建根组件 VNode
+// 并交给渲染器 render(vnode, container)；unmount 即 render(null, container)。
+// 根组件必须是 isComponent（compiler 包装 / 显式 defineComponent），
+// 未标记函数直接报错，避免"普通函数当组件"的双语义。
+// ============================================================
+
+import { isComponent } from '@actview/runtime-core'
+import type { ComponentTag } from '@actview/runtime-core'
+import { createVNode, type VNode } from '@actview/runtime-core/internal'
+import type {
+  AppConfig,
+  AppContext,
+  ComponentInternalInstance,
+} from './instance'
+import { render } from './renderer'
+
+/** 挂载过 app 的容器（重复 mount 检测标记） */
+type MountedContainer = Element & { __actview_app__?: App }
+
+/** createApp 返回的应用对象 */
+export interface App {
+  /** 应用上下文（全局 config 等） */
+  _context: AppContext
+  /** 当前挂载的容器；null = 未挂载 */
+  _container: Element | null
+  /** 应用配置（与 _context.config 同一对象） */
+  config: AppConfig
+  /** 根组件 */
+  component: ComponentTag
+  /** 挂载到容器（DOM Element 或选择器字符串），返回根组件实例 */
+  mount(rootContainer: Element | string): ComponentInternalInstance | null
+  /** 卸载当前挂载的应用（移除 DOM 并停止响应式更新） */
+  unmount(): void
+}
+
+/**
+ * 创建应用。
+ *
+ * @param rootComponent 根组件（marked setup 函数；普通函数直接报错）
+ * @param rootProps 根组件 props
+ */
+export function createApp(
+  rootComponent: ComponentTag,
+  rootProps: Record<string, any> | null = null,
+): App {
+  assertRootComponent(rootComponent)
+
+  const context: AppContext = { app: null, config: {} }
+
+  const app: App = {
+    _context: context,
+    _container: null,
+    config: context.config,
+    component: rootComponent,
+    mount(rootContainer) {
+      assertRootComponent(app.component)
+
+      const container = resolveContainer(rootContainer)
+      const mounted = container as MountedContainer
+      if (mounted.__actview_app__) {
+        console.warn(
+          '[actview] 容器已挂载过 ActView 应用：重复 mount 会覆盖容器上的 app 标记，' +
+            '旧应用不会被自动卸载。',
+        )
+      }
+
+      const vnode = createVNode(app.component, rootProps ?? null)
+      // VNode 类型里没有 appContext 字段（渲染器内部状态，由 app 写入）
+      ;(vnode as VNode & { appContext: AppContext }).appContext = context
+      render(vnode, container)
+
+      mounted.__actview_app__ = app
+      app._container = container
+
+      // 渲染器在 mountComponent 中把实例写回 vnode.component
+      return (vnode.component as unknown as ComponentInternalInstance | null) ?? null
+    },
+    unmount() {
+      const container = app._container as MountedContainer | null
+      if (!container) return
+
+      render(null, container)
+      delete container.__actview_app__
+      app._container = null
+    },
+  }
+
+  context.app = app
+  return app
+}
+
+/** 根组件运行时校验：必须是 isComponent（compiler 包装或显式 defineComponent） */
+function assertRootComponent(
+  component: unknown,
+): asserts component is ComponentTag {
+  if (!isComponent(component)) {
+    throw new Error(
+      '[actview] 根组件无效：根组件需经 compiler 包装或显式 defineComponent' +
+        `（当前为 ${typeof component}）`,
+    )
+  }
+}
+
+/** 解析挂载容器：选择器字符串 → document.querySelector；找不到时报错 */
+function resolveContainer(rootContainer: Element | string): Element {
+  if (typeof rootContainer === 'string') {
+    const container = document.querySelector(rootContainer)
+    if (!container) {
+      throw new Error(`[actview] mount 失败：未找到容器 "${rootContainer}"`)
+    }
+    return container
+  }
+  if (!rootContainer) {
+    throw new Error('[actview] mount 失败：容器不能为空')
+  }
+  return rootContainer
+}

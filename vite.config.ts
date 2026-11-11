@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => ({
     exclude: [
       '@actview/reactivity',
       '@actview/shared',
+      '@actview/core',
       '@actview/jsx',
       '@actview/jsx/jsx-runtime',
       '@actview/jsx/jsx-dev-runtime',
@@ -41,6 +42,7 @@ export default defineConfig(({ mode }) => ({
       '@actview/runtime-core/internal': src('./packages/runtime-core/src/internal.ts'),
       '@actview/jsx': src('./packages/jsx/src/index.ts'),
       '@actview/runtime-core': src('./packages/runtime-core/src/index.ts'),
+      '@actview/core': src('./packages/core/src/index.ts'),
       // 直接映射到源码，dev / build 均免预构建（pnpm workspace link 存在时也一致）
       '@actview/reactivity': src('./packages/reactivity/src/index.ts'),
       '@actview/shared': src('./packages/shared/src/index.ts'),

@@ -21,14 +21,14 @@ string | symbol (标签/Fragment)
 | `@actview/runtime-core` | 平台无关的类型基础 + 最小元素工厂 | `.`（公开）/ `./internal`（内部） | 公开：`Element` / `ElementType` / `ComponentFunction` / `ComponentTag` / `ComponentProps` / `ElementChild(ren)` / `RenderFunction` / `SetupContext` / `defineComponent` / `isComponent`；内部：`VNode` / `VNodeTypes` / `VNodeChild(ren)` / `createVNode` / `isVNode` / `Component` / `ComponentInternalInstance` / `SetupFunction` |
 | `@actview/compiler` | 编译层 L1：组件函数 → `defineComponent(setup)`（JSX 降级交给宿主 automatic runtime） | `.` / `./vite` | `wrapComponentsPlugin` / `compileComponents()` / `actviewCompiler()`（Vite 宿主）；分层契约见 `docs/compiler-layers.md` |
 | `@actview/jsx` | JSX 作者层：用户写 TSX 看到的那一层 | `.` / `./jsx-runtime` / `./jsx-dev-runtime` | 全局 `JSX` 命名空间、DOM/SVG 属性类型、JSX runtime（`jsx` / `jsxs` / `jsxDEV` / `Fragment`），再导出 runtime-core 公开类型 |
-| `@actview/core` | DOM 运行时公开层（渲染器，当前占位） | `.` | 后续：`createApp` / `patch` / 生命周期 / 内置组件 |
+| `@actview/core` | DOM 运行时公开层（渲染器，M1 已落地） | `.` | 已实现：`createApp` / `mount` / `unmount`、组件级 re-render（render effect + scheduler）、`patch`（text / element / Fragment / 组件）、生命周期 hooks、`nextTick`、元素/组件 ref；后续：provide/inject、keyed diff、内置组件、SSR。设计见 `docs/renderer-design.md` |
 | `@actview/reactivity` / `@actview/shared` | 响应式 / 内部工具 | — | 与本分层无耦合 |
 
 依赖方向：
 
 ```
 @actview/jsx ──→ @actview/runtime-core
-@actview/core ──→ @actview/runtime-core（渲染器落地时）
+@actview/core ──→ @actview/runtime-core / @actview/reactivity
 @actview/compiler ──→ (无 runtime 依赖；编译产物 import @actview/runtime-core / @actview/jsx)
 @actview/runtime-core ──→ (无平台依赖；不 import @actview/jsx / @actview/core)
 ```
@@ -197,7 +197,7 @@ pnpm test
 |---|---|
 | JSX runtime 的 Ref 顶层解包（`MaybeRef` 属性形态） | 类型已就绪，运行时解包待 JSX runtime 下一步实现 |
 | `defineComponent` 实现 | 已实现（`runtime-core/src/component.ts`）：在 setup 函数上写 `__actview_component` 标记并原样返回，返回类型 `ComponentTag<P>`；渲染层用 `isComponent` 判定 |
-| DOM renderer（`createApp` / `patch`） | 待实现（`@actview/core`）；消费 `/internal` 的 `VNode` / `ComponentInternalInstance` |
+| DOM renderer（`createApp` / `patch`） | 已实现 M1（`@actview/core`）：createApp/mount/unmount、组件级 re-render、patch（text/element/Fragment/组件）、生命周期、nextTick、ref；详见 `docs/renderer-design.md` |
 | compiler（TSX → `defineComponent`） | 已实现（`@actview/compiler`）：L1 `wrap.ts` + Vite 宿主；JSX 降级交给宿主 automatic runtime（esbuild/tsc），见 `docs/compiler-layers.md` |
 | 编译产物的 `.d.ts` 视角 | tsc 只看到源码（函数视角）。发布库若要暴露"编译后对象类型"，需要 compiler 附带声明改写（或显式 `defineComponent`），属后续阶段 |
 | 根 `tsconfig` / 构建脚本 | 需改为 project references（reactivity 与基础配置不一致） |

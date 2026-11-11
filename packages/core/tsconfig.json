@@ -2,9 +2,22 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "types": ["node"]
+    // core 直接消费 @actview/reactivity / @actview/shared 的源码（workspace link）：
+    // 这两个包派生自 Vue，源码允许 enum 等非可擦除语法，且依赖 ES2016 lib
+    // （其 @ts-expect-error 断言基于“新数组方法不存在”）。这里对齐它们的编译
+    // 前提，否则跨包类型检查会报上游代码错误。彻底方案是 project references。
+    "target": "ES2016",
+    "lib": ["ES2016", "DOM"],
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["node"],
+    "paths": {
+      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["../runtime-core/src/*"],
+      "@actview/reactivity": ["../reactivity/src/index.ts"],
+      "@actview/shared": ["../shared/src/index.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "__tests__", "../global.d.ts"]
 }

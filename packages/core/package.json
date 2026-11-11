@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@actview/reactivity": "workspace:^",
+    "@actview/runtime-core": "workspace:^"
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",

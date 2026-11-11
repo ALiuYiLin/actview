@@ -49,6 +49,22 @@ export interface VNode<Type extends VNodeTypes = VNodeTypes>
 /** Fragment 标记（`<></>` / `<Fragment>` 的 type） */
 export const Fragment: symbol = Symbol.for('actview.fragment')
 
+/** 文本节点标记（渲染器内部：`string | number` 渲染值归一化后的 type） */
+export const Text: symbol = Symbol.for('actview.text')
+
+/** 创建文本 VNode（渲染器内部使用；props.text 保存文本内容） */
+export function createTextVNode(text: string): VNode<typeof Text> {
+  return {
+    __v_isVNode: true,
+    type: Text,
+    key: null,
+    ref: null,
+    props: { text },
+    el: null,
+    component: null,
+  }
+}
+
 /** 创建 VNode（internal 工厂：渲染器与 JSX runtime 的底层入口） */
 export function createVNode<Type extends VNodeTypes>(
   type: Type,

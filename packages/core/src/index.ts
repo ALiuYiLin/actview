@@ -1,11 +1,46 @@
 // ============================================================
-// @actview/core — DOM 运行时公开层（占位）
+// @actview/core — DOM 运行时公开入口
 //
-// 规划职责：DOM 渲染器（createApp / patch / 生命周期 / 内置组件）。
-// JSX 作者层类型与 runtime 已独立到 @actview/jsx；
-// 渲染器内部类型（VNode 等）在 @actview/runtime-core/internal。
+// 已实现（M1）：
+//   - createApp / mount / unmount
+//   - 组件级 re-render（setup 一次 + render effect + 微任务批处理）
+//   - patch：text / element / Fragment / 组件，props/class/style/事件
+//   - 生命周期：onBeforeMount / onMounted / onBeforeUpdate / onUpdated /
+//     onBeforeUnmount / onUnmounted
+//   - nextTick
 //
-// 渲染器落地前本入口保持空（仅 `export {}` 维持模块语义）。
+// 组件定义 / 元素工厂从 @actview/runtime-core 再导出，方便应用侧单入口使用。
 // ============================================================
 
-export {}
+export { createApp } from './app'
+export { nextTick } from './scheduler'
+export {
+  getCurrentInstance,
+  onBeforeMount,
+  onMounted,
+  onBeforeUpdate,
+  onUpdated,
+  onBeforeUnmount,
+  onUnmounted,
+} from './lifecycle'
+
+// 组件 / 元素基础 API（运行时 + 类型）
+export {
+  Fragment,
+  createElement,
+  defineComponent,
+  isComponent,
+  isValidElement,
+} from '@actview/runtime-core'
+
+export type {
+  ComponentFunction,
+  ComponentProps,
+  ComponentTag,
+  Element,
+  ElementChild,
+  ElementChildren,
+  ElementType,
+  RenderFunction,
+  SetupContext,
+} from '@actview/runtime-core'

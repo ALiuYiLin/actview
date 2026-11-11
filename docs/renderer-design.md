@@ -307,7 +307,7 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 
 ## 13. 分阶段计划
 
-### M1（最小闭环，本次目标）
+### M1（最小闭环，本次目标 — ✅ 已实现）
 
 - `createApp` / `mount` / `unmount`；
 - text / element / Fragment / 组件 patch；首帧 + 更新 + 卸载；
@@ -318,6 +318,17 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 - scheduler：`queueJob / queuePostFlushCb / nextTick`，微任务批处理；
 - refs：元素 ref 基础支持；
 - 测试（happy-dom）：挂载 DOM、响应式更新、批处理、props 更新、条件切换卸载/挂载、卸载停止更新、生命周期顺序、Fragment/文本归一化。
+
+**M1 落地信息**
+
+- 代码：`packages/core/src/{app,renderer,component,instance,scheduler,lifecycle,domProps,refs,index}.ts`；`packages/runtime-core/src/vnode.ts` 新增 `Text` / `createTextVNode`。
+- 测试：`packages/core/__tests__/renderer.spec.ts`（15 用例；`pnpm test` 全仓 411 passed / 4 skipped）。
+- 实现备注：
+  - 本版 `ReactiveEffect` 构造函数只接收 `fn`，render effect 用 `effect.scheduler = () => queueJob(job)`，且必须在 `instance.scope.run()` 内创建（构造时按 activeEffectScope 登记，否则 `scope.stop()` 停不掉 render effect）。
+  - `getNextHostNode` 对组件递归子树，组件根为 Fragment 时锚点仍正确。
+  - 组件 render 返回 `null` ↔ 内容的切换：M1 无占位节点，从 null 变为内容时只能追加挂载（无法记录原位置锚点）；这是 M1 的已知限制。
+  - `unmounted` 是 post hook：组件切换后同步断言会看到 post 语义顺序（`await nextTick()` 后为常规顺序）。
+  - `packages/core/tsconfig.json` 因直接消费 reactivity/shared 源码，对齐了 ES2016 + 关闭 `erasableSyntaxOnly`（project references 债，见 `docs/types-architecture.md` §7）。
 
 ### M2
 
