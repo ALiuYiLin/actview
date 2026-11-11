@@ -12,6 +12,7 @@
     "build": "tsc && vite build",
     "build:packages": "pnpm --filter \"./packages/*\" run build",
     "preview": "vite preview",
+    "typecheck": "pnpm -C packages/runtime-core typecheck && pnpm -C packages/jsx typecheck && pnpm -C packages/core typecheck",
     "test": "vitest run",
     "changeset": "changeset",
     "changeset:status": "changeset status",

@@ -1,9 +1,17 @@
 {
   // ============================================================
   // 公共 TS 配置（tsconfig.json / tsconfig.test.json 共享）
-  // 抽取自原 tsconfig.json 的 compilerOptions；JSX 统一指向
-  // @actview/jsx（自研 JSX runtime + Babel 插件），避免 TS 默认
-  // 找 react/jsx-runtime。
+  //
+  // JSX 统一指向 @actview/jsx（自研 JSX runtime + 公开作者层类型），
+  // 避免 TS 默认找 react/jsx-runtime。
+  //
+  // 包分层（详见 docs/types-architecture.md）：
+  //   @actview/runtime-core     公开元素/组件契约 + 内部 VNode 类型
+  //   @actview/jsx              JSX 作者层（全局 JSX 命名空间 / DOM 属性 / JSX runtime）
+  //   @actview/core             DOM 运行时公开层（渲染器，占位）
+  //   @actview/reactivity       响应式系统
+  //   @actview/shared           内部共享工具
+  //   actview                   聚合入口
   // ============================================================
   "compilerOptions": {
     "target": "es2023",
@@ -25,21 +33,14 @@
 
     /* Path aliases — resolves workspace packages */
     "paths": {
+      "@actview/runtime-core": ["./packages/runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["./packages/runtime-core/src/*"],
       "@actview/jsx": ["./packages/jsx/src/index.ts"],
       "@actview/jsx/*": ["./packages/jsx/src/*"],
       "@actview/core": ["./packages/core/src/index.ts"],
       "@actview/core/*": ["./packages/core/src/*"],
       "@actview/reactivity": ["./packages/reactivity/src/index.ts"],
       "@actview/shared": ["./packages/shared/src/index.ts"],
-      "@actview/hooks-react": ["./packages/hooks-react/src/index.ts"],
-      "@actview/plugin-vite": ["./plugins/vite/src/index.ts"],
-      "@actview/plugin-babel": ["./plugins/babel/src/index.ts"],
-      "@actview/plugin-scoped": ["./plugins/scoped/src/index.ts"],
-      "@actview/plugin-scoped/*": ["./plugins/scoped/src/*"],
-      "@actview/router": ["./packages/router/src/index.ts"],
-      "@actview/store": ["./packages/store/src/index.ts"],
-      "@actview/testing": ["./packages/testing/src/index.ts"],
-      "@actview/devtools": ["./packages/devtools/src/index.ts"],
       "actview": ["./packages/actview/src/index.ts"]
     },
 

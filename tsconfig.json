@@ -1,12 +1,17 @@
 {
   "extends": "./tsconfig.base.json",
+  // 根配置只声明「应用 + 类型基础包」的检查范围；
+  // reactivity / shared 由各自 package tsconfig 负责（根配置的 ES2023 +
+  // erasableSyntaxOnly 与 reactivity 的 ES2016 上游约定不一致，直接纳入会误报，
+  // 后续改为 project references 解决）。
   "include": [
     "src",
-    "packages/jsx/src/global.ts",
-    "packages/core",
-    "packages/hooks-react",
-    "packages/router",
-    "plugins/*/src",
-    "plugins/*/test"
-  ]
+    "packages/global.d.ts",
+    "packages/runtime-core/src",
+    "packages/runtime-core/type-tests",
+    "packages/jsx/src",
+    "packages/jsx/type-tests",
+    "packages/core/src"
+  ],
+  "exclude": ["**/node_modules", "**/dist"]
 }

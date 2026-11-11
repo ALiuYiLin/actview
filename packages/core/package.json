@@ -2,11 +2,18 @@
   "name": "@actview/core",
   "version": "1.5.1",
   "type": "module",
-  "dependencies": {},
+  "description": "ActView DOM runtime public layer — renderer, createApp and built-in components (upcoming)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
     "prepublishOnly": "pnpm build"
   },
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public",
     "exports": {
@@ -20,15 +27,10 @@
     "types": "./dist/index.d.ts",
     "registry": "https://registry.npmjs.org/"
   },
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/actview/actview.git",
     "directory": "packages/core"
-  }
+  },
+  "license": "MIT"
 }

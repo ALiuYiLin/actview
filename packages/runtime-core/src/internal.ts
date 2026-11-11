@@ -1,0 +1,24 @@
+// ============================================================
+// @actview/runtime-core/internal — 内部类型入口
+//
+// 供渲染器 / compiler / 测试使用：
+//   - VNode / VNodeTypes / VNodeChild(ren) / createVNode / isVNode / Fragment
+//   - Component / ComponentInternalInstance / SetupFunction / SetupContext
+//   - 公开契约类型（Element 等）按需再导出，方便内部模块单点导入
+//
+// 该子路径**不进入** publishConfig 的公开 exports（workspace 内使用）；
+// 外部消费方只能看到公开入口。
+// ============================================================
+
+export * from './vnode'
+export * from './component'
+
+export type {
+  Element,
+  ElementType,
+  ComponentFunction,
+  ComponentTag,
+  ComponentProps,
+  ElementChild,
+  ElementChildren,
+} from './element'
