@@ -8,36 +8,9 @@ importers:
 
   .:
     devDependencies:
-      '@actview/core':
+      '@actview/reactivity':
         specifier: workspace:*
-        version: link:packages/core
-      '@actview/devtools':
-        specifier: workspace:*
-        version: link:packages/devtools
-      '@actview/hooks-react':
-        specifier: workspace:*
-        version: link:packages/hooks-react
-      '@actview/jsx':
-        specifier: workspace:*
-        version: link:packages/jsx
-      '@actview/plugin-babel':
-        specifier: workspace:*
-        version: link:plugins/babel
-      '@actview/plugin-scoped':
-        specifier: workspace:*
-        version: link:plugins/scoped
-      '@actview/plugin-vite':
-        specifier: workspace:*
-        version: link:plugins/vite
-      '@actview/router':
-        specifier: workspace:*
-        version: link:packages/router
-      '@actview/store':
-        specifier: workspace:*
-        version: link:packages/store
-      '@actview/testing':
-        specifier: workspace:*
-        version: link:packages/testing
+        version: link:packages/reactivity
       '@babel/core':
         specifier: ^8.0.1
         version: 8.0.1
@@ -50,9 +23,6 @@ importers:
       '@types/node':
         specifier: ^26.0.1
         version: 26.0.1
-      actview:
-        specifier: workspace:*
-        version: link:packages/actview
       happy-dom:
         specifier: ^20.11.1
         version: 20.11.1
@@ -72,95 +42,17 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.0.1)(happy-dom@20.11.1)(jsdom@27.4.0(supports-color@7.1.0))(vite@6.4.3(@types/node@26.0.1)(yaml@2.9.0))
 
-  packages/actview:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-      '@actview/jsx':
-        specifier: workspace:^
-        version: link:../jsx
+  packages/actview: {}
 
   packages/core: {}
 
-  packages/devtools:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  packages/hooks-react:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  packages/jsx: {}
-
-  packages/router:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-      '@actview/jsx':
-        specifier: workspace:^
-        version: link:../jsx
-
-  packages/store:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  packages/testing:
-    devDependencies:
-      '@actview/core':
-        specifier: workspace:^
-        version: link:../core
-
-  plugins/babel:
-    devDependencies:
-      '@babel/core':
-        specifier: ^8.0.1
-        version: 8.0.1
-      '@babel/generator':
-        specifier: ^8.0.0
-        version: 8.0.0
-
-  plugins/scoped:
+  packages/reactivity:
     dependencies:
-      '@actview/plugin-babel':
+      '@actview/shared':
         specifier: workspace:^
-        version: link:../babel
-      postcss:
-        specifier: ^8.5.0
-        version: 8.5.15
-      postcss-selector-parser:
-        specifier: ^7.0.0
-        version: 7.1.5
-      vite:
-        specifier: ^6.0.0 || ^7.0.0 || ^8.0.0
-        version: 6.4.3(@types/node@26.0.1)(yaml@2.9.0)
-    devDependencies:
-      '@babel/core':
-        specifier: ^8.0.1
-        version: 8.0.1
-      '@types/node':
-        specifier: ^26.0.1
-        version: 26.0.1
+        version: link:../shared
 
-  plugins/vite:
-    dependencies:
-      '@actview/plugin-babel':
-        specifier: workspace:^
-        version: link:../babel
-      vite:
-        specifier: ^6.0.0 || ^7.0.0 || ^8.0.0
-        version: 6.4.3(@types/node@26.0.1)(yaml@2.9.0)
-    devDependencies:
-      '@types/node':
-        specifier: ^26.0.1
-        version: 26.0.1
+  packages/shared: {}
 
 packages:
 
@@ -1032,11 +924,6 @@ packages:
     resolution: {integrity: sha512-X7sjQzceUhu1u7Y/ylrRZFU2FS6LRiFVp6rKLPg23y3x3c3DOKAwuXGDp+PAGjh6CSnCjYeAul8pcT8bAl+lSA==}
     engines: {node: ^10 || ^12.20.0 || ^14.13.0 || >=15.0.0}
 
-  cssesc@3.0.0:
-    resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
-    engines: {node: '>=4'}
-    hasBin: true
-
   cssstyle@5.3.7:
     resolution: {integrity: sha512-7D2EPVltRrsTkhpQmksIu+LxeWAIEk6wRDMJ1qljlv+CKHJM+cJLlfhWIzNA44eAsHXSNe3+vO6DW1yCYx8SuQ==}
     engines: {node: '>=20'}
@@ -1297,10 +1184,6 @@ packages:
       yaml:
         optional: true
 
-  postcss-selector-parser@7.1.5:
-    resolution: {integrity: sha512-KvvtD7SrlBP7dlgkBghEE3r84CABm5SmV2aNcG4oCA+qDnJ/tvKonFVvwWAyyWUEwxuNawdfEAZKP9zM3oZ2Uw==}
-    engines: {node: '>=4'}
-
   postcss@8.5.15:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1460,9 +1343,6 @@ packages:
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
-
-  util-deprecate@1.0.2:
-    resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
   vite@6.4.3:
     resolution: {integrity: sha512-NTKlcQjlAK7MlQoyb6LgaqHc8sso/pVyUJYWMws3jg21uTJw/LddqIFPcPqP6PzpgbIcZyKI85sFE4HBrQDA8A==}
@@ -2312,8 +2192,6 @@ snapshots:
       mdn-data: 2.27.1
       source-map-js: 1.2.1
 
-  cssesc@3.0.0: {}
-
   cssstyle@5.3.7:
     dependencies:
       '@asamuzakjp/css-color': 4.1.2
@@ -2594,11 +2472,6 @@ snapshots:
       postcss: 8.5.15
       yaml: 2.9.0
 
-  postcss-selector-parser@7.1.5:
-    dependencies:
-      cssesc: 3.0.0
-      util-deprecate: 1.0.2
-
   postcss@8.5.15:
     dependencies:
       nanoid: 3.3.15
@@ -2767,8 +2640,6 @@ snapshots:
       browserslist: 4.28.5
       escalade: 3.2.0
       picocolors: 1.1.1
-
-  util-deprecate@1.0.2: {}
 
   vite@6.4.3(@types/node@26.0.1)(yaml@2.9.0):
     dependencies:

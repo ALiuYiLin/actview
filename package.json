@@ -20,12 +20,11 @@
     "release": "changeset version && changeset publish"
   },
   "devDependencies": {
-    "@actview/core": "workspace:*",
+    "@actview/reactivity": "workspace:*",
     "@babel/core": "^8.0.1",
     "@changesets/cli": "^3.0.0",
     "@testing-library/user-event": "^14.6.6",
     "@types/node": "^26.0.1",
-    "actview": "workspace:*",
     "happy-dom": "^20.11.1",
     "jsdom": "^27.4.0",
     "tsup": "^8.5.1",

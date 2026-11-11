@@ -6,12 +6,10 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "@actview/core": "^1.5.1",
-    "@actview/jsx": "^1.1.1"
+    
   },
   "devDependencies": {
-    "@actview/core": "workspace:^",
-    "@actview/jsx": "workspace:^"
+    
   },
   "scripts": {
     "build": "tsup",

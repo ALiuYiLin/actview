@@ -1,27 +1,37 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
-import path from 'path'
-import { actviewPlugin } from '@actview/plugin-vite'
-import { actviewScopedPlugin } from '@actview/plugin-scoped'
 
-export default defineConfig({
-  plugins: [actviewPlugin(), ...actviewScopedPlugin()],
+export default defineConfig(({ mode }) => ({
+  // @actview 源码里的编译期常量（Vue 源码约定）：
+  // dev/test 为 true、生产构建为 false（esbuild define 只接受字面量，这里直接写 true/false）。
+  define: {
+    __DEV__: JSON.stringify(mode !== 'production'),
+  },
   optimizeDeps: {
-    // workspace 包走源码 transform（含 Babel 插件），不做 esbuild 预构建
-    exclude: ['@actview/router'],
+    // workspace 包直接消费源码（走 Vite transform，__DEV__ define 才能生效）
+    exclude: ['@actview/reactivity', '@actview/shared'],
   },
   resolve: {
     alias: {
-      // workspace 包 exports 已指向 src（dev 免构建）；jsx 子路径别名是历史保留
-      '@actview/jsx': path.resolve(__dirname, 'packages/jsx/src'),
+      // 直接映射到源码，dev / build 均免预构建（pnpm workspace link 存在时也一致）
+      '@actview/reactivity': fileURLToPath(
+        new URL('./packages/reactivity/src/index.ts', import.meta.url),
+      ),
+      '@actview/shared': fileURLToPath(
+        new URL('./packages/shared/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {
     environment: 'happy-dom',
-    include: ['test/**/*.test.{ts,tsx}', 'plugins/**/test/*.test.ts'],
+    globals: true,
+    include: ['packages/reactivity/__tests__/**/*.spec.ts'],
+    setupFiles: ['./packages/reactivity/__tests__/setup.ts'],
+    passWithNoTests: true,
   },
   server: {
     port: 3000,
     strictPort: true,
     open: true,
   },
-})
+}))
