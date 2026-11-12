@@ -14,7 +14,14 @@
 //     微任务批处理（§8）；同 tick 多次变化只重跑一次 render；
 //   - 组件卸载 = scope.stop()（停 render effect + setup 内 effect）+ job.active = false。
 //
-// children diff（§7.2 M1）：位置对齐时逐位 patch，否则卸载全部 + 重新挂载。
+// children diff（§7.2 M2）：
+//   - 无 key → unkeyed：公共段逐位 patch，旧多出的卸载，新多出的按锚点挂载；
+//   - 有 key → keyed（Vue 3 风格）：头头 / 尾尾同步 → 中间段建 key→旧索引 map，
+//     复用节点 patch、被删节点卸载、新节点按锚点插入、复用节点 insertBefore 移动；
+//   - key 为 null 的子节点在 keyed 中间段按「旧无 key 节点出现顺序」复用；
+//   - 锚点统一取「下一个已定位节点的宿主节点」：元素 / 文本用 el，Fragment /
+//     组件沿子树收集宿主节点（可能为多个）；无宿主节点（渲染 null 的组件 /
+//     空 Fragment）跳过移动或回退到调用方 anchor。
 //
 // 依赖边界（§9）：patch / DOM 操作不读取响应式数据；setup / 钩子由
 // component.ts / lifecycle.ts 统一 pauseTracking；render 执行期间正常收集依赖。
@@ -36,7 +43,7 @@ import {
   shouldUpdateComponent,
   updateProps,
 } from './component'
-import { patchProps } from './domProps'
+import { createElement, patchProps } from './domProps'
 import type { AppContext, ComponentInternalInstance } from './instance'
 import { invokeHooks } from './lifecycle'
 import { setRef } from './refs'
@@ -53,7 +60,7 @@ type ContainerElement = Element & { _vnode?: VNode | null }
  * 直接调用 render()（未经 createApp）时的兜底 AppContext。
  * 正常路径由 app.mount 把 AppContext 写到根 VNode 的 appContext 上。
  */
-const fallbackAppContext: AppContext = { app: null, config: {} }
+const fallbackAppContext: AppContext = { app: null, config: {}, provides: {} }
 
 // ------------------------------------------------------------
 // 对外入口
@@ -167,7 +174,8 @@ function mountElement(
   anchor: Node | null,
   parent: ComponentInternalInstance | null,
 ): void {
-  const el = document.createElement(vnode.type as string)
+  // SVG 命名空间由 domProps.createElement 统一处理
+  const el = createElement(vnode.type as string)
   // 先写 el：子节点挂载 / ref 处理都可能回读 vnode.el
   vnode.el = el
 
@@ -254,7 +262,7 @@ function firstHostNode(children: VNode[]): Node | null {
 }
 
 // ------------------------------------------------------------
-// children diff（M1：位置对齐逐位 patch，否则全量替换）
+// children diff（§7.2 M2）：unkeyed / keyed
 // ------------------------------------------------------------
 
 function patchChildren(
@@ -268,36 +276,187 @@ function patchChildren(
   const nextChildren = normalizeChildren(n2.props?.children)
   n2.children = nextChildren
 
-  const aligned =
-    prevChildren.length === nextChildren.length &&
-    prevChildren.every((child, index) =>
-      isSameVNodeType(child, nextChildren[index]),
-    )
+  // 任一侧出现 key → 走 keyed diff（keyed 内部对 key 为 null 的节点做
+  // 「按旧无 key 节点顺序复用」的回退）；否则 unkeyed 逐位 patch。
+  const hasKey =
+    prevChildren.some((child) => child.key != null) ||
+    nextChildren.some((child) => child.key != null)
 
-  if (aligned) {
-    for (let i = 0; i < prevChildren.length; i++) {
-      // 每对同类型节点就地 patch；anchor = 旧节点之后的宿主节点，
-      // 供嵌套 Fragment 的 children 替换定位（普通 patch 不使用 anchor）。
-      patch(
-        prevChildren[i],
-        nextChildren[i],
-        container,
-        getNextHostNode(prevChildren[i]),
-        parent,
-      )
+  if (hasKey) {
+    patchKeyedChildren(prevChildren, nextChildren, container, anchor, parent)
+  } else {
+    patchUnkeyedChildren(prevChildren, nextChildren, container, anchor, parent)
+  }
+}
+
+/**
+ * unkeyed diff（Vue 3 patchUnkeyedChildren）：
+ *   1) 公共长度逐位 patch（anchor = 该项之后第一个宿主节点，供嵌套 Fragment 用）；
+ *   2) 旧多出的从尾部依次卸载；
+ *   3) 新多出的按顺序插到 anchor 前（anchor = 旧 children 范围之后的位置）。
+ */
+function patchUnkeyedChildren(
+  prevChildren: VNode[],
+  nextChildren: VNode[],
+  container: Element,
+  anchor: Node | null,
+  parent: ComponentInternalInstance | null,
+): void {
+  const commonLength = Math.min(prevChildren.length, nextChildren.length)
+
+  for (let i = 0; i < commonLength; i++) {
+    patch(
+      prevChildren[i],
+      nextChildren[i],
+      container,
+      nextHostNodeAfter(prevChildren, i, anchor),
+      parent,
+    )
+  }
+
+  // 旧多出：从尾部卸载（与 Vue 一致，避免索引漂移）
+  for (let i = prevChildren.length - 1; i >= commonLength; i--) {
+    unmount(prevChildren[i], parent)
+  }
+
+  // 新多出：顺序插到旧范围之后（同一 anchor 连续 insertBefore 保持顺序）
+  for (let i = commonLength; i < nextChildren.length; i++) {
+    patch(null, nextChildren[i], container, anchor, parent)
+  }
+}
+
+/**
+ * keyed diff（Vue 3 风格，M3 再叠加 LIS 最小移动）：
+ *
+ *   ① 头头同步：`isSameVNodeType`（type + key）相同就就地 patch；
+ *   ② 尾尾同步：同上，从两侧向中间收拢；
+ *   ③ 旧序列先耗尽 → 剩余新节点依次插到「新后缀首个宿主节点」前；
+ *   ④ 新序列先耗尽 → 剩余旧节点全部卸载；
+ *   ⑤ 中间段：旧 key→索引 map；新节点按 key 命中则 patch 复用（无 key 的按
+ *      旧无 key 节点出现顺序复用），未命中标记为待挂载；
+ *   ⑥ 卸载所有未被复用的旧节点；
+ *   ⑦ 从后往前：未命中的节点按锚点挂载，命中的节点 insertBefore 移动到锚点前；
+ *      anchor 恒为「下一个新节点的首个宿主节点」（尾部回退到调用方 anchor）。
+ */
+function patchKeyedChildren(
+  prevChildren: VNode[],
+  nextChildren: VNode[],
+  container: Element,
+  anchor: Node | null,
+  parent: ComponentInternalInstance | null,
+): void {
+  const prevLength = prevChildren.length
+  const nextLength = nextChildren.length
+  let start = 0
+  let prevEnd = prevLength - 1
+  let nextEnd = nextLength - 1
+
+  // ① 头头同步
+  while (
+    start <= prevEnd &&
+    start <= nextEnd &&
+    isSameVNodeType(prevChildren[start], nextChildren[start])
+  ) {
+    patch(
+      prevChildren[start],
+      nextChildren[start],
+      container,
+      nextHostNodeAfter(prevChildren, start, anchor),
+      parent,
+    )
+    start++
+  }
+
+  // ② 尾尾同步
+  while (
+    start <= prevEnd &&
+    start <= nextEnd &&
+    isSameVNodeType(prevChildren[prevEnd], nextChildren[nextEnd])
+  ) {
+    patch(
+      prevChildren[prevEnd],
+      nextChildren[nextEnd],
+      container,
+      nextHostNodeAfter(prevChildren, prevEnd, anchor),
+      parent,
+    )
+    prevEnd--
+    nextEnd--
+  }
+
+  // ③ 旧节点已全部对位 → 剩余新节点都是新增
+  if (start > prevEnd) {
+    if (start <= nextEnd) {
+      const nextAnchor = anchorFromIndex(nextChildren, nextEnd + 1, anchor)
+      for (let i = start; i <= nextEnd; i++) {
+        patch(null, nextChildren[i], container, nextAnchor, parent)
+      }
     }
     return
   }
 
-  // 无法位置对齐 → 卸载全部旧节点，再按顺序挂载新节点。
-  // 插入锚点取旧 children 最后一个宿主节点之后（先取再卸载）。
-  const insertAnchor =
-    prevChildren.length > 0
-      ? getNextHostNode(prevChildren[prevChildren.length - 1])
-      : anchor
+  // ④ 新节点已全部对位 → 剩余旧节点都是删除
+  if (start > nextEnd) {
+    for (let i = start; i <= prevEnd; i++) unmount(prevChildren[i], parent)
+    return
+  }
 
-  for (const child of prevChildren) unmount(child, parent)
-  for (const child of nextChildren) patch(null, child, container, insertAnchor, parent)
+  // ⑤ 中间段：建 key → 旧索引 map；旧无 key 节点按出现顺序排队
+  const oldKeyToIndex = new Map<unknown, number>()
+  const oldUnkeyedIndexes: number[] = []
+  for (let i = start; i <= prevEnd; i++) {
+    const { key } = prevChildren[i]
+    if (key != null) oldKeyToIndex.set(key, i)
+    else oldUnkeyedIndexes.push(i)
+  }
+
+  /** 已被复用的旧索引 */
+  const reusedOldIndexes = new Set<number>()
+  /** 已 patch（复用）的新索引；未在集合中的新节点需要挂载 */
+  const reusedNewIndexes = new Set<number>()
+  let unkeyedCursor = 0
+
+  for (let i = start; i <= nextEnd; i++) {
+    const nextChild = nextChildren[i]
+    let oldIndex = -1
+
+    if (nextChild.key != null) {
+      const found = oldKeyToIndex.get(nextChild.key)
+      if (found !== undefined && !reusedOldIndexes.has(found)) oldIndex = found
+    } else if (unkeyedCursor < oldUnkeyedIndexes.length) {
+      oldIndex = oldUnkeyedIndexes[unkeyedCursor++]
+    }
+
+    if (oldIndex < 0) continue // 新增节点，第 ⑦ 步统一挂载
+
+    reusedOldIndexes.add(oldIndex)
+    reusedNewIndexes.add(i)
+    // 复用：先 patch（type 不同时 patch 内部会卸载旧的再挂新的；新 DOM 暂可
+    // 落在 anchor 位置，第 ⑦ 步统一移动到正确位置）
+    patch(prevChildren[oldIndex], nextChild, container, anchor, parent)
+  }
+
+  // ⑥ 卸载未被复用的旧节点
+  for (let i = start; i <= prevEnd; i++) {
+    if (!reusedOldIndexes.has(i)) unmount(prevChildren[i], parent)
+  }
+
+  // ⑦ 从后往前定位：anchor = 下一个已定位节点的首个宿主节点
+  let nextAnchor = anchorFromIndex(nextChildren, nextEnd + 1, anchor)
+  for (let i = nextEnd; i >= start; i--) {
+    const nextChild = nextChildren[i]
+
+    if (!reusedNewIndexes.has(i)) {
+      // 新节点：直接挂载到 anchor 前（Fragment / 组件内部按锚点顺序插入）
+      patch(null, nextChild, container, nextAnchor, parent)
+    } else {
+      // 复用节点：移动到 anchor 前（已就位时 moveHostNodes 内部跳过）
+      moveHostNodes(nextChild, container, nextAnchor)
+    }
+
+    const firstHost = firstHostNodeDeep(nextChild)
+    if (firstHost) nextAnchor = firstHost
+  }
 }
 
 // ------------------------------------------------------------
@@ -328,9 +487,9 @@ function mountComponent(
   // ③ render effect + 首帧同步渲染
   setupRenderEffect(instance, container, anchor)
 
-  // 组件 ref → 实例（元素 ref → DOM，在 mountElement 中处理）
+  // 组件 ref → 公开实例 proxy（元素 ref → DOM，在 mountElement 中处理）
   const ref = resolveRef(vnode)
-  if (ref != null) setRef(ref, instance)
+  if (ref != null) setRef(ref, instance.proxy)
 }
 
 /**
@@ -415,12 +574,12 @@ function updateComponent(n1: VNode, n2: VNode): void {
   // 原地写 shallowReactive props：值变化会触发子 render effect 的 scheduler
   updateProps(instance, n2.props, n1.props)
 
-  // ref 换绑
+  // ref 换绑（组件 ref → 公开实例 proxy）
   const prevRef = resolveRef(n1)
   const nextRef = resolveRef(n2)
   if (prevRef !== nextRef) {
     setRef(prevRef, null)
-    setRef(nextRef, instance)
+    setRef(nextRef, instance.proxy)
   }
 
   // 显式入队与 props 触发由 job 去重合并（同 tick 只跑一次）
@@ -491,26 +650,108 @@ function unmount(vnode: VNode, parent: ComponentInternalInstance | null): void {
 
 /**
  * VNode 的宿主 DOM 范围之后的那个节点（插入锚点 / 更新定位用）。
- * - Fragment：最后一个子节点的下一节点（空 Fragment 无法反查 → null）；
- * - 组件：沿 subTree 递归（组件根可能是 Fragment，vnode.el 只是首节点）；
+ * - Fragment：最后一个宿主节点的下一节点（空 Fragment → null）；
+ * - 组件：沿 subTree 递归（组件根可能是 Fragment / 渲染 null）；
  * - 元素 / 文本：el.nextSibling。
  */
 function getNextHostNode(vnode: VNode): Node | null {
+  const last = lastHostNode(vnode)
+  return last ? last.nextSibling : null
+}
+
+/**
+ * 收集 vnode 子树的全部宿主 DOM 节点（文档顺序）：
+ * - 元素 / 文本 → [vnode.el]；
+ * - Fragment → 递归 children（可能有多个宿主节点）；
+ * - 组件 → 递归 instance.subTree（组件根可能是 Fragment，vnode.el 只是首节点）。
+ */
+function collectHostNodes(vnode: VNode, out: Node[] = []): Node[] {
   const { type } = vnode
 
   if (type === Fragment) {
-    const children = getChildren(vnode)
-    const last = children.length > 0 ? children[children.length - 1] : null
-    return last ? getNextHostNode(last) : null
+    for (const child of getChildren(vnode)) collectHostNodes(child, out)
+    return out
   }
 
   if (isComponent(type)) {
     const instance = vnode.component as unknown as ComponentInternalInstance | null
-    if (instance && instance.subTree) return getNextHostNode(instance.subTree)
+    if (instance && instance.subTree) {
+      collectHostNodes(instance.subTree, out)
+      return out
+    }
+    const el = vnode.el as Node | null
+    if (el) out.push(el)
+    return out
   }
 
   const el = vnode.el as Node | null
-  return el ? el.nextSibling : null
+  if (el) out.push(el)
+  return out
+}
+
+/** 子树第一个宿主节点（渲染 null 的组件 / 空 Fragment → null） */
+function firstHostNodeDeep(vnode: VNode): Node | null {
+  const nodes = collectHostNodes(vnode)
+  return nodes.length > 0 ? nodes[0] : null
+}
+
+/** 子树最后一个宿主节点（无宿主节点 → null） */
+function lastHostNode(vnode: VNode): Node | null {
+  const nodes = collectHostNodes(vnode)
+  return nodes.length > 0 ? nodes[nodes.length - 1] : null
+}
+
+/**
+ * 把 vnode 子树的所有宿主节点移动到 container 的 anchor 之前（保持顺序）。
+ * - 无宿主节点 → 无操作（渲染 null 的组件 / 空 Fragment）；
+ * - 已紧邻 anchor 之前 → 跳过（避免无谓 DOM 操作）。
+ */
+function moveHostNodes(
+  vnode: VNode,
+  container: Element,
+  anchor: Node | null,
+): void {
+  const nodes = collectHostNodes(vnode)
+  if (nodes.length === 0) return
+
+  const last = nodes[nodes.length - 1]
+  if (last.parentNode === container && last.nextSibling === anchor) return
+
+  // 连续 insertBefore(el, anchor) 保持节点相对顺序（A B anchor 顺序成立）
+  for (const node of nodes) container.insertBefore(node, anchor)
+}
+
+/**
+ * 列表中第 index 项 DOM 范围之后的第一个节点。
+ * 优先用 getNextHostNode 反查；该项无宿主节点（渲染 null 组件 / 空 Fragment）
+ * 时向后扫描兄弟，最后回退到调用方 anchor。
+ */
+function nextHostNodeAfter(
+  children: VNode[],
+  index: number,
+  fallback: Node | null,
+): Node | null {
+  const next = getNextHostNode(children[index])
+  if (next) return next
+
+  for (let i = index + 1; i < children.length; i++) {
+    const first = firstHostNodeDeep(children[i])
+    if (first) return first
+  }
+  return fallback
+}
+
+/** 从 children[from] 起第一个宿主节点；都没有时回退 fallback */
+function anchorFromIndex(
+  children: VNode[],
+  from: number,
+  fallback: Node | null,
+): Node | null {
+  for (let i = from; i < children.length; i++) {
+    const first = firstHostNodeDeep(children[i])
+    if (first) return first
+  }
+  return fallback
 }
 
 /** 已挂载 VNode 的子节点列表；未挂载过时从 props.children 归一化 */

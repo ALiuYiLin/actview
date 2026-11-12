@@ -21,6 +21,28 @@ export interface AppContext {
   /** createApp 返回的 app 对象（避免循环依赖，用 unknown） */
   app: unknown
   config: AppConfig
+  /** app.provide 注入表（根组件 injects 的初始表） */
+  provides: Record<PropertyKey, any>
+}
+
+/**
+ * 组件公开实例（public instance proxy）。
+ *
+ * `app.mount()` / 组件 ref 暴露给用户的就是它；内部实例通过 `$` 访问，
+ * 避免直接泄漏渲染器内部字段。
+ */
+export interface ComponentPublicInstance {
+  /** 内部实例（调试 / 逃生口） */
+  readonly $: ComponentInternalInstance
+  readonly $props: Record<string, any>
+  /** 组件子树根 DOM（组件渲染 null 时为 null） */
+  readonly $el: Element | null
+  readonly $parent: ComponentPublicInstance | null
+  readonly $root: ComponentPublicInstance
+  /** 强制重渲染（跳过 props 比较） */
+  $forceUpdate: () => void
+  /** 等当前更新刷盘（同 nextTick） */
+  $nextTick: <T = void>(fn?: () => T) => Promise<T>
 }
 
 /** 生命周期钩子函数 */
@@ -71,8 +93,10 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   /** 组件挂载的 DOM 容器（DOM 渲染器实现；跨平台渲染器可另立类型） */
   container: Element | null
-  /** provide/inject 注入表（M2） */
+  /** provide/inject 注入表（M2：provide 时 copy-on-write） */
   injects: Record<PropertyKey, any>
+  /** 公开实例 proxy（组件 ref / app.mount 返回值） */
+  proxy: ComponentPublicInstance
   /** 触发一次组件更新（= queueJob(job)） */
   update: () => void
   beforeMount: Hook[]

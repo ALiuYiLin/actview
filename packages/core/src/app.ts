@@ -1,10 +1,14 @@
 // ============================================================
-// createApp / mount / unmount（M1，docs/renderer-design.md §4）
+// createApp / mount / unmount（M1，docs/renderer-design.md §4；M2 补 provide/proxy）
 //
-// 应用对象持有 AppContext（config / app 反指），mount 时创建根组件 VNode
-// 并交给渲染器 render(vnode, container)；unmount 即 render(null, container)。
-// 根组件必须是 isComponent（compiler 包装 / 显式 defineComponent），
-// 未标记函数直接报错，避免"普通函数当组件"的双语义。
+// 应用对象持有 AppContext（config / app 反指 / provides 注入表），mount 时
+// 创建根组件 VNode 并交给渲染器 render(vnode, container)；unmount 即
+// render(null, container)。根组件必须是 isComponent（compiler 包装 / 显式
+// defineComponent），未标记函数直接报错，避免"普通函数当组件"的双语义。
+//
+// M2：
+//   - app.provide(key, value)：写入 AppContext.provides（根组件 injects 初始表）；
+//   - mount 返回根组件的公开实例 proxy（不是内部实例，内部实例经 proxy.$ 拿）。
 // ============================================================
 
 import { isComponent } from '@actview/runtime-core'
@@ -14,6 +18,7 @@ import type {
   AppConfig,
   AppContext,
   ComponentInternalInstance,
+  ComponentPublicInstance,
 } from './instance'
 import { render } from './renderer'
 
@@ -30,8 +35,16 @@ export interface App {
   config: AppConfig
   /** 根组件 */
   component: ComponentTag
-  /** 挂载到容器（DOM Element 或选择器字符串），返回根组件实例 */
-  mount(rootContainer: Element | string): ComponentInternalInstance | null
+  /**
+   * 提供应用级注入值：写入 AppContext.provides（根组件的初始注入表），
+   * 所有组件都能 inject 到。建议在 mount 之前调用（根组件 setup 时继承该表）。
+   */
+  provide<T>(key: PropertyKey, value: T): App
+  /**
+   * 挂载到容器（DOM Element 或选择器字符串），返回根组件【公开实例 proxy】；
+   * 未挂载成功（根组件 render 异常等）为 null。内部实例经 proxy.$ 访问。
+   */
+  mount(rootContainer: Element | string): ComponentPublicInstance | null
   /** 卸载当前挂载的应用（移除 DOM 并停止响应式更新） */
   unmount(): void
 }
@@ -48,13 +61,17 @@ export function createApp(
 ): App {
   assertRootComponent(rootComponent)
 
-  const context: AppContext = { app: null, config: {} }
+  const context: AppContext = { app: null, config: {}, provides: {} }
 
   const app: App = {
     _context: context,
     _container: null,
     config: context.config,
     component: rootComponent,
+    provide<T>(key: PropertyKey, value: T): App {
+      context.provides[key] = value
+      return app
+    },
     mount(rootContainer) {
       assertRootComponent(app.component)
 
@@ -75,8 +92,12 @@ export function createApp(
       mounted.__actview_app__ = app
       app._container = container
 
-      // 渲染器在 mountComponent 中把实例写回 vnode.component
-      return (vnode.component as unknown as ComponentInternalInstance | null) ?? null
+      // 渲染器在 mountComponent 中把内部实例写回 vnode.component；
+      // 对外返回公开实例 proxy（内部实例经 proxy.$ 访问）
+      const instance = (vnode.component as unknown as
+        | ComponentInternalInstance
+        | null) ?? null
+      return instance?.proxy ?? null
     },
     unmount() {
       const container = app._container as MountedContainer | null

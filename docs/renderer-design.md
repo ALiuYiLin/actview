@@ -330,12 +330,23 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
   - `unmounted` 是 post hook：组件切换后同步断言会看到 post 语义顺序（`await nextTick()` 后为常规顺序）。
   - `packages/core/tsconfig.json` 因直接消费 reactivity/shared 源码，对齐了 ES2016 + 关闭 `erasableSyntaxOnly`（project references 债，见 `docs/types-architecture.md` §7）。
 
-### M2
+### M2（更新与能力补全 — ✅ 已实现）
 
 - unkeyed / keyed children diff；
 - `beforeUpdate / updated`、`shouldUpdateComponent` 优化；
 - provide / inject、组件实例 public proxy、`nextTick` 完整语义；
 - `patchProp` 完整（DOM property、SVG、事件修饰）。
+
+**M2 落地信息**
+
+- keyed diff（`renderer.ts`）：Vue 3 风格双端同步 + key→旧索引 map；中间段复用节点通过 `collectHostNodes` / `moveHostNodes` 归位（组件根为 Fragment / 渲染 null 的节点跳过）；混合列表（部分无 key）按旧无 key 节点顺序回退复用；**LIS 最小移动留到 M3**（当前移动已就位节点会跳过 DOM 操作）。
+- unkeyed diff：公共段逐位 patch，其余尾部卸载 / 按锚点挂载。
+- provide / inject（`apiProvide.ts`）：`provide` 在继承引用上 copy-on-write，兄弟隔离；`inject` own-property 查找，支持默认值与显式 `undefined` 区分；**仅 setup 内可用**（render 期调用会 throw，保持与 Vue 一致；见决策记录）。`app.provide()` 写入 AppContext.provides。
+- public instance proxy（`component.ts`）：`$`、`$props`、`$el`、`$parent`、`$root`、`$forceUpdate`、`$nextTick`；`app.mount()` 与组件 ref 都返回/指向 proxy。
+- `shouldUpdateComponent` 保持 props 浅比较；`$forceUpdate` 直接 `queueJob(instance.job)` 绕过比较。
+- `patchProp`（`domProps.ts`）：DOM property 判定（value/checked/disabled/muted/selected 等；SVG 属性一律走 attribute 避免只读 SVGAnimated*）、class（string/array/object）、style（string/对象/custom property/移除旧 key）、事件（Capture/Once/Passive 后缀 + `{handler, options}` 对象形态 + 解绑）、`innerHTML` / `textContent`、布尔属性与属性移除。
+- 测试：`packages/core/__tests__/m2.spec.ts`（23 用例；全仓 434 passed / 4 skipped）。
+- 已知限制：inject 仅 setup 内可用；keyed 无 LIS；事件选项经属性名/对象声明，无模板修饰符语法。
 
 ### M3
 

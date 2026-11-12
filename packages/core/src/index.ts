@@ -1,19 +1,15 @@
 // ============================================================
 // @actview/core — DOM 运行时公开入口
 //
-// 已实现（M1）：
-//   - createApp / mount / unmount
-//   - 组件级 re-render（setup 一次 + render effect + 微任务批处理）
-//   - patch：text / element / Fragment / 组件，props/class/style/事件
-//   - 生命周期：onBeforeMount / onMounted / onBeforeUpdate / onUpdated /
-//     onBeforeUnmount / onUnmounted
-//   - nextTick
-//
-// 组件定义 / 元素工厂从 @actview/runtime-core 再导出，方便应用侧单入口使用。
+// M1：createApp / mount / unmount、组件级 re-render、patch、生命周期、nextTick
+// M2：keyed children diff、provide/inject、public instance proxy、
+//     $forceUpdate、完整 patchProp（DOM property / SVG / 事件选项）
 // ============================================================
 
 export { createApp } from './app'
+export type { App } from './app'
 export { nextTick } from './scheduler'
+export { provide, inject } from './apiProvide'
 export {
   getCurrentInstance,
   onBeforeMount,
@@ -44,3 +40,5 @@ export type {
   RenderFunction,
   SetupContext,
 } from '@actview/runtime-core'
+
+export type { ComponentPublicInstance } from './instance'

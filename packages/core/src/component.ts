@@ -1,5 +1,5 @@
 // ============================================================
-// 组件实例 / setup / props / render 根节点（M1）
+// 组件实例 / setup / props / render 根节点（M1，M2 补 public proxy）
 //
 // 组件 = 带 `__actview_component` 标记的 setup 函数（见 runtime-core），
 // setup 只执行一次，返回 render 函数；render 每次更新执行，返回值经
@@ -10,6 +10,9 @@
 //     否则 setup 内的响应式读取会被父 effect 收集；
 //   - render 执行期间正常 tracking：组件依赖的唯一来源；
 //   - props 是 shallowReactive 且原地写：父更新 → 子 render effect 重跑。
+//
+// M2：createComponentInstance 同时创建公开实例 proxy（组件 ref /
+// app.mount 返回值），并提供 provide/inject 所需的 injects 继承表。
 // ============================================================
 
 import {
@@ -27,8 +30,13 @@ import {
   type VNode,
 } from '@actview/runtime-core/internal'
 import { hasChanged, hasOwn } from '@actview/shared'
-import type { AppContext, ComponentInternalInstance } from './instance'
+import type {
+  AppContext,
+  ComponentInternalInstance,
+  ComponentPublicInstance,
+} from './instance'
 import { setCurrentInstance } from './lifecycle'
+import { nextTick } from './scheduler'
 
 /** 组件 uid 自增计数器（job.id 排序 / 去重用） */
 let uid = 0
@@ -38,7 +46,8 @@ let uid = 0
  *
  * - scope 是 detached：不继承父 scope，组件卸载时自行 stop；
  * - effect / job / update 由渲染器在 setupRenderEffect 中填充，这里占位；
- * - injects 继承父实例的注入表（M2 provide/inject 的 copy-on-write 基础）。
+ * - injects 继承父实例的注入表（M2 provide/inject 的 copy-on-write 基础）；
+ * - proxy（公开实例）在这里创建，保证 setupComponent 之前就位。
  */
 export function createComponentInstance(
   vnode: VNode,
@@ -62,7 +71,11 @@ export function createComponentInstance(
     scope: new EffectScope(true),
     isMounted: false,
     container: null,
-    injects: parent ? parent.injects : {},
+    // 注入表继承：子组件共享父实例的引用（零拷贝），首次 provide 时
+    // 由 apiProvide 做 copy-on-write；根组件继承 app.provide 的根注入表。
+    injects: parent ? parent.injects : appContext.provides,
+    // 先占位，下面用 createComponentPublicInstance 创建（需要 instance 本身）
+    proxy: null as unknown as ComponentPublicInstance,
     update: () => {},
     beforeMount: [],
     mounted: [],
@@ -76,7 +89,51 @@ export function createComponentInstance(
   // vnode 与实例互相指向：更新时 updateComponent 通过 n1.component 复用实例
   vnode.component = instance
 
+  // 公开实例 proxy 必须在 setupComponent 之前就位：setup 期间用户就可能
+  // 通过 getCurrentInstance()!.proxy 或 ctx 拿到它，渲染器也会在 setup 后
+  // 用 instance.proxy 写组件 ref（子组件继承 parent.proxy 时父 proxy 已存在）。
+  instance.proxy = createComponentPublicInstance(instance)
+
   return instance
+}
+
+/**
+ * 创建组件公开实例（public instance proxy）。
+ *
+ * 这是 `app.mount()` 返回值 / 组件 ref 暴露给用户的对象：只包含公开字段，
+ * 内部实例通过 `$` 逃生口访问。
+ *
+ * 全部字段用 getter 读取实例状态（而不是快照值）：
+ * - `$props` 必须是 getter：`initProps` 会把 `instance.props` 从占位 `{}`
+ *   整体替换为 shallowReactive 对象，快照引用会失效；props 本身原地更新，
+ *   因此每次读 getter 拿到的都是当前对象；
+ * - `$el` 首帧渲染完成后才有值（挂载前 / render 返回 null 时为 null）；
+ * - `$parent` / `$root` 走 parent 链的 proxy（根组件 `$root` 指向自身）。
+ */
+export function createComponentPublicInstance(
+  instance: ComponentInternalInstance,
+): ComponentPublicInstance {
+  return {
+    // 内部实例逃生口（调试 / 进阶用法）
+    $: instance,
+    get $props(): Record<string, any> {
+      return instance.props
+    },
+    get $el(): Element | null {
+      return (instance.vnode.el as Element | null) ?? null
+    },
+    get $parent(): ComponentPublicInstance | null {
+      return instance.parent?.proxy ?? null
+    },
+    get $root(): ComponentPublicInstance {
+      let root = instance
+      while (root.parent) root = root.parent
+      return root.proxy
+    },
+    // 强制更新：直接入队组件 job，跳过 shouldUpdateComponent 的 props 比较
+    $forceUpdate: () => instance.update(),
+    $nextTick: nextTick,
+  }
 }
 
 /**
