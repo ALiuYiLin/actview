@@ -90,9 +90,9 @@ const wrongPropsFromTag: PropsFromTag = { id: 1 }
 export { wrongPropsFromTag }
 
 declare const component: Component<{ id: string }>
-// 运行时组件就是 setup 函数本体：可调用并返回 render 函数
+// 运行时组件就是 setup 函数本体：可调用并返回 render 函数（M3 起 async setup 可返回 Promise）
 export const componentAsSetup: SetupFunction<{ id: string }> = component
-export const componentRender: RenderFunction = component(
+export const componentRender: RenderFunction | Promise<RenderFunction> = component(
   { id: 'x' },
   { injects: {} },
 )

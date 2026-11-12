@@ -21,11 +21,14 @@ export interface SetupContext {
 /** setup 返回的渲染函数：每次更新执行，返回公开元素（运行时是 VNode） */
 export type RenderFunction = () => Element | null
 
-/** 组件 setup：props 全量进 setup（React 语义，无 props/attrs 分离） */
+/** 组件 setup：props 全量进 setup（React 语义，无 props/attrs 分离）。
+ *
+ * 返回 render 函数（同步），或 `Promise<RenderFunction>`（async setup，
+ * 由渲染器向最近的 Suspense 注册、resolve 后重新渲染）。 */
 export type SetupFunction<P = Record<string, any>> = (
   props: P,
   ctx: SetupContext,
-) => RenderFunction
+) => RenderFunction | Promise<RenderFunction>
 
 /**
  * 运行时组件（internal）：就是 defineComponent 传入的 setup 函数本体。

@@ -10,6 +10,13 @@ export { createApp } from './app'
 export type { App } from './app'
 export { nextTick } from './scheduler'
 export { provide, inject } from './apiProvide'
+export { Suspense, lazy } from './suspense'
+export { ErrorBoundary } from './errorBoundary'
+export { Teleport } from './teleport'
+export { Transition } from './transition'
+export { KeepAlive } from './keepAlive'
+export { setDevtoolsHook, getDevtoolsHook } from './devtools'
+export type { DevtoolsComponentInfo, DevtoolsHook } from './devtools'
 export {
   getCurrentInstance,
   onBeforeMount,
@@ -18,6 +25,9 @@ export {
   onUpdated,
   onBeforeUnmount,
   onUnmounted,
+  onActivated,
+  onDeactivated,
+  onErrorCaptured,
 } from './lifecycle'
 
 // 组件 / 元素基础 API（运行时 + 类型）

@@ -97,6 +97,11 @@ export interface ComponentInternalInstance {
   injects: Record<PropertyKey, any>
   /** 公开实例 proxy（组件 ref / app.mount 返回值） */
   proxy: ComponentPublicInstance
+  /** 最近的 Suspense 上下文（Suspense 组件在 setup 阶段写入；async setup 用它注册） */
+  suspenseCtx?: {
+    register(): void
+    resolve(): void
+  }
   /** 触发一次组件更新（= queueJob(job)） */
   update: () => void
   beforeMount: Hook[]
@@ -105,5 +110,7 @@ export interface ComponentInternalInstance {
   updated: Hook[]
   beforeUnmount: Hook[]
   unmounted: Hook[]
+  activated: Hook[]
+  deactivated: Hook[]
   errorCaptured: ErrorCapturedHook[]
 }

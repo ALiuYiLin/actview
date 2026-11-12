@@ -23,16 +23,35 @@
 //     组件沿子树收集宿主节点（可能为多个）；无宿主节点（渲染 null 的组件 /
 //     空 Fragment）跳过移动或回退到调用方 anchor。
 //
+// M3（§10 / §11）：
+//   - keyed 中间段移动用 LIS 最小化：只有不在最长递增子序列上的复用节点才移动；
+//   - async setup：setupComponent 返回 Promise 时先挂 null 占位，resolve 后写入
+//     render 并 queueJob；同时向当前 Suspense 注册 / 解决（register / resolve）；
+//   - 错误路径：setup / render+patch / unmount 统一 try/catch → handleError
+//     （errorCaptured 沿 parent 链 → app.config.errorHandler）；已被捕获则继续
+//     挂载占位 / 保持旧 DOM，未捕获继续向上抛；
+//   - DevTools：mount / update / unmount 上报 getDevtoolsHook()（hook 为空零开销）。
+//
+// M3b 内置组件（Teleport / Transition / KeepAlive）：
+//   - Teleport：`type.__builtin === 'teleport'`，children patch 到
+//     resolveTeleportTarget(props.to) 的目标容器（不在本容器内，无宿主节点）；
+//   - Transition：`type.__builtin === 'transition'`，单子节点 + enter/leave 类名，
+//     离场完成后才真正卸载旧子节点；
+//   - KeepAlive：keepAlive.ts 给可缓存子 vnode 打 `__keepAlive` 标记；renderer
+//     在 unmount 时把宿主节点移入 storage + deactivated（不 stop 不卸载），
+//     重新挂载带 component 的缓存 vnode 时移回 DOM + update + activated。
+//
 // 依赖边界（§9）：patch / DOM 操作不读取响应式数据；setup / 钩子由
 // component.ts / lifecycle.ts 统一 pauseTracking；render 执行期间正常收集依赖。
 // ============================================================
 
-import { ReactiveEffect } from '@actview/reactivity'
-import { isComponent } from '@actview/runtime-core'
+import { EffectFlags, ReactiveEffect } from '@actview/reactivity'
+import { isComponent, type RenderFunction } from '@actview/runtime-core'
 import {
   Fragment,
   Text,
   createTextVNode,
+  createVNode,
   isVNode,
   type VNode,
 } from '@actview/runtime-core/internal'
@@ -43,11 +62,16 @@ import {
   shouldUpdateComponent,
   updateProps,
 } from './component'
+import { getDevtoolsHook } from './devtools'
 import { createElement, patchProps } from './domProps'
+import { handleError } from './errorHandling'
 import type { AppContext, ComponentInternalInstance } from './instance'
 import { invokeHooks } from './lifecycle'
 import { setRef } from './refs'
 import { queueJob, queuePostFlushCb } from './scheduler'
+import { getCurrentSuspense } from './suspense'
+import { resolveTeleportTarget } from './teleport'
+import { applyTransitionEnter, applyTransitionLeave } from './transition'
 
 // ------------------------------------------------------------
 // 内部类型 / 常量
@@ -112,12 +136,28 @@ function patch(
     processFragment(n1, n2, container, anchor, parent)
   } else if (typeof type === 'string') {
     processElement(n1, n2, container, anchor, parent)
+  } else if (getBuiltinKind(type) === 'teleport') {
+    if (n1) patchTeleport(n1, n2, parent)
+    else mountTeleport(n2, parent)
+  } else if (getBuiltinKind(type) === 'transition') {
+    processTransition(n1, n2, container, anchor, parent)
   } else if (isComponent(type)) {
     if (n1) updateComponent(n1, n2)
     else mountComponent(n2, container, anchor, parent)
   } else {
     throw new Error(`[actview] 无效的 VNode type：${String(type)}`)
   }
+}
+
+/** 渲染器识别的内置组件标记（`type.__builtin`；其余走普通元素 / 组件） */
+type BuiltinKind = 'teleport' | 'transition'
+
+/** 读取内置组件标记；普通标签 / 组件 / symbol 一律返回 null */
+function getBuiltinKind(type: unknown): BuiltinKind | null {
+  const builtin = (
+    type as unknown as { __builtin?: unknown } | null | undefined
+  )?.__builtin
+  return builtin === 'teleport' || builtin === 'transition' ? builtin : null
 }
 
 /** VNode 类型 / key 相同才能复用 DOM 做 patch */
@@ -262,6 +302,198 @@ function firstHostNode(children: VNode[]): Node | null {
 }
 
 // ------------------------------------------------------------
+// 内置组件：Teleport（M3b）
+// ------------------------------------------------------------
+
+/**
+ * Teleport：children 挂到 `props.to` 解析出的目标容器（selector / Element）。
+ * 自身没有宿主节点（vnode.el = null），目标容器可以在当前渲染树之外。
+ */
+function mountTeleport(vnode: VNode, parent: ComponentInternalInstance | null): void {
+  const target = resolveTeleportTarget(vnode.props?.to)
+  const children = normalizeChildren(vnode.props?.children)
+  vnode.children = children
+  // M3：同一目标内多个 Teleport 只保证 append 顺序，不做跨树锚点插入
+  for (const child of children) patch(null, child, target, null, parent)
+  vnode.el = null
+}
+
+/**
+ * Teleport 更新：children patch 到目标容器；`to` 变化时把旧 children 从旧
+ * 目标卸载、新 children 挂到新目标（M3 支持 to 变化，不共享锚点）。
+ */
+function patchTeleport(
+  n1: VNode,
+  n2: VNode,
+  parent: ComponentInternalInstance | null,
+): void {
+  const nextChildren = normalizeChildren(n2.props?.children)
+  n2.children = nextChildren
+
+  const prevTarget = resolveTeleportTarget(n1.props?.to)
+  const nextTarget = resolveTeleportTarget(n2.props?.to)
+
+  if (prevTarget !== nextTarget) {
+    for (const child of getChildren(n1)) unmount(child, parent)
+    for (const child of nextChildren) patch(null, child, nextTarget, null, parent)
+  } else {
+    patchChildren(n1, n2, nextTarget, null, parent)
+  }
+
+  n2.el = null
+}
+
+/** Teleport 卸载：卸载 children（DOM 从其实际父节点移除，无需目标容器） */
+function unmountTeleport(
+  vnode: VNode,
+  parent: ComponentInternalInstance | null,
+): void {
+  for (const child of getChildren(vnode)) unmount(child, parent)
+  vnode.el = null
+}
+
+// ------------------------------------------------------------
+// 内置组件：Transition（M3b）
+// ------------------------------------------------------------
+
+/**
+ * Transition：单子节点（多子节点包成 Fragment），负责 enter / leave 编排。
+ *
+ * - mount：挂载子节点后调用 enter；
+ * - update：子节点 type/key 变化 → 旧子节点离场完成后卸载 + 挂载新子节点 +
+ *   enter；否则直接 patch 子节点；
+ * - unmount：先离场，动画结束后再卸载子节点 DOM（延迟卸载）。
+ *
+ * vnode.el = 子节点范围的首个宿主节点；vnode.children = [子节点] 供更新 /
+ * 卸载 / collectHostNodes 复用。
+ */
+function processTransition(
+  n1: VNode | null,
+  n2: VNode,
+  container: Element,
+  anchor: Node | null,
+  parent: ComponentInternalInstance | null,
+): void {
+  const prevChild = n1 ? transitionChild(n1) : null
+  const nextChild = transitionChild(n2)
+  const props = n2.props ?? {}
+
+  // 无旧子节点：挂载 + enter
+  if (!prevChild) {
+    if (!nextChild) {
+      n2.el = null
+      return
+    }
+    patch(null, nextChild, container, anchor, parent)
+    n2.el = nextChild.el
+    transitionEnter(nextChild, props)
+    return
+  }
+
+  // 新子节点消失：leave 完成后再卸载旧子节点
+  if (!nextChild) {
+    transitionLeave(prevChild, n1?.props ?? props, () => unmount(prevChild, parent))
+    n2.el = null
+    return
+  }
+
+  // 子节点类型 / key 变化：旧子节点 leave → 卸载旧 + 挂载新 + enter
+  if (!isSameVNodeType(prevChild, nextChild)) {
+    transitionLeave(prevChild, n1?.props ?? props, () => {
+      unmount(prevChild, parent)
+      patch(null, nextChild, container, anchor, parent)
+      n2.el = nextChild.el
+      transitionEnter(nextChild, props)
+    })
+    // 离场期间旧 DOM 仍在，el 暂指向旧子节点
+    n2.el = prevChild.el
+    return
+  }
+
+  // 同类型子节点：就地 patch（不重复进场）
+  patch(prevChild, nextChild, container, anchor, parent)
+  n2.el = nextChild.el
+}
+
+/**
+ * Transition 子节点归一化（结果缓存在 vnode.children = [child]）：
+ * - 0 个 → null；
+ * - 1 个 → 该 VNode；
+ * - 多个 → 包成 Fragment VNode，enter / leave 作用于其全部宿主元素。
+ */
+function transitionChild(vnode: VNode): VNode | null {
+  if (Array.isArray(vnode.children)) {
+    const cached = vnode.children as VNode[]
+    if (cached.length === 0) return null
+    if (cached.length === 1) return cached[0]
+  }
+
+  const children = normalizeChildren(vnode.props?.children)
+  if (children.length === 0) {
+    vnode.children = []
+    return null
+  }
+  const child =
+    children.length === 1 ? children[0] : createVNode(Fragment, { children })
+  vnode.children = [child]
+  return child
+}
+
+/** 子节点子树里的宿主元素（文本节点不参与 class 动画） */
+function transitionElements(vnode: VNode): Element[] {
+  const elements: Element[] = []
+  for (const node of collectHostNodes(vnode)) {
+    if (node.nodeType === 1) elements.push(node as Element)
+  }
+  return elements
+}
+
+/** 进场：对子节点全部宿主元素应用 enter 类名 */
+function transitionEnter(
+  child: VNode,
+  props: Record<string, any>,
+): void {
+  for (const el of transitionElements(child)) applyTransitionEnter(el, props)
+}
+
+/**
+ * 离场：对子节点全部宿主元素应用 leave 类名；全部完成后调用 done（卸载 DOM）。
+ * 没有宿主元素时立即完成。
+ */
+function transitionLeave(
+  child: VNode,
+  props: Record<string, any> | null,
+  done: () => void,
+): void {
+  const elements = transitionElements(child)
+  if (elements.length === 0) {
+    done()
+    return
+  }
+
+  const leaveProps = props ?? {}
+  let remaining = elements.length
+  const finish = (): void => {
+    if (--remaining === 0) done()
+  }
+  for (const el of elements) applyTransitionLeave(el, leaveProps, finish)
+}
+
+/** Transition 卸载：先离场，动画结束后再卸载子节点 */
+function unmountTransition(
+  vnode: VNode,
+  parent: ComponentInternalInstance | null,
+): void {
+  const child = transitionChild(vnode)
+  if (!child) {
+    vnode.el = null
+    return
+  }
+  transitionLeave(child, vnode.props, () => unmount(child, parent))
+  // DOM 在离场结束后由回调移除；vnode.el 保留到离场完成
+}
+
+// ------------------------------------------------------------
 // children diff（§7.2 M2）：unkeyed / keyed
 // ------------------------------------------------------------
 
@@ -333,10 +565,13 @@ function patchUnkeyedChildren(
  *   ③ 旧序列先耗尽 → 剩余新节点依次插到「新后缀首个宿主节点」前；
  *   ④ 新序列先耗尽 → 剩余旧节点全部卸载；
  *   ⑤ 中间段：旧 key→索引 map；新节点按 key 命中则 patch 复用（无 key 的按
- *      旧无 key 节点出现顺序复用），未命中标记为待挂载；
+ *      旧无 key 节点出现顺序复用），未命中标记为待挂载；复用节点记录
+ *      「旧索引 + 1」序列（新节点 / type 变化需重建 DOM 的节点记 0）；
  *   ⑥ 卸载所有未被复用的旧节点；
- *   ⑦ 从后往前：未命中的节点按锚点挂载，命中的节点 insertBefore 移动到锚点前；
- *      anchor 恒为「下一个新节点的首个宿主节点」（尾部回退到调用方 anchor）。
+ *   ⑦ 对「旧索引序列」求 LIS：从后往前，未命中的节点按锚点挂载，命中但不在
+ *      LIS 上的复用节点 insertBefore 移动；LIS 上的节点保持原位（相对顺序已
+ *      正确，无需 DOM 操作）。anchor 恒为「下一个新节点的首个宿主节点」
+ *      （尾部回退到调用方 anchor）。
  */
 function patchKeyedChildren(
   prevChildren: VNode[],
@@ -414,6 +649,13 @@ function patchKeyedChildren(
   const reusedOldIndexes = new Set<number>()
   /** 已 patch（复用）的新索引；未在集合中的新节点需要挂载 */
   const reusedNewIndexes = new Set<number>()
+  /**
+   * 中间段「旧索引 + 1」序列（对齐 Vue newIndexToOldIndexMap）：
+   * - >0 = 该新位置复用了旧列表中的节点（值 = 旧索引 + 1）；
+   * - 0 = 新节点，或 key 命中但 type 变化（旧 DOM 已被 patch 销毁重建），
+   *   这类节点不参与 LIS（必须移动）。
+   */
+  const newIndexToOldIndex: number[] = []
   let unkeyedCursor = 0
 
   for (let i = start; i <= nextEnd; i++) {
@@ -427,13 +669,21 @@ function patchKeyedChildren(
       oldIndex = oldUnkeyedIndexes[unkeyedCursor++]
     }
 
-    if (oldIndex < 0) continue // 新增节点，第 ⑦ 步统一挂载
+    if (oldIndex < 0) {
+      // 新增节点，第 ⑦ 步统一挂载
+      newIndexToOldIndex.push(0)
+      continue
+    }
 
     reusedOldIndexes.add(oldIndex)
     reusedNewIndexes.add(i)
+    // type 相同 → DOM 原地复用，可进 LIS；不同 → patch 内部卸载旧的再挂新的，
+    // 新 DOM 暂落在 anchor 位置，必须移动（记 0，不参与 LIS）
+    const domReused = isSameVNodeType(prevChildren[oldIndex], nextChild)
     // 复用：先 patch（type 不同时 patch 内部会卸载旧的再挂新的；新 DOM 暂可
     // 落在 anchor 位置，第 ⑦ 步统一移动到正确位置）
     patch(prevChildren[oldIndex], nextChild, container, anchor, parent)
+    newIndexToOldIndex.push(domReused ? oldIndex + 1 : 0)
   }
 
   // ⑥ 卸载未被复用的旧节点
@@ -441,7 +691,13 @@ function patchKeyedChildren(
     if (!reusedOldIndexes.has(i)) unmount(prevChildren[i], parent)
   }
 
-  // ⑦ 从后往前定位：anchor = 下一个已定位节点的首个宿主节点
+  // ⑦ LIS 求「保持原位」的新索引集合：不在集合中的复用节点才需要移动
+  const stableIndexes = new Set<number>()
+  for (const index of getSequence(newIndexToOldIndex)) {
+    stableIndexes.add(index + start)
+  }
+
+  // 从后往前定位：anchor = 下一个已定位节点的首个宿主节点
   let nextAnchor = anchorFromIndex(nextChildren, nextEnd + 1, anchor)
   for (let i = nextEnd; i >= start; i--) {
     const nextChild = nextChildren[i]
@@ -449,10 +705,11 @@ function patchKeyedChildren(
     if (!reusedNewIndexes.has(i)) {
       // 新节点：直接挂载到 anchor 前（Fragment / 组件内部按锚点顺序插入）
       patch(null, nextChild, container, nextAnchor, parent)
-    } else {
-      // 复用节点：移动到 anchor 前（已就位时 moveHostNodes 内部跳过）
+    } else if (!stableIndexes.has(i)) {
+      // 复用节点不在 LIS 上：移动到 anchor 前（已就位时 moveHostNodes 内部跳过）
       moveHostNodes(nextChild, container, nextAnchor)
     }
+    // LIS 上的复用节点保持原位（相对顺序已正确，不做 DOM 操作）
 
     const firstHost = firstHostNodeDeep(nextChild)
     if (firstHost) nextAnchor = firstHost
@@ -469,6 +726,13 @@ function mountComponent(
   anchor: Node | null,
   parent: ComponentInternalInstance | null,
 ): void {
+  // KeepAlive 缓存复用：vnode 已带组件实例 → 激活路径（setup 不重跑）。
+  // 由 keepAlive.ts 的渲染函数在缓存命中时返回「带 component 的缓存 vnode」触发。
+  if (vnode.component) {
+    activateKeptAlive(vnode, container, anchor)
+    return
+  }
+
   // ① 创建实例（vnode.component / instance.vnode 互相指向）
   const instance = createComponentInstance(
     vnode,
@@ -481,8 +745,35 @@ function mountComponent(
   // 渲染器实际写入 DOM 宿主元素）
   instance.container = container as unknown as ComponentInternalInstance['container']
 
-  // ② setup 只执行一次（内部 pauseTracking + currentInstance 栈）
-  setupComponent(instance)
+  // ② setup 只执行一次（内部 pauseTracking + currentInstance 栈）。
+  // setup 同步抛错：先走 errorCaptured / app.config.errorHandler；已被捕获时
+  // 用 null 占位继续挂载（祖先 ErrorBoundary 稍后重渲染 fallback），未捕获上抛。
+  let pending: Promise<RenderFunction> | null = null
+  try {
+    pending = setupComponent(instance)
+  } catch (err) {
+    if (!handleError(err, instance, 'setup')) throw err
+    instance.render = () => null
+  }
+
+  // async setup：component.ts 已把 instance.render 置为 null 占位（首帧渲染空），
+  // 这里向最近的 Suspense 注册（显示 fallback）；Promise resolve 后写入真实
+  // render 并 queueJob 触发更新，resolve 后隐藏 fallback。
+  if (pending) {
+    const suspense = currentSuspense()
+    suspense?.register()
+    pending.then(
+      (render) => {
+        instance.render = render
+        suspense?.resolve()
+        queueJob(instance.job)
+      },
+      (err) => {
+        suspense?.resolve()
+        if (!handleError(err, instance, 'setup')) throw err
+      },
+    )
+  }
 
   // ③ render effect + 首帧同步渲染
   setupRenderEffect(instance, container, anchor)
@@ -490,6 +781,40 @@ function mountComponent(
   // 组件 ref → 公开实例 proxy（元素 ref → DOM，在 mountElement 中处理）
   const ref = resolveRef(vnode)
   if (ref != null) setRef(ref, instance.proxy)
+
+  // KeepAlive 首次挂载同样视为一次激活（mounted 之后触发 activated）
+  if (getKeepAliveMarker(vnode)) {
+    queuePostFlushCb(() => invokeHooks(instance.activated, instance))
+  }
+
+  // DevTools：首次挂载完成（hook 未注册时零开销）
+  notifyDevtools(instance, 'mount')
+}
+
+/**
+ * 子树 patch 期间临时允许 render effect 自触发。
+ *
+ * 子组件挂载发生在父组件 render effect 的 RUNNING 期间；async setup 的
+ * `Suspense.register()` 与 ErrorBoundary 的 `errorCaptured` 钩子会在这时写
+ * 父组件的响应式状态（pending / error）。本版 reactivity（Vue 3.5 语义）对
+ * RUNNING 效果默认忽略 notify，若不临时打开 ALLOW_RECURSE，Suspense 不会
+ * 显示 fallback、ErrorBoundary 不会切到 fallback。
+ *
+ * 只包 patch、不包 renderComponentRoot：组件自身 render 期间写状态仍保持
+ * 「忽略自触发」的既有语义（避免无限重渲染），只有子组件挂载/卸载引发的
+ * 边界状态写入可以调度一轮重渲染。
+ */
+function patchWithRecurse<T>(
+  instance: ComponentInternalInstance,
+  patchFn: () => T,
+): T {
+  const effect = instance.effect
+  effect.flags |= EffectFlags.ALLOW_RECURSE
+  try {
+    return patchFn()
+  } finally {
+    effect.flags &= ~EffectFlags.ALLOW_RECURSE
+  }
 }
 
 /**
@@ -505,10 +830,23 @@ function setupRenderEffect(
     if (!instance.isMounted) {
       invokeHooks(instance.beforeMount, instance)
 
-      const subTree = renderComponentRoot(instance)
-      instance.subTree = subTree
-      if (subTree) patch(null, subTree, container, anchor, instance)
-      instance.vnode.el = subTree ? subTree.el : null
+      try {
+        const subTree = renderComponentRoot(instance)
+        instance.subTree = subTree
+        patchWithRecurse(instance, () => {
+          if (subTree) patch(null, subTree, container, anchor, instance)
+        })
+        instance.vnode.el = subTree ? subTree.el : null
+      } catch (err) {
+        // 渲染 / patch 抛错：先交给 errorCaptured / app.config.errorHandler。
+        // 已被捕获 → 本组件保持空子树 + isMounted（祖先边界重渲染 fallback）；
+        // 未捕获 → 继续上抛（首帧 mount 错误由 render()/mount() 抛出）。
+        if (!handleError(err, instance, 'render')) throw err
+        instance.subTree = null
+        instance.vnode.el = null
+        instance.isMounted = true
+        return
+      }
 
       instance.isMounted = true
       // mounted 是 post hook：等整轮 patch 完成、DOM 就绪后执行
@@ -521,23 +859,36 @@ function setupRenderEffect(
     invokeHooks(instance.beforeUpdate, instance)
 
     const prevTree = instance.subTree
-    const nextTree = renderComponentRoot(instance)
-    instance.subTree = nextTree
     const hostContainer = instanceContainer(instance)
 
-    if (prevTree && nextTree) {
-      patch(prevTree, nextTree, hostContainer, getNextHostNode(prevTree), instance)
-      instance.vnode.el = nextTree.el
-    } else if (nextTree) {
-      // 上一帧 render 返回 null，本帧有内容：无旧树可 diff，直接挂载
-      patch(null, nextTree, hostContainer, null, instance)
-      instance.vnode.el = nextTree.el
-    } else {
-      // 本帧 render 返回 null：移除旧树
-      if (prevTree) unmount(prevTree, instance)
-      instance.vnode.el = null
+    try {
+      const nextTree = renderComponentRoot(instance)
+      instance.subTree = nextTree
+
+      patchWithRecurse(instance, () => {
+        if (prevTree && nextTree) {
+          patch(prevTree, nextTree, hostContainer, getNextHostNode(prevTree), instance)
+          instance.vnode.el = nextTree.el
+        } else if (nextTree) {
+          // 上一帧 render 返回 null，本帧有内容：无旧树可 diff，直接挂载
+          patch(null, nextTree, hostContainer, null, instance)
+          instance.vnode.el = nextTree.el
+        } else {
+          // 本帧 render 返回 null：移除旧树
+          if (prevTree) unmount(prevTree, instance)
+          instance.vnode.el = null
+        }
+      })
+    } catch (err) {
+      // 更新失败：回滚 subTree（保持下一次 diff 的旧树一致）；已被捕获则等
+      // 祖先边界重渲染 fallback，未捕获继续上抛（scheduler 复位状态后抛出）
+      instance.subTree = prevTree
+      if (!handleError(err, instance, 'render')) throw err
+      return
     }
 
+    // DevTools：重渲染完成
+    notifyDevtools(instance, 'update')
     queuePostFlushCb(() => invokeHooks(instance.updated, instance))
   }
 
@@ -603,8 +954,14 @@ function unmountComponent(vnode: VNode): void {
 
   const subTree = instance.subTree
   if (subTree) {
-    unmount(subTree, instance)
-    instance.subTree = null
+    try {
+      unmount(subTree, instance)
+    } catch (err) {
+      // 子树卸载抛错：同样走 errorCaptured / app.config.errorHandler
+      if (!handleError(err, instance, 'unmount')) throw err
+    } finally {
+      instance.subTree = null
+    }
   }
 
   queuePostFlushCb(() => invokeHooks(instance.unmounted, instance))
@@ -612,6 +969,74 @@ function unmountComponent(vnode: VNode): void {
   setRef(resolveRef(instance.vnode), null)
   instance.isMounted = false
   vnode.el = null
+
+  // DevTools：卸载完成
+  notifyDevtools(instance, 'unmount')
+}
+
+// ------------------------------------------------------------
+// KeepAlive 集成（缓存 vnode 由 keepAlive.ts 打 __keepAlive 标记）
+// ------------------------------------------------------------
+
+/** keepAlive.ts 打在可缓存子 vnode 上的标记（renderer 只读 storage / cache） */
+interface KeepAliveMarker {
+  cache: Map<unknown, VNode>
+  storage: Element
+  key: unknown
+  max?: number
+}
+
+/** 读取 vnode 的 KeepAlive 标记（非 KeepAlive 子节点 → null） */
+function getKeepAliveMarker(vnode: VNode): KeepAliveMarker | null {
+  return (
+    (vnode as unknown as { __keepAlive?: KeepAliveMarker }).__keepAlive ?? null
+  )
+}
+
+/**
+ * 停用（缓存）组件：把子树宿主节点移入 storage，实例 / 子树 / scope 全部保留，
+ * 只触发 deactivated。
+ *
+ * 与原 unmountComponent 的区别：不 scope.stop()、不调用 unmounted、不卸载
+ * 子树、不置空 vnode.el / vnode.component —— 缓存 vnode 再次挂载时由
+ * activateKeptAlive 复用同一实例（setup 不重跑、状态保留）。
+ */
+function deactivateKeptAlive(vnode: VNode, marker: KeepAliveMarker): void {
+  const instance = vnode.component as unknown as ComponentInternalInstance | null
+  if (!instance) return
+
+  // append 到 storage（detached 容器）→ 节点从页面移除但保持相对顺序
+  for (const node of collectHostNodes(vnode)) marker.storage.appendChild(node)
+
+  // 写入 KeepAlive 缓存：下次 render 命中后用同一 vnode / 实例激活
+  marker.cache.set(marker.key, vnode)
+
+  // KeepAlive 自身卸载清理时缓存实例已被销毁（isMounted=false）→ 不再发 deactivated
+  if (instance.isMounted) invokeHooks(instance.deactivated, instance)
+}
+
+/**
+ * 激活缓存组件：宿主节点从 storage 移回 container，复用原实例重新渲染并触发
+ * activated（跳过 createComponentInstance / setupComponent）。
+ */
+function activateKeptAlive(
+  vnode: VNode,
+  container: Element,
+  anchor: Node | null,
+): void {
+  const instance = vnode.component as unknown as ComponentInternalInstance | null
+  if (!instance) return
+
+  // 从 storage 移回原容器（保持文档顺序）
+  for (const node of collectHostNodes(vnode)) container.insertBefore(node, anchor)
+
+  instance.vnode = vnode
+  instance.container = container as unknown as ComponentInternalInstance['container']
+  vnode.el = instance.subTree ? instance.subTree.el : null
+
+  // 用最新 props / vnode 触发一次 render（scheduler 去重，异步刷盘）
+  instance.update()
+  invokeHooks(instance.activated, instance)
 }
 
 // ------------------------------------------------------------
@@ -639,7 +1064,25 @@ function unmount(vnode: VNode, parent: ComponentInternalInstance | null): void {
     return
   }
 
+  // 内置组件（Teleport / Transition）：各自编排 DOM 卸载
+  const builtin = getBuiltinKind(type)
+  if (builtin === 'teleport') {
+    unmountTeleport(vnode, parent)
+    return
+  }
+  if (builtin === 'transition') {
+    unmountTransition(vnode, parent)
+    return
+  }
+
   if (isComponent(type)) {
+    // KeepAlive 缓存复用中的组件：不真正卸载
+    // （宿主节点入 storage + deactivated；实例 / 子树 / scope 全部保留）
+    const marker = getKeepAliveMarker(vnode)
+    if (vnode.component && marker) {
+      deactivateKeptAlive(vnode, marker)
+      return
+    }
     unmountComponent(vnode)
   }
 }
@@ -667,6 +1110,15 @@ function getNextHostNode(vnode: VNode): Node | null {
  */
 function collectHostNodes(vnode: VNode, out: Node[] = []): Node[] {
   const { type } = vnode
+
+  // Teleport 的内容挂在目标容器（可能在本树之外）→ 不参与本树锚点计算，
+  // 避免跨容器 insertBefore 抛 NotFoundError；Transition 的宿主节点即子节点。
+  const builtin = getBuiltinKind(type)
+  if (builtin === 'teleport') return out
+  if (builtin === 'transition') {
+    for (const child of getChildren(vnode)) collectHostNodes(child, out)
+    return out
+  }
 
   if (type === Fragment) {
     for (const child of getChildren(vnode)) collectHostNodes(child, out)
@@ -752,6 +1204,93 @@ function anchorFromIndex(
     if (first) return first
   }
   return fallback
+}
+
+/**
+ * 最长递增子序列（返回下标数组）。
+ *
+ * 入参是「旧索引 + 1」序列（0 = 新节点，跳过）。返回的下标集合 = 相对顺序
+ * 已经正确、无需移动的节点；keyed 中间段只移动不在该集合中的复用节点，
+ * 把 DOM 移动次数降到最小（对齐 Vue 3 getSequence：贪心 + 二分 + 前驱回溯）。
+ */
+function getSequence(arr: number[]): number[] {
+  const predecessors = arr.slice() // 前驱链：predecessors[i] = 子序列中 i 的前一个下标
+  const tails: number[] = [] // tails[k] = 长度为 k+1 的递增子序列末尾元素下标
+
+  for (let i = 0; i < arr.length; i++) {
+    const value = arr[i]
+    if (value === 0) continue // 新节点 / 重建 DOM 的节点不参与 LIS
+
+    // 二分查找第一个「末尾值 >= value」的位置
+    let low = 0
+    let high = tails.length
+    while (low < high) {
+      const middle = (low + high) >> 1
+      if (arr[tails[middle]] < value) low = middle + 1
+      else high = middle
+    }
+    if (low > 0) predecessors[i] = tails[low - 1]
+    tails[low] = i
+  }
+
+  // 从最后一个尾巴回溯前驱链，还原真实子序列下标
+  let length = tails.length
+  let cursor = tails[length - 1]
+  while (length-- > 0) {
+    tails[length] = cursor
+    cursor = predecessors[cursor]
+  }
+  return tails
+}
+
+// ------------------------------------------------------------
+// M3 集成钩子：Suspense 上下文 / DevTools 埋点
+// ------------------------------------------------------------
+
+/** Suspense 上下文（suspense.ts 的 getCurrentSuspense 返回实例或 ctx，两种都兼容） */
+interface SuspenseContextLike {
+  register(): void
+  resolve(): void
+}
+
+/** 当前最近 Suspense 的 register/resolve（不在 Suspense 内 → null） */
+function currentSuspense(): SuspenseContextLike | null {
+  const suspense = getCurrentSuspense() as unknown
+  if (suspense == null) return null
+
+  const ctx =
+    (suspense as { suspenseCtx?: SuspenseContextLike }).suspenseCtx ??
+    (suspense as SuspenseContextLike)
+  return ctx != null &&
+    typeof ctx.register === 'function' &&
+    typeof ctx.resolve === 'function'
+    ? ctx
+    : null
+}
+
+/** DevTools 事件类型 */
+type DevtoolsEvent = 'mount' | 'update' | 'unmount'
+
+/**
+ * 上报组件生命周期到 DevTools hook。
+ * hook 未注册时直接返回（零开销，不构造 info 对象）。
+ */
+function notifyDevtools(
+  instance: ComponentInternalInstance,
+  event: DevtoolsEvent,
+): void {
+  const hook = getDevtoolsHook()
+  if (!hook) return
+
+  const info = {
+    id: instance.uid,
+    name: (instance.type.name as string | undefined) || 'Anonymous',
+    instance,
+    parent: instance.parent,
+  }
+  if (event === 'mount') hook.onComponentMount?.(info)
+  else if (event === 'update') hook.onComponentUpdate?.(info)
+  else hook.onComponentUnmount?.(info)
 }
 
 /** 已挂载 VNode 的子节点列表；未挂载过时从 props.children 归一化 */

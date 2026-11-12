@@ -1,9 +1,11 @@
 // ============================================================
-// 组件实例 / setup / props / render 根节点（M1，M2 补 public proxy）
+// 组件实例 / setup / props / render 根节点（M1 起，M3 补 async setup）
 //
 // 组件 = 带 `__actview_component` 标记的 setup 函数（见 runtime-core），
 // setup 只执行一次，返回 render 函数；render 每次更新执行，返回值经
 // renderComponentRoot 归一化为 VNode 树交给渲染器。
+// M3：setup 可以返回 Promise（async setup）——先挂 `() => null` 占位，
+// 返回 Promise<RenderFunction> 给渲染器集成 Suspense / 错误处理。
 //
 // 依赖边界（docs/renderer-design.md §9）：
 //   - setup 在父组件 render effect 执行栈中运行，必须 pauseTracking，
@@ -83,6 +85,8 @@ export function createComponentInstance(
     updated: [],
     beforeUnmount: [],
     unmounted: [],
+    activated: [],
+    deactivated: [],
     errorCaptured: [],
   }
 
@@ -141,12 +145,22 @@ export function createComponentPublicInstance(
  *
  * 注意 pauseTracking：setup 在父组件 render effect 栈内执行，其中的
  * 响应式读取不能污染父 effect（§9）。
+ *
+ * 返回值（M3 async setup 协议）：
+ * - 同步 setup：返回 null，`instance.render` 已就位；
+ * - async setup：`instance.render` 先置 `() => null` 占位，返回
+ *   Promise<RenderFunction>；渲染器负责在 resolve 后写回 render、queueJob，
+ *   并把它与最近的 Suspense（register / resolve）及 handleError 关联。
  */
-export function setupComponent(instance: ComponentInternalInstance): void {
+export function setupComponent(
+  instance: ComponentInternalInstance,
+): Promise<RenderFunction> | null {
   initProps(instance, instance.vnode.props ?? null)
 
   const prev = setCurrentInstance(instance)
   try {
+    let pending: Promise<RenderFunction> | null = null
+
     instance.scope.run(() => {
       pauseTracking()
       try {
@@ -162,13 +176,24 @@ export function setupComponent(instance: ComponentInternalInstance): void {
           },
         })
 
-        // async setup 属 M3（Suspense）；M1 明确报错，避免静默拿到 Promise
+        // async setup（M3）：先挂空 render 占位（渲染 null），返回 Promise；
+        // 拒绝由渲染器 pending.then 的 reject 分支交给 handleError，
+        // 这里不 throw（同步 setup 的校验失败仍然 throw）。
         if (isThenable(result)) {
-          throw new Error(
-            `[actview] 组件 "${getComponentName(instance)}" 的 setup 返回了 Promise：` +
-              `M1 仅支持同步 setup（async setup / Suspense 在 M3 提供）`,
-          )
+          instance.render = (() => null) as unknown as RenderFunction
+          pending = Promise.resolve(result).then((render) => {
+            if (typeof render !== 'function') {
+              throw new Error(
+                `[actview] 组件 "${getComponentName(instance)}" 的 async setup ` +
+                  `resolve 值必须是 render 函数（当前为 ${typeof render}）`,
+              )
+            }
+            instance.render = render as unknown as RenderFunction
+            return instance.render
+          })
+          return
         }
+
         if (typeof result !== 'function') {
           throw new Error(
             `[actview] 组件 "${getComponentName(instance)}" 的 setup 必须返回 render 函数` +
@@ -181,6 +206,8 @@ export function setupComponent(instance: ComponentInternalInstance): void {
         resetTracking()
       }
     })
+
+    return pending
   } finally {
     setCurrentInstance(prev)
   }

@@ -10,7 +10,12 @@
 // ============================================================
 
 import { pauseTracking, resetTracking } from '@actview/reactivity'
-import type { ComponentInternalInstance, Hook, LifecycleType } from './instance'
+import type {
+  ComponentInternalInstance,
+  ErrorCapturedHook,
+  Hook,
+  LifecycleType,
+} from './instance'
 
 /** 当前组件实例（setup / 钩子执行上下文）；null 表示不在组件上下文内 */
 let currentInstance: ComponentInternalInstance | null = null
@@ -73,6 +78,26 @@ export function invokeHooks(
   }
 }
 
+/**
+ * 注册错误捕获钩子（子树 setup / render / patch / unmount 错误会沿 parent
+ * 链调用各实例的 errorCaptured；返回 false 表示已处理、阻止继续向上）。
+ *
+ * 与生命周期钩子不同，errorCaptured 是「即时调用」的（由 errorHandling 的
+ * handleError 在错误现场执行），不进入 post 队列。
+ */
+export function onErrorCaptured(
+  hook: ErrorCapturedHook,
+  target: ComponentInternalInstance | null = getCurrentInstance(),
+): void {
+  if (!target) {
+    console.warn(
+      '[actview] onErrorCaptured 只能在组件 setup 中注册，已忽略。',
+    )
+    return
+  }
+  target.errorCaptured.push(hook)
+}
+
 export const onBeforeMount = (
   hook: Hook,
   target?: ComponentInternalInstance | null,
@@ -102,3 +127,40 @@ export const onUnmounted = (
   hook: Hook,
   target?: ComponentInternalInstance | null,
 ): void => injectHook('unmounted', hook, target)
+
+/**
+ * 注册 activated 钩子：KeepAlive 缓存的组件被重新激活时由 renderer 调用
+ * `invokeHooks(instance.activated, instance)`。
+ *
+ * activated / deactivated 不在 LifecycleType 联合内（实例字段已由
+ * createComponentInstance 初始化），因此这里直接 push 对应数组。
+ */
+export function onActivated(
+  hook: Hook,
+  target: ComponentInternalInstance | null = currentInstance,
+): void {
+  if (!target) {
+    console.warn(
+      '[actview] onActivated 生命周期钩子只能在组件 setup 中注册，已忽略。',
+    )
+    return
+  }
+  target.activated.push(hook)
+}
+
+/**
+ * 注册 deactivated 钩子：KeepAlive 缓存的组件被移入缓存（失活）时由
+ * renderer 调用 `invokeHooks(instance.deactivated, instance)`。
+ */
+export function onDeactivated(
+  hook: Hook,
+  target: ComponentInternalInstance | null = currentInstance,
+): void {
+  if (!target) {
+    console.warn(
+      '[actview] onDeactivated 生命周期钩子只能在组件 setup 中注册，已忽略。',
+    )
+    return
+  }
+  target.deactivated.push(hook)
+}

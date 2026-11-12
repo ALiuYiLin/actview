@@ -348,12 +348,24 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 - 测试：`packages/core/__tests__/m2.spec.ts`（23 用例；全仓 434 passed / 4 skipped）。
 - 已知限制：inject 仅 setup 内可用；keyed 无 LIS；事件选项经属性名/对象声明，无模板修饰符语法。
 
-### M3
+### M3（错误边界 / 异步 / 内置组件 / DevTools / LIS — ✅ 已实现）
 
 - 错误边界（ErrorBoundary / errorCaptured）；
 - Suspense / async setup / lazy；
 - Teleport / Transition / KeepAlive（内置组件）；
 - DevTools 钩子、keyed LIS 优化。
+
+**M3 落地信息**
+
+- 错误处理（`errorHandling.ts` / `errorBoundary.ts` / `lifecycle.ts`）：`handleError(err, instance, info)` 沿 parent 链跑 `errorCaptured`（返回 false = 已捕获）→ `app.config.errorHandler` → console.error + 上抛；`onErrorCaptured`；`ErrorBoundary`（fallback 支持 VNode 或函数）；setup / render+patch / unmount 全路径接入。
+- 关键语义修复：本版 reactivity 对 RUNNING effect 忽略 notify，父组件首帧 patch 期间子组件挂载引发的 `Suspense.register()` / ErrorBoundary 错误钩子写状态会被吞。renderer 用 `patchWithRecurse` 只在 patch 子树期间临时开 `EffectFlags.ALLOW_RECURSE`（不包 render，保持 render 自触发忽略）。
+- async setup（`component.ts` + `renderer.ts`）：`setup()` 返回 Promise 时先渲染 `() => null` 占位，向最近 Suspense `register()`；resolve 后写回 `instance.render`、`resolve()` 并 `queueJob`；reject 交给 `handleError`。
+- Suspense / lazy（`suspense.ts`）：模块级 suspense 栈；children 常驻 div（pending 时 `display:none`）+ fallback；`lazy(loader)` 缓存 loader，async setup 后渲染真实组件。
+- 内置组件：`Teleport`（renderer 特判 `__builtin:'teleport'`，children patch 到 `resolveTeleportTarget(props.to)` 目标容器，支持 to 变化/卸载）、`Transition`（单子节点 enter/leave 类名 + 延迟卸载，`name` 默认 `v`、`duration` 默认 300ms）、`KeepAlive`（缓存组件实例/DOM，activated/deactivated、include/exclude、max LRU；unmount 时 renderer 把 host 节点移入 storage 并写 cache，重新命中走激活路径）。`lifecycle` 增加 `onActivated` / `onDeactivated`。
+- DevTools（`devtools.ts`）：`setDevtoolsHook` / `getDevtoolsHook`，renderer 在 mount/update/unmount 上报 `{ id, name, instance, parent }`；未注册时零开销。
+- keyed LIS（`renderer.ts`）：`getSequence()`（贪心+二分+前驱回溯）最小化 DOM 移动；同 key 换 type / 新建节点记 0 强制移动。
+- 测试：`packages/core/__tests__/m3.spec.ts`（9）+ `m3b.spec.ts`（6）；全仓 449 passed / 4 skipped。
+- M3 设计内限制：同一 target 的多个 Teleport 仅按 append 顺序（无跨树锚点）；Transition 位于被整体移除的子树内时 leave 会被打断；KeepAlive 仅支持单根组件子树；Suspense 用 div 包裹 children（会多一层 DOM）。
 
 ### M4
 
