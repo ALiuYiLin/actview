@@ -1,3 +1,4 @@
+import { testComponent } from './test-helper'
 // ============================================================
 // @actview/core M1 渲染器测试（happy-dom）
 //   覆盖 docs/renderer-design.md §14 验收标准：
@@ -9,7 +10,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   Fragment,
   createApp,
-  defineComponent,
   nextTick,
   onBeforeMount,
   onBeforeUnmount,
@@ -47,7 +47,7 @@ afterEach(() => {
 // ============================================================
 describe('@actview/core M1：挂载', () => {
   it('createApp(App).mount(container) 渲染 DOM', () => {
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h('div', { id: 'app' }, h('span', { class: 'label' }, 'hello')),
     )
     const root = mountRoot()
@@ -64,14 +64,14 @@ describe('@actview/core M1：挂载', () => {
     host.id = 'host'
     document.body.appendChild(host)
 
-    const App = defineComponent(() => () => h('p', null, 'from selector'))
+    const App = testComponent(() => () => h('p', null, 'from selector'))
     createApp(App).mount('#host')
     expect(host.querySelector('p')!.textContent).toBe('from selector')
   })
 
   it('重复挂载同一容器给出 warning（不抛错）', () => {
     const root = mountRoot()
-    const App = defineComponent(() => () => h('div'))
+    const App = testComponent(() => () => h('div'))
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     createApp(App).mount(root)
     createApp(App).mount(root)
@@ -79,7 +79,7 @@ describe('@actview/core M1：挂载', () => {
     warn.mockRestore()
   })
 
-  it('根组件必须是 defineComponent 组件，否则抛错', () => {
+  it('根组件必须是 testComponent 组件，否则抛错', () => {
     const root = mountRoot()
     expect(() => createApp((() => h('div')) as any).mount(root)).toThrow()
   })
@@ -100,7 +100,7 @@ describe('@actview/core M1：渲染值归一化', () => {
     ]
 
     for (const [value, expected] of cases) {
-      const App = defineComponent(() => () => value)
+      const App = testComponent(() => () => value)
       const root = mountRoot()
       createApp(App).mount(root)
       expect(root.textContent).toBe(expected)
@@ -117,7 +117,7 @@ describe('@actview/core M1：响应式更新', () => {
     let setupCount = 0
     let renderCount = 0
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       setupCount++
       count = ref(0)
       return () => {
@@ -143,7 +143,7 @@ describe('@actview/core M1：响应式更新', () => {
     let count!: Ref<number>
     let renderCount = 0
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () => {
         renderCount++
@@ -166,7 +166,7 @@ describe('@actview/core M1：响应式更新', () => {
 
   it('元素文本子节点逐位 patch（不重建 DOM 节点）', async () => {
     let count!: Ref<number>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () => h('div', null, 'count: ', String(count.value))
     })
@@ -194,7 +194,7 @@ describe('@actview/core M1：props 更新', () => {
     let childSetupCount = 0
     let childRenderCount = 0
 
-    const Child = defineComponent((props: any) => {
+    const Child = testComponent((props: any) => {
       childSetupCount++
       return () => {
         childRenderCount++
@@ -202,7 +202,7 @@ describe('@actview/core M1：props 更新', () => {
       }
     })
 
-    const Parent = defineComponent(() => {
+    const Parent = testComponent(() => {
       parentCount = ref(0)
       return () => h('div', null, h(Child, { value: parentCount.value }))
     })
@@ -230,15 +230,15 @@ describe('@actview/core M1：条件渲染与卸载', () => {
     let visible!: Ref<boolean>
     const logs: string[] = []
 
-    const A = defineComponent(() => {
+    const A = testComponent(() => {
       onUnmounted(() => logs.push('A-unmounted'))
       return () => h('a', null, 'A')
     })
-    const B = defineComponent(() => {
+    const B = testComponent(() => {
       onMounted(() => logs.push('B-mounted'))
       return () => h('b', null, 'B')
     })
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       visible = ref(true)
       return () => h('div', null, visible.value ? h(A) : h(B))
     })
@@ -266,7 +266,7 @@ describe('@actview/core M1：卸载', () => {
     let count!: Ref<number>
     let renderCount = 0
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () => {
         renderCount++
@@ -296,12 +296,12 @@ describe('@actview/core M1：生命周期', () => {
   it('挂载：父 beforeMount → 子 beforeMount → 子 mounted → 父 mounted', async () => {
     const logs: string[] = []
 
-    const Child = defineComponent(() => {
+    const Child = testComponent(() => {
       onBeforeMount(() => logs.push('child-beforeMount'))
       onMounted(() => logs.push('child-mounted'))
       return () => h('i', null, 'child')
     })
-    const Parent = defineComponent(() => {
+    const Parent = testComponent(() => {
       onBeforeMount(() => logs.push('parent-beforeMount'))
       onMounted(() => logs.push('parent-mounted'))
       return () => h('div', null, h(Child))
@@ -322,12 +322,12 @@ describe('@actview/core M1：生命周期', () => {
   it('卸载：父 beforeUnmount → 子 beforeUnmount → 子 unmounted → 父 unmounted', async () => {
     const logs: string[] = []
 
-    const Child = defineComponent(() => {
+    const Child = testComponent(() => {
       onBeforeUnmount(() => logs.push('child-beforeUnmount'))
       onUnmounted(() => logs.push('child-unmounted'))
       return () => h('i', null, 'child')
     })
-    const Parent = defineComponent(() => {
+    const Parent = testComponent(() => {
       onBeforeUnmount(() => logs.push('parent-beforeUnmount'))
       onUnmounted(() => logs.push('parent-unmounted'))
       return () => h('div', null, h(Child))
@@ -356,7 +356,7 @@ describe('@actview/core M1：生命周期', () => {
 describe('@actview/core M1：事件', () => {
   it('onClick 更新状态；重渲染后监听器被替换（不重复触发）', async () => {
     let count!: Ref<number>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () =>
         h('button', { onClick: () => count.value++ }, String(count.value))
@@ -383,7 +383,7 @@ describe('@actview/core M1：事件', () => {
 describe('@actview/core M1：ref', () => {
   it('元素 ref 指向 DOM；卸载后置 null', () => {
     const elRef = ref<HTMLElement | null>(null)
-    const App = defineComponent(() => () => h('input', { ref: elRef }))
+    const App = testComponent(() => () => h('input', { ref: elRef }))
 
     const root = mountRoot()
     const app = createApp(App)

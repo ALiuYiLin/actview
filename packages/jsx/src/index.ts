@@ -15,15 +15,14 @@
 import './jsx'
 
 export type {
+  BuiltinComponent,
+  ClassComponent,
   Element,
   ElementType,
-  ComponentFunction,
-  ComponentTag,
   ComponentProps,
   ElementChild,
   ElementChildren,
   RenderFunction,
-  SetupContext,
 } from '@actview/runtime-core'
 
 export type * from './jsx/attrs'

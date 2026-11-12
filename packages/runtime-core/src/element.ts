@@ -8,8 +8,6 @@
 //     el / component / 子节点缓存…）不属于公开契约。
 // ============================================================
 
-import type { Component } from './component'
-
 /**
  * 公开元素契约：所有 JSX 表达式、render 返回值、children 的静态类型。
  *
@@ -33,9 +31,16 @@ export interface Element {
 export type ElementType =
   | string
   | symbol
-  | ComponentFunction<any>
-  | ComponentTag<any>
   | ClassComponent<any>
+  | BuiltinComponent
+
+/**
+ * 内置组件标记（Teleport / Transition）：renderer 按 `__builtin` 特判，
+ * 不是普通类组件。
+ */
+export interface BuiltinComponent {
+  readonly __builtin?: string
+}
 
 /**
  * 类组件构造器（第一版类组件目标形态）。
@@ -48,37 +53,10 @@ export interface ClassComponent<P = Record<string, any>> {
 }
 
 /**
- * 源码层组件：用户书写的组件函数（compiler 转换之前）。
+ * 从类组件构造器推导 props。
  *
- *   function Hello(props: Props) { return <div /> }
- *   // 公开类型 = (props: Props) => Element | null
- *
- * 返回值限制为 Element | null：返回普通值（number / string / 对象）的
- * 函数不是组件，作为 JSX 标签或公开 API 入参时会在类型期报错。
- */
-export type ComponentFunction<P = Record<string, any>> = (
-  props: P,
-) => Element | null
-
-/**
- * 编译后组件的「JSX 标签视图」（公开层）。
- *
- * 运行时组件就是 setup 函数本体（defineComponent 产物，带
- * `__actview_component` 标记，见 internal 的 Component）；TypeScript 的 JSX
- * 标签检查要求 call signature，这里用交叉补上「(props: P) => any」的标签
- * 视图 —— 纯类型层，运行时不会额外包装：
- *   - 命名用 ComponentTag（标签）而不是 Component（运行时函数），提醒这是视图；
- *   - 真正的运行时形状见 runtime-core/internal 的 Component（= setup 函数）。
- */
-export type ComponentTag<P = Record<string, any>> = Component<P> &
-  ((props: P) => any)
-
-/**
- * 从组件推导 props。同时支持两种视图：
- *   1) 标记组件：ComponentTag<P>（defineComponent 产物，内含 setup 签名）
- *   2) 源码函数：ComponentFunction<P>（(props: P) => Element | null）
- *
- * 用 `...rest` 吸收 setup 的第二个参数（SetupContext），避免 infer 失配。
+ * 优先从实例的 `$props`（ActViewComponent<P> 的基类声明）推导，这样即使
+ * 子类没有显式 constructor 也能得到精确 props；否则退回构造器第一个参数。
  */
 export type ComponentProps<C> = C extends new (
   ...args: any[]
@@ -86,9 +64,7 @@ export type ComponentProps<C> = C extends new (
   ? P
   : C extends new (props: infer P, ...rest: any[]) => any
     ? P
-    : C extends (props: infer P, ...rest: any[]) => any
-      ? P
-      : {}
+    : {}
 
 /** 单个子节点（渲染器会忽略 boolean / null / undefined） */
 export type ElementChild =

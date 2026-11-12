@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/vite.ts'],
+  entry: ['src/index.ts'],
   format: ['esm'],
   dts: {
     compilerOptions: {
@@ -14,6 +14,4 @@ export default defineConfig({
   },
   clean: true,
   outDir: 'dist',
-  // vite 是可选 peer（只有 ./vite 子路径需要）
-  external: ['vite'],
 })

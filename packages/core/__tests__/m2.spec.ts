@@ -1,3 +1,4 @@
+import { testComponent } from './test-helper'
 // ============================================================
 // @actview/core M2 验收测试（happy-dom）
 //   - children diff：keyed（重排/反转/插入/删除/组件实例保持）/ unkeyed
@@ -11,7 +12,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createApp,
-  defineComponent,
   inject,
   nextTick,
   onMounted,
@@ -54,7 +54,7 @@ afterEach(() => {
 describe('@actview/core M2：keyed children diff', () => {
   function createList() {
     let order!: Ref<number[]>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       order = ref([1, 2, 3])
       return () =>
         h(
@@ -112,7 +112,7 @@ describe('@actview/core M2：keyed children diff', () => {
     const setupCounts = new Map<number, number>()
     const renderCounts = new Map<number, number>()
 
-    const Item = defineComponent((props: any) => {
+    const Item = testComponent((props: any) => {
       setupCounts.set(props.id, (setupCounts.get(props.id) ?? 0) + 1)
       return () => {
         renderCounts.set(props.id, (renderCounts.get(props.id) ?? 0) + 1)
@@ -120,7 +120,7 @@ describe('@actview/core M2：keyed children diff', () => {
       }
     })
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       order = ref([1, 2, 3])
       const labels: Record<number, string> = { 1: 'a', 2: 'b', 3: 'c' }
       return () =>
@@ -161,7 +161,7 @@ describe('@actview/core M2：keyed children diff', () => {
 
   it('unkeyed：长度变化（缩短 / 加长）', async () => {
     let items!: Ref<string[]>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       items = ref(['a', 'b', 'c'])
       return () =>
         h('ul', null, ...items.value.map((text) => h('li', null, text)))
@@ -195,12 +195,12 @@ describe('@actview/core M2：provide / inject', () => {
   it('祖先 provide，后代 inject（跨层级）', () => {
     const THEME = 'theme'
 
-    const GrandChild = defineComponent(() => {
+    const GrandChild = testComponent(() => {
       const theme = inject(THEME, 'unknown')
       return () => h('span', null, String(theme))
     })
-    const Child = defineComponent(() => () => h('div', null, h(GrandChild)))
-    const Provider = defineComponent(() => {
+    const Child = testComponent(() => () => h('div', null, h(GrandChild)))
+    const Provider = testComponent(() => {
       provide(THEME, 'dark')
       return () => h(Child)
     })
@@ -213,17 +213,17 @@ describe('@actview/core M2：provide / inject', () => {
   it('兄弟隔离：provide 的 copy-on-write 不污染兄弟', () => {
     const KEY = 'color'
 
-    const Leaf = defineComponent(() => {
+    const Leaf = testComponent(() => {
       const color = inject(KEY, 'default')
       return () => h('i', null, String(color))
     })
-    const Provider = defineComponent(() => {
+    const Provider = testComponent(() => {
       provide(KEY, 'red')
       return () => h(Leaf)
     })
-    const Plain = defineComponent(() => () => h(Leaf))
+    const Plain = testComponent(() => () => h(Leaf))
 
-    const App = defineComponent(() => () => h('div', null, h(Provider), h(Plain)))
+    const App = testComponent(() => () => h('div', null, h(Provider), h(Plain)))
 
     const root = mountRoot()
     createApp(App).mount(root)
@@ -235,7 +235,7 @@ describe('@actview/core M2：provide / inject', () => {
 
   it('app.provide：根注入表对整棵树可见', () => {
     const THEME = 'theme'
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       const theme = inject(THEME, 'light')
       return () => h('span', null, String(theme))
     })
@@ -252,7 +252,7 @@ describe('@actview/core M2：provide / inject', () => {
     let provided: unknown
     let missing: unknown
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       provided = inject('missing', 'fallback')
       missing = inject('missing')
       return () => h('div')
@@ -270,10 +270,10 @@ describe('@actview/core M2：provide / inject', () => {
 // ============================================================
 describe('@actview/core M2：public instance proxy', () => {
   it('app.mount 返回公开实例；$props/$el/$parent/$root/$ 可用', () => {
-    const Child = defineComponent((props: any) => () =>
+    const Child = testComponent((props: any) => () =>
       h('span', { id: 'child' }, String(props.msg)),
     )
-    const App = defineComponent(() => () => h('div', null, h(Child, { msg: 'hi' })))
+    const App = testComponent(() => () => h('div', null, h(Child, { msg: 'hi' })))
 
     const root = mountRoot()
     const app = createApp(App, { rootProp: 1 })
@@ -295,8 +295,8 @@ describe('@actview/core M2：public instance proxy', () => {
     const childRef = (value: ComponentPublicInstance | null) => {
       childProxy = value
     }
-    const Child = defineComponent(() => () => h('span', null, 'child'))
-    const App = defineComponent(() => () => h('div', null, h(Child, { ref: childRef })))
+    const Child = testComponent(() => () => h('span', null, 'child'))
+    const App = testComponent(() => () => h('div', null, h(Child, { ref: childRef })))
 
     const root = mountRoot()
     const appInstance = createApp(App).mount(root) as ComponentPublicInstance
@@ -311,17 +311,17 @@ describe('@actview/core M2：public instance proxy', () => {
     let proxy!: ComponentPublicInstance
     let renderCount = 0
 
-    const Child = defineComponent(() => () => {
+    const Child = testComponent(() => () => {
       renderCount++
       return h('span', null, 'child')
     })
-    const App = defineComponent(() => () => h('div', null, h(Child)))
+    const App = testComponent(() => () => h('div', null, h(Child)))
 
     const root = mountRoot()
     createApp(App).mount(root)
 
     // 通过根实例找不到子 proxy，直接构造一个暴露 ref 的组件拿 proxy
-    const WithRef = defineComponent(() => () =>
+    const WithRef = testComponent(() => () =>
       h(Child, { ref: (v: any) => (proxy = v) }),
     )
     const root2 = mountRoot()
@@ -337,7 +337,7 @@ describe('@actview/core M2：public instance proxy', () => {
     let proxy!: ComponentPublicInstance
     let count!: Ref<number>
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () =>
         h('div', { ref: (v: any) => (proxy = v) }, String(count.value))
@@ -362,11 +362,11 @@ describe('@actview/core M2：更新优化与 nextTick', () => {
     let parentCount!: Ref<number>
     let childRenderCount = 0
 
-    const Child = defineComponent(() => () => {
+    const Child = testComponent(() => () => {
       childRenderCount++
       return h('span', null, 'stable')
     })
-    const Parent = defineComponent(() => {
+    const Parent = testComponent(() => {
       parentCount = ref(0)
       return () =>
         h('div', null, h('span', null, String(parentCount.value)), h(Child))
@@ -390,7 +390,7 @@ describe('@actview/core M2：更新优化与 nextTick', () => {
 
   it('mounted 中 nextTick 在 DOM 就绪后执行', async () => {
     const logs: string[] = []
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       onMounted(() => {
         logs.push('mounted')
         nextTick(() => logs.push('tick'))
@@ -415,7 +415,7 @@ describe('@actview/core M2：DOM property / class / style', () => {
     let text!: Ref<string>
     let disabled!: Ref<boolean>
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       text = ref('hello')
       disabled = ref(false)
       return () =>
@@ -444,7 +444,7 @@ describe('@actview/core M2：DOM property / class / style', () => {
 
   it('class：string / array / object 归一化', async () => {
     let cls!: Ref<any>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       cls = ref('a b')
       return () => h('div', { class: cls.value })
     })
@@ -470,7 +470,7 @@ describe('@actview/core M2：DOM property / class / style', () => {
 
   it('style：对象 / string / 移除旧 key', async () => {
     let style!: Ref<any>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       style = ref({ color: 'red', fontSize: '12px' })
       return () => h('div', { style: style.value })
     })
@@ -494,7 +494,7 @@ describe('@actview/core M2：DOM property / class / style', () => {
 
   it('innerHTML / textContent 特殊 props', async () => {
     let html!: Ref<string>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       html = ref('<b>one</b>')
       return () => h('div', { innerHTML: html.value })
     })
@@ -513,7 +513,7 @@ describe('@actview/core M2：DOM property / class / style', () => {
 describe('@actview/core M2：事件与 SVG', () => {
   it('事件 options：once 只触发一次', async () => {
     let clicks = 0
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h('button', {
         onClick: { handler: () => clicks++, once: true },
       }),
@@ -531,7 +531,7 @@ describe('@actview/core M2：事件与 SVG', () => {
   it('事件后缀 Capture 走 capture 选项', async () => {
     let count!: Ref<number>
     let clicked = 0
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () =>
         h(
@@ -563,7 +563,7 @@ describe('@actview/core M2：事件与 SVG', () => {
 
   it('SVG 元素使用正确 namespace', () => {
     const SVG_NS = 'http://www.w3.org/2000/svg'
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h('svg', { viewBox: '0 0 10 10' }, h('circle', { r: '5', cx: '5', cy: '5' })),
     )
 
@@ -580,7 +580,7 @@ describe('@actview/core M2：事件与 SVG', () => {
 
   it('属性移除：旧 props 删除后 removeAttribute', async () => {
     let title!: Ref<string | null>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       title = ref('hello')
       return () => h('div', { title: title.value ?? null })
     })

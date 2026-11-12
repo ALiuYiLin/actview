@@ -1,3 +1,4 @@
+import { testComponent } from './test-helper'
 // ============================================================
 // 细节债验收（M3 边界）：
 //   - Teleport 跨树锚点：多 Teleport 同 target 顺序 / 兄弟节点顺序 /
@@ -11,7 +12,6 @@ import {
   KeepAlive,
   Teleport,
   createApp,
-  defineComponent,
   nextTick,
   onActivated,
 } from '../src/index'
@@ -50,7 +50,7 @@ describe('@actview/core 细节债：Teleport 跨树锚点', () => {
 
     let text!: Ref<string>
     let showSecond!: Ref<boolean>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       text = ref('A')
       showSecond = ref(true)
       return () =>
@@ -96,7 +96,7 @@ describe('@actview/core 细节债：Teleport 跨树锚点', () => {
     document.body.append(t1, t2)
 
     let to!: Ref<string>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       to = ref('#t1')
       return () =>
         h(
@@ -132,7 +132,7 @@ describe('@actview/core 细节债：KeepAlive 多根', () => {
     let setupCount = 0
     let activatedCount = 0
 
-    const Multi = defineComponent(() => {
+    const Multi = testComponent(() => {
       setupCount++
       onActivated(() => activatedCount++)
       return () =>
@@ -144,9 +144,9 @@ describe('@actview/core 细节债：KeepAlive 多根', () => {
         )
     }, 'Multi')
 
-    const Other = defineComponent(() => () => h('i', null, 'O'), 'Other')
+    const Other = testComponent(() => () => h('i', null, 'O'), 'Other')
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       which = ref('multi')
       return () =>
         h(KeepAlive, null, which.value === 'multi' ? h(Multi) : h(Other))
@@ -182,7 +182,7 @@ describe('@actview/core 细节债：KeepAlive 多根', () => {
 
   it('多根组件失活后节点全部移出文档', async () => {
     let which!: Ref<'multi' | 'other'>
-    const Multi = defineComponent(
+    const Multi = testComponent(
       () => () =>
         h(
           Fragment,
@@ -193,9 +193,9 @@ describe('@actview/core 细节债：KeepAlive 多根', () => {
         ),
       'Multi',
     )
-    const Other = defineComponent(() => () => h('i', null, 'O'))
+    const Other = testComponent(() => () => h('i', null, 'O'))
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       which = ref('multi')
       return () =>
         h(KeepAlive, null, which.value === 'multi' ? h(Multi) : h(Other))

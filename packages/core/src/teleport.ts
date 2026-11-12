@@ -8,12 +8,12 @@
 //   - resolveTeleportTarget：把 props.to（选择器 / Element）解析成目标容器。
 // ============================================================
 
-import type { ComponentTag } from '@actview/runtime-core'
+import type { BuiltinComponent } from '@actview/runtime-core'
 
 /** Teleport 内置组件标记（renderer 只按 `__builtin` 字段识别） */
 export const Teleport = {
   __builtin: 'teleport',
-} as unknown as ComponentTag<any>
+} as unknown as BuiltinComponent
 
 /**
  * 解析 Teleport 的目标容器。

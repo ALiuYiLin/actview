@@ -57,21 +57,19 @@ export {
 export {
   Fragment,
   createElement,
-  defineComponent,
   isComponent,
   isValidElement,
 } from '@actview/runtime-core'
 
 export type {
-  ComponentFunction,
+  BuiltinComponent,
+  ClassComponent,
   ComponentProps,
-  ComponentTag,
   Element,
   ElementChild,
   ElementChildren,
   ElementType,
   RenderFunction,
-  SetupContext,
 } from '@actview/runtime-core'
 
 export type { ComponentPublicInstance } from './instance'

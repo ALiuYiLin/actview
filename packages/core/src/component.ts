@@ -24,11 +24,8 @@ import {
   resetTracking,
   shallowReactive,
 } from '@actview/reactivity'
-import type { RenderFunction, SetupContext } from '@actview/runtime-core'
-import {
-  isClassComponent,
-  type ClassComponentCtor,
-} from '@actview/runtime-core'
+import type { RenderFunction } from '@actview/runtime-core'
+import type { ClassComponentCtor } from '@actview/runtime-core'
 import { getComponentMeta } from './decorators'
 import {
   Fragment,
@@ -305,75 +302,14 @@ function registerClassLifecycle(
 }
 
 /**
- * 初始化组件实例：执行一次 setup，把返回的 render 函数挂到实例上。
- *
- * 类组件（@Component）走 setupClassComponent；函数组件（过渡期保留）走
- * 下面的 setup 函数路径。类路径的 @Ref / @Prop accessor 在构造后立即安装。
+ * 初始化组件实例：第一版只有 @Component 类组件路径。
+ * @Ref / @Prop accessor 在构造后立即安装，然后执行 @Setup。
  */
 export function setupComponent(
   instance: ComponentInternalInstance,
 ): Promise<RenderFunction> | null {
   initProps(instance, instance.vnode.props ?? null)
-
-  // 第一版类组件路径：@Component 标记的 class 构造器。
-  if (isClassComponent(instance.type)) {
-    return setupClassComponent(instance)
-  }
-
-  const prev = setCurrentInstance(instance)
-  try {
-    let pending: Promise<RenderFunction> | null = null
-
-    instance.scope.run(() => {
-      pauseTracking()
-      try {
-        // 运行时取 setup：类型层是 ComponentTag（公开的 JSX 标签视图），
-        // 实际调用形状是 setup(props, ctx) => render。
-        const setup = instance.type as unknown as (
-          props: Record<string, any>,
-          ctx: SetupContext,
-        ) => unknown
-        const result = setup(instance.props, {
-          get injects() {
-            return instance.injects
-          },
-        })
-
-        // async setup（M3）：先挂空 render 占位（渲染 null），返回 Promise；
-        // 拒绝由渲染器 pending.then 的 reject 分支交给 handleError，
-        // 这里不 throw（同步 setup 的校验失败仍然 throw）。
-        if (isThenable(result)) {
-          instance.render = (() => null) as unknown as RenderFunction
-          pending = Promise.resolve(result).then((render) => {
-            if (typeof render !== 'function') {
-              throw new Error(
-                `[actview] 组件 "${getComponentName(instance)}" 的 async setup ` +
-                  `resolve 值必须是 render 函数（当前为 ${typeof render}）`,
-              )
-            }
-            instance.render = render as unknown as RenderFunction
-            return instance.render
-          })
-          return
-        }
-
-        if (typeof result !== 'function') {
-          throw new Error(
-            `[actview] 组件 "${getComponentName(instance)}" 的 setup 必须返回 render 函数` +
-              `（当前为 ${typeof result}）`,
-          )
-        }
-
-        instance.render = result as unknown as RenderFunction
-      } finally {
-        resetTracking()
-      }
-    })
-
-    return pending
-  } finally {
-    setCurrentInstance(prev)
-  }
+  return setupClassComponent(instance)
 }
 
 /** props 初始化：拷贝 vnode.props 为 shallowReactive（key 属于 VNode 身份，不进 props） */

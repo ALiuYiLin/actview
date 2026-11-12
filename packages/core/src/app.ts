@@ -3,8 +3,8 @@
 //
 // 应用对象持有 AppContext（config / app 反指 / provides 注入表），mount 时
 // 创建根组件 VNode 并交给渲染器 render(vnode, container)；unmount 即
-// render(null, container)。根组件必须是 isComponent（compiler 包装 / 显式
-// defineComponent），未标记函数直接报错，避免"普通函数当组件"的双语义。
+// render(null, container)。根组件必须是 @Component 类（带
+// __actview_class_component 标记），裸 class / 函数直接报错。
 //
 // M2：
 //   - app.provide(key, value)：写入 AppContext.provides（根组件 injects 初始表）；
@@ -12,11 +12,7 @@
 // ============================================================
 
 import { isComponent } from '@actview/runtime-core'
-import type {
-  ClassComponentCtor,
-  ComponentFunction,
-  ComponentTag,
-} from '@actview/runtime-core'
+import type { ClassComponentCtor } from '@actview/runtime-core'
 import { createVNode, type VNode } from '@actview/runtime-core/internal'
 import type {
   AppConfig,
@@ -37,8 +33,8 @@ export interface App {
   _container: Element | null
   /** 应用配置（与 _context.config 同一对象） */
   config: AppConfig
-  /** 根组件（函数组件 tag 或类组件构造器） */
-  component: ComponentTag | ClassComponentCtor
+  /** 根组件（@Component 类构造器） */
+  component: ClassComponentCtor
   /**
    * 提供应用级注入值：写入 AppContext.provides（根组件的初始注入表），
    * 所有组件都能 inject 到。建议在 mount 之前调用（根组件 setup 时继承该表）。
@@ -64,7 +60,7 @@ export interface App {
  * @param rootProps 根组件 props
  */
 export function createApp(
-  rootComponent: ComponentTag | ComponentFunction | ClassComponentCtor,
+  rootComponent: ClassComponentCtor,
   rootProps: Record<string, any> | null = null,
 ): App {
   assertRootComponent(rootComponent)
@@ -121,13 +117,13 @@ export function createApp(
   return app
 }
 
-/** 根组件运行时校验：必须是函数组件标记或 @Component 类组件 */
+/** 根组件运行时校验：必须是 @Component 类组件 */
 function assertRootComponent(
   component: unknown,
-): asserts component is ComponentTag | ClassComponentCtor {
+): asserts component is ClassComponentCtor {
   if (!isComponent(component)) {
     throw new Error(
-      '[actview] 根组件无效：需要 @Component 类组件（过渡期也接受 defineComponent 函数组件）' +
+      '[actview] 根组件无效：需要 @Component 类组件（必须实现 render）' +
         `（当前为 ${typeof component}）`,
     )
   }

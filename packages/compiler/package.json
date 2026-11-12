@@ -2,23 +2,16 @@
   "name": "@actview/compiler",
   "version": "0.0.1",
   "type": "module",
-  "description": "ActView compiler — layered TSX transform: defineComponent wrapping (L1) + JSX lowering (L2)",
+  "description": "ActView compiler package — L1 wrap removed; Babel retained for decorator lowering / future analysis",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts",
-    "./vite": "./src/vite.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@babel/core": "^8.0.1"
   },
-  "peerDependencies": {
-    "vite": "^6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "vite": {
-      "optional": true
-    }
-  },
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
   "devDependencies": {
     "vite": "^6.4.3"
   },
@@ -36,10 +29,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
-      },
-      "./vite": {
-        "types": "./dist/vite.d.ts",
-        "import": "./dist/vite.js"
       }
     },
     "main": "./dist/index.js",

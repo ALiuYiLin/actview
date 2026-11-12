@@ -1,3 +1,4 @@
+import { testComponent } from './test-helper'
 // ============================================================
 // @actview/core M3（第一批）验收测试（happy-dom）
 //   - 错误处理：ErrorBoundary / onErrorCaptured / app.config.errorHandler
@@ -12,7 +13,6 @@ import {
   Fragment,
   Suspense,
   createApp,
-  defineComponent,
   getDevtoolsHook,
   lazy,
   nextTick,
@@ -60,10 +60,10 @@ afterEach(() => {
 // ============================================================
 describe('@actview/core M3：错误处理', () => {
   it('ErrorBoundary：子组件渲染抛错 → 显示 fallback', async () => {
-    const Boom = defineComponent(() => () => {
+    const Boom = testComponent(() => () => {
       throw new Error('boom')
     })
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(
         ErrorBoundary,
         { fallback: h('span', null, 'fallback') },
@@ -80,10 +80,10 @@ describe('@actview/core M3：错误处理', () => {
   })
 
   it('ErrorBoundary：fallback 可以是函数（收到错误）', async () => {
-    const Boom = defineComponent(() => () => {
+    const Boom = testComponent(() => () => {
       throw new Error('kaboom')
     })
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(
         ErrorBoundary,
         {
@@ -104,10 +104,10 @@ describe('@actview/core M3：错误处理', () => {
 
   it('onErrorCaptured：父组件捕获子树错误', async () => {
     const captured: string[] = []
-    const Boom = defineComponent(() => () => {
+    const Boom = testComponent(() => () => {
       throw new Error('child-error')
     })
-    const Parent = defineComponent(() => {
+    const Parent = testComponent(() => {
       onErrorCaptured((err) => {
         captured.push((err as Error).message)
         return false
@@ -125,10 +125,10 @@ describe('@actview/core M3：错误处理', () => {
 
   it('app.config.errorHandler：无边界时交给全局处理', async () => {
     const handler = vi.fn()
-    const Boom = defineComponent(() => () => {
+    const Boom = testComponent(() => () => {
       throw new Error('global')
     })
-    const App = defineComponent(() => () => h(Boom))
+    const App = testComponent(() => () => h(Boom))
 
     const root = mountRoot()
     const app = createApp(App)
@@ -157,11 +157,11 @@ describe('@actview/core M3：async setup + Suspense', () => {
 
   it('async setup：Suspense fallback → 内容', async () => {
     const gate = deferred<string>()
-    const AsyncComp = defineComponent(async () => {
+    const AsyncComp = testComponent(async () => {
       const text = await gate.promise
       return () => h('b', null, text)
     })
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(
         Suspense,
         { fallback: h('span', null, 'loading') },
@@ -181,11 +181,11 @@ describe('@actview/core M3：async setup + Suspense', () => {
 
   it('lazy：loader 完成后渲染真实组件', async () => {
     const gate = deferred<void>()
-    const Real = defineComponent(() => () => h('i', null, 'real'))
+    const Real = testComponent(() => () => h('i', null, 'real'))
     const Lazy = lazy(() =>
       gate.promise.then(() => ({ default: Real })),
     )
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(Suspense, { fallback: h('span', null, 'loading') }, h(Lazy)),
     )
 
@@ -201,10 +201,10 @@ describe('@actview/core M3：async setup + Suspense', () => {
 
   it('async setup 拒绝：交给 ErrorBoundary / 全局处理', async () => {
     const handler = vi.fn()
-    const Failing = defineComponent(async () => {
+    const Failing = testComponent(async () => {
       throw new Error('async-fail')
     })
-    const App = defineComponent(() => () => h(Suspense, null, h(Failing)))
+    const App = testComponent(() => () => h(Suspense, null, h(Failing)))
 
     const root = mountRoot()
     const app = createApp(App)
@@ -229,7 +229,7 @@ describe('@actview/core M3：DevTools 钩子', () => {
     })
 
     let count!: Ref<number>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       count = ref(0)
       return () => h('div', null, String(count.value))
     }, 'App')
@@ -249,7 +249,7 @@ describe('@actview/core M3：DevTools 钩子', () => {
 
   it('未注册 hook 时零开销（不抛错）', () => {
     expect(getDevtoolsHook()).toBeNull()
-    const App = defineComponent(() => () => h('div', null, 'x'))
+    const App = testComponent(() => () => h('div', null, 'x'))
     const root = mountRoot()
     createApp(App).mount(root)
     expect(root.textContent).toBe('x')

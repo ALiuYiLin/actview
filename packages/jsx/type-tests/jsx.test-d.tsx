@@ -1,29 +1,30 @@
 // ============================================================
-// 编译期类型测试（type-tests，不执行）：公开 JSX 作者层
-//   - TSX 组件 props 推导 / 必填校验 / 未知属性拦截
+// 编译期类型测试（type-tests，不执行）：公开 JSX 作者层（第一版类组件）
+//   - 类组件 props 推导 / 必填校验 / 未知属性拦截
 //   - 事件参数与原生属性类型检查
 //   - JSX.Element 只暴露 4 个稳定字段（无 VNode 内部字段）
-//   - 返回非元素的函数不能当组件
+//   - ClassComponent / ComponentProps 公开视图可用
 // ============================================================
 
 import type {
-  ComponentFunction,
-  ComponentTag,
+  ClassComponent,
   ComponentProps,
   Element,
 } from '@actview/jsx'
 
 type HelloProps = { name: string; onSave?: (value: string) => void }
 
-function Hello(props: HelloProps) {
-  return <div class="hello">{props.name}</div>
+class Hello {
+  constructor(_props: HelloProps) {
+    void _props
+  }
+  render() {
+    return <div class="hello">hello</div>
+  }
 }
 
-// 公开作者层：源码里的组件就是函数
-export const helloAsFunction: ComponentFunction<HelloProps> = Hello
-
 // ------------------------------------------------------------
-// 1. JSX props 推导
+// 1. JSX props 推导（类组件构造器）
 // ------------------------------------------------------------
 export const ok = <Hello name="x" onSave={(value) => value.toUpperCase()} />
 // @ts-expect-error 缺少必填 prop name
@@ -50,24 +51,16 @@ node.el
 node.component
 
 // ------------------------------------------------------------
-// 3. 返回非元素的函数不能当组件（类型期拦截）
+// 3. ClassComponent / ComponentProps 公开视图
 // ------------------------------------------------------------
-function NotAComponent() {
-  return 1
-}
-// @ts-expect-error 组件必须返回 Element | null
-export const badComponent = <NotAComponent />
-
-// ------------------------------------------------------------
-// 4. 编译产物标签视图出现在公开层（ComponentTag / ComponentProps）
-// ------------------------------------------------------------
-declare const compiled: ComponentTag<HelloProps>
+declare const compiled: ClassComponent<HelloProps>
 export const compiledAsComponentProps: ComponentProps<typeof compiled> = {
   name: 'x',
 }
+export const helloClass: ClassComponent<HelloProps> = Hello
 
 // ------------------------------------------------------------
-// 5. 原生元素属性 / 事件类型
+// 4. 原生元素属性 / 事件类型
 // ------------------------------------------------------------
 // @ts-expect-error onClick 参数是 MouseEvent，不是 number
 const badEvent = <button onClick={(e: number) => e.toFixed()} />

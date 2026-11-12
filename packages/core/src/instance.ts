@@ -2,15 +2,11 @@
 // 渲染器内部类型（@actview/core）
 //
 // 这里是 DOM 渲染器的实现契约：组件实例、AppContext、调度任务。
-// 跨平台基础契约在 @actview/runtime-core（Element / ComponentTag /
-// ComponentInternalInstance 的最小字段），本文件在其上补充渲染器字段。
+// 跨平台基础契约在 @actview/runtime-core（Element / ClassComponentCtor /
+// RenderFunction）；本文件在其上补充渲染器字段。
 // ============================================================
 
-import type {
-  ClassComponentCtor,
-  ComponentTag,
-  RenderFunction,
-} from '@actview/runtime-core'
+import type { ClassComponentCtor, RenderFunction } from '@actview/runtime-core'
 import type { VNode } from '@actview/runtime-core/internal'
 import type { EffectScope, ReactiveEffect } from '@actview/reactivity'
 
@@ -79,8 +75,8 @@ export interface SchedulerJob {
 /** 组件实例（渲染器实现） */
 export interface ComponentInternalInstance {
   uid: number
-  /** 组件类型：函数组件 tag 或类组件构造器（第一版类组件目标形态） */
-  type: ComponentTag | ClassComponentCtor
+  /** 组件类型：@Component 类组件构造器 */
+  type: ClassComponentCtor
   parent: ComponentInternalInstance | null
   appContext: AppContext
   vnode: VNode

@@ -19,12 +19,12 @@
 //   同一元素重复调用会清理上一轮定时器（el 上存 _transitionTimer）。
 // ============================================================
 
-import type { ComponentTag } from '@actview/runtime-core'
+import type { BuiltinComponent } from '@actview/runtime-core'
 
 /** Transition 内置组件标记（renderer 只按 `__builtin` 字段识别） */
 export const Transition = {
   __builtin: 'transition',
-} as unknown as ComponentTag<any>
+} as unknown as BuiltinComponent
 
 /** 默认过渡时长（ms） */
 const DEFAULT_DURATION = 300

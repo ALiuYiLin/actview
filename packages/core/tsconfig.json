@@ -41,7 +41,7 @@
       "@actview/shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../global.d.ts"],
   "references": [
     { "path": "../shared" },
     { "path": "../reactivity" },

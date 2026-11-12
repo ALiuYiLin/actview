@@ -8,7 +8,7 @@
 export interface DevtoolsComponentInfo {
   /** 实例唯一 id（自增） */
   id: number
-  /** 组件名（defineComponent 存 name / Babel 保留函数名） */
+  /** 组件名（@Component 的 name / class name） */
   name: string
   /** 组件实例 */
   instance: any

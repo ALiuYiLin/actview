@@ -1,3 +1,4 @@
+import { testComponent } from './test-helper'
 // ============================================================
 // @actview/core M3b 验收测试（happy-dom）
 //   - Teleport：children 渲染到目标容器 / 更新 / 卸载
@@ -12,7 +13,6 @@ import {
   Teleport,
   Transition,
   createApp,
-  defineComponent,
   nextTick,
   onActivated,
   onDeactivated,
@@ -60,7 +60,7 @@ describe('@actview/core M3b：Teleport', () => {
     document.body.appendChild(target)
 
     let text!: Ref<string>
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       text = ref('one')
       return () =>
         h(
@@ -88,7 +88,7 @@ describe('@actview/core M3b：Teleport', () => {
   it('to 可以是 Element', () => {
     const target = document.createElement('section')
     document.body.appendChild(target)
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(Teleport, { to: target }, h('b', null, 'x')),
     )
     const root = mountRoot()
@@ -107,7 +107,7 @@ describe('@actview/core M3b：KeepAlive', () => {
     let aSetup = 0
     let bSetup = 0
 
-    const A = defineComponent(() => {
+    const A = testComponent(() => {
       aSetup++
       onMounted(() => logs.push('A-mounted'))
       onActivated(() => logs.push('A-activated'))
@@ -116,7 +116,7 @@ describe('@actview/core M3b：KeepAlive', () => {
       return () => h('i', null, 'A')
     }, 'A')
 
-    const B = defineComponent(() => {
+    const B = testComponent(() => {
       bSetup++
       onMounted(() => logs.push('B-mounted'))
       onActivated(() => logs.push('B-activated'))
@@ -124,7 +124,7 @@ describe('@actview/core M3b：KeepAlive', () => {
       return () => h('i', null, 'B')
     }, 'B')
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       which = ref('a')
       return () =>
         h(KeepAlive, null, which.value === 'a' ? h(A) : h(B))
@@ -154,13 +154,13 @@ describe('@actview/core M3b：KeepAlive', () => {
     let which!: Ref<'a' | 'b'>
     const logs: string[] = []
 
-    const A = defineComponent(() => () => h('i', null, 'A'), 'A')
-    const B = defineComponent(() => {
+    const A = testComponent(() => () => h('i', null, 'A'), 'A')
+    const B = testComponent(() => {
       onUnmounted(() => logs.push('B-unmounted'))
       return () => h('i', null, 'B')
     }, 'B')
 
-    const App = defineComponent(() => {
+    const App = testComponent(() => {
       which = ref('a')
       return () =>
         h(KeepAlive, { include: 'A' }, which.value === 'a' ? h(A) : h(B))
@@ -185,7 +185,7 @@ describe('@actview/core M3b：KeepAlive', () => {
 // ============================================================
 describe('@actview/core M3b：Transition', () => {
   it('enter 类名添加后按时长清理', async () => {
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(Transition, { name: 'fade', duration: 20 }, h('div', null, 'x')),
     )
     const root = mountRoot()
@@ -201,7 +201,7 @@ describe('@actview/core M3b：Transition', () => {
   })
 
   it('leave：卸载时先播 leave 类，时长后移除 DOM', async () => {
-    const App = defineComponent(() => () =>
+    const App = testComponent(() => () =>
       h(Transition, { name: 'fade', duration: 20 }, h('div', null, 'x')),
     )
     const root = mountRoot()
