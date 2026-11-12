@@ -461,6 +461,35 @@ interface ComponentMeta {
 
 ---
 
+### 3.7 数据 / 注入装饰器（第一版已实现）
+
+| 装饰器 | 元数据 | 运行时接线 |
+|---|---|---|
+| `@Reactive` | `reactive: Map<key, { shallow? }>` | 构造后摘掉 own 字段，安装 accessor 返回 `reactive(initial)` / `shallowReactive`；setter 重新包装新对象 |
+| `@Computed` | `computed: Map<key, getter>` | 在 `instance.scope.run` 内为每实例创建 `computed(() => getter.call(ctx))`；实例 accessor 读 `cache.value`（惰性 + 缓存） |
+| `@Watch(source, options?)` | `watch: WatchMeta[]` | `@Setup` 之后注册 `watch(getter, handler)`；source 支持字段名 / 字符串数组 / getter；handler 以 `ctx` 为 `this` 调用，参数 `(value, oldValue, onCleanup)`；随 scope 自动停止 |
+| `@Provide` | `provides: { key, property }[]` | `@Setup` 之后执行 `provide(key, ctx[property])`，供后代注入 |
+| `@Inject` | `injects: { key, property, default? }[]` | `@Setup` 之前执行 `inject(key, default ?? initializer)`，写入实例字段（快照语义） |
+
+安装顺序（`setupClassComponent`）：
+
+```
+new Ctor → 公开实例 → scope:
+  @Prop / @Ref / @Reactive / @Inject → @Computed → 生命周期注册
+  → @Setup → @Provide / @Watch → render
+```
+
+async `@Setup` 时，`@Provide` / `@Watch` 在 Promise resolve 之后安装（`installProvides/installWatches`）。
+
+注意：
+
+- `@Reactive` 只对对象 / 数组生效；原始值字段请用 `@Ref`；
+- `@Computed` 必须用于 getter；不要同时声明同名字段；
+- `@Inject` 是 setup 期快照；需要响应式注入时 provide `@Reactive` 对象 / ref，并在 render 中读取；
+- `@Provide` 当前只支持字段级（方法级提供后续版本）。
+
+---
+
 ## 4. 装饰器工具链实测（本机，2026-11）
 
 测试环境：`typescript 6.0.3`、`esbuild 0.25.0 / 0.27.7`（Vite 6.4.3 依赖链）、当前 `tsconfig.base.json`（用户 WIP 已加 `experimentalDecorators: true` / `emitDecoratorMetadata: true`）。
@@ -742,14 +771,19 @@ export function runClassComponent(instance: ComponentInternalInstance): void {
 - ✅ 删除 `defineComponent`、函数组件路径、`ComponentFunction` / `ComponentTag` / `SetupFunction`；`isComponent` 只认类组件标记；
 - ✅ 删除 L1 wrap（`packages/compiler/src/{wrap,vite}.ts` 与 Vite 插件注册）；compiler 包保留占位，Babel 依赖保留；
 - ✅ `src/App.tsx` 迁移为目标类组件示例；`src/main.ts` 使用 `createApp(App)`；
-- ✅ 验证：`pnpm typecheck` / `pnpm test`（393 passed / 4 skipped）/ `pnpm build` / `pnpm build:packages` 全绿。
+- ✅ `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` 已实现：
+  - `@Reactive`：对象 / 数组字段安装 reactive（或 shallowReactive）代理；
+  - `@Computed`：getter 按实例创建 computed（惰性 + 缓存）；
+  - `@Watch`：方法装饰器，支持字段名 / 字段名数组 / getter、`immediate/deep` 选项，随 scope 自动停止；
+  - `@Provide` / `@Inject`：字段级注入，`@Inject(key, default?)` 支持默认值；
+- ✅ 验证：`pnpm typecheck` / `pnpm test`（core 64 条）/ `pnpm build` / `pnpm build:packages` 全绿。
 
 ### 本版未做（后续）
 
-- `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` / `@Bind`；
 - 静态分析 / manifest / 代码生成；
 - HMR / SSR / hydrate；
-- 版本发布策略（changeset）与 Stage-3 装饰器迁移。
+- 版本发布策略（changeset）与 Stage-3 装饰器迁移；
+- `@Bind`、`@Provide` 方法级提供等增强。
 
 ### 做
 

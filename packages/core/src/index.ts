@@ -22,21 +22,31 @@ export {
   BeforeUnmount,
   BeforeUpdate,
   Component,
+  Computed,
   Deactivated,
+  Inject,
   Mounted,
   Prop,
+  Provide,
+  Reactive,
   Ref,
   Setup,
   Unmounted,
   Updated,
+  Watch,
   getComponentMeta,
 } from './decorators'
 export type {
   ComponentMeta,
   ComponentOptions,
+  InjectMeta,
   LifecycleName,
   PropOptions,
+  ProvideMeta,
+  ReactiveOptions,
   RefOptions,
+  WatchMeta,
+  WatchSource,
 } from './decorators'
 export { setDevtoolsHook, getDevtoolsHook } from './devtools'
 export type { DevtoolsComponentInfo, DevtoolsHook } from './devtools'

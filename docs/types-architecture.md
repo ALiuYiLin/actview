@@ -46,7 +46,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 - `@Prop` 字段映射 `instance.props`（initializer 为缺省值）；
 - `@Ref` 字段：装饰器只记录元数据，渲染器在 `new Ctor()` 后安装每实例 accessor（`this.count` 类型为 `number`，内部是 `ref`）；
 - 生命周期：`@Setup` / `@BeforeMount` / `@Mounted` / `@BeforeUpdate` / `@Updated` / `@BeforeUnmount` / `@Unmounted` / `@Activated` / `@Deactivated`；
-- 第一版数据装饰器只支持 `@Prop` / `@Ref`；`@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` 后续版本再加。
+- 数据 / 注入装饰器：`@Reactive`（对象字段 reactive）、`@Computed`（getter 派生值）、`@Watch`（方法监听字段 / getter）、`@Provide` / `@Inject`（跨层级注入，支持默认值）。
 
 `ComponentProps<typeof Counter>` 优先从 `ActViewComponent<P>` 的 `$props` 声明推导，因此没有显式 constructor 也能得到精确 props。
 

@@ -19,10 +19,13 @@
 
 import {
   EffectScope,
+  computed,
   pauseTracking,
+  reactive,
   ref,
   resetTracking,
   shallowReactive,
+  watch,
 } from '@actview/reactivity'
 import type { RenderFunction } from '@actview/runtime-core'
 import type { ClassComponentCtor } from '@actview/runtime-core'
@@ -35,6 +38,7 @@ import {
   type VNode,
 } from '@actview/runtime-core/internal'
 import { hasChanged, hasOwn } from '@actview/shared'
+import { inject, provide } from './apiProvide'
 import type {
   AppContext,
   ComponentInternalInstance,
@@ -144,10 +148,10 @@ export function createComponentPublicInstance(
 }
 
 /**
- * 第一版类组件 setup：
+ * 类组件 setup：
  *
- *   new Ctor(props) → installClassPublicInstance → installDeclaredFields
- *   → @Setup（同步或 Promise）→ instance.render = () => ctx.render()
+ *   new Ctor(props) → 公开实例 → scope 内安装 @Prop/@Ref/@Reactive/@Computed/
+ *   @Inject → 注册生命周期 → @Setup → @Provide/@Watch → render
  *
  * @Ref / @Prop 的 accessor 必须在构造之后安装：ES2022 class field 的 define
  * 语义会创建 own data property 并遮蔽原型 accessor（见设计文档 §3.3）。
@@ -162,7 +166,6 @@ function setupClassComponent(
   instance.ctx = ctx
   instance.proxy = ctx as unknown as ComponentPublicInstance
   installClassPublicInstance(ctx, instance)
-  installDeclaredFields(ctx, instance, meta)
 
   const prev = setCurrentInstance(instance)
   try {
@@ -171,21 +174,41 @@ function setupClassComponent(
     instance.scope.run(() => {
       pauseTracking()
       try {
+        // 字段 / 注入 / computed 必须在 setup 前就位。
+        installDeclaredFields(ctx, instance, meta)
+        installComputed(ctx, meta)
         registerClassLifecycle(instance, ctx, meta)
 
         const setupName = meta.setup
         const result = setupName ? ctx[setupName]?.() : undefined
 
-        // 第一版允许 @Setup 返回 Promise（给 Suspense / lazy 留协议）；
-        // 先渲染 null 占位，resolve 后切回真实 render。
+        // 允许 @Setup 返回 Promise（async setup）：先渲染 null 占位，
+        // resolve 后再安装 @Provide/@Watch 并切回真实 render。
         if (isThenable(result)) {
           instance.render = (() => null) as unknown as RenderFunction
           pending = Promise.resolve(result).then(() => {
+            const prevInner = setCurrentInstance(instance)
+            try {
+              instance.scope.run(() => {
+                pauseTracking()
+                try {
+                  installProvides(ctx, meta)
+                  installWatches(ctx, meta)
+                } finally {
+                  resetTracking()
+                }
+              })
+            } finally {
+              setCurrentInstance(prevInner)
+            }
             instance.render = () => ctx.render()
             return instance.render
           })
           return
         }
+
+        installProvides(ctx, meta)
+        installWatches(ctx, meta)
       } finally {
         resetTracking()
       }
@@ -235,11 +258,13 @@ function installClassPublicInstance(
 }
 
 /**
- * 安装 @Prop / @Ref 的每实例 accessor。
- *
- * 先摘掉 class field initializer 产生的 own data property，再安装 accessor：
+ * 安装声明字段的每实例 accessor：
  *   - @Prop：读 instance.props[key]（缺省时用 initializer 值做 fallback）；
- *   - @Ref：闭包持有一个真正 ref，get/set 与 this.count ≈ count.value 等价。
+ *   - @Ref：闭包持有一个真正 ref，get/set 与 this.count ≈ count.value 等价；
+ *   - @Reactive：对象 / 数组字段变成 reactive（或 shallowReactive）代理；
+ *   - @Inject：setup 期解析一次注入值，写入实例字段。
+ *
+ * 先摘掉 class field initializer 产生的 own data property，再安装 accessor。
  */
 function installDeclaredFields(
   ctx: Record<string, any>,
@@ -276,7 +301,111 @@ function installDeclaredFields(
       },
     })
   }
+
+  for (const [key, options] of meta.reactive) {
+    const own = Object.getOwnPropertyDescriptor(ctx, key)
+    const initial = own?.value
+    if (own) delete ctx[key]
+    let state = toReactive(initial, options)
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => state,
+      set: (value: unknown) => {
+        state = toReactive(value, options)
+      },
+    })
+  }
+
+  for (const entry of meta.injects) {
+    const own = Object.getOwnPropertyDescriptor(ctx, entry.property)
+    const fallback = entry.default !== undefined ? entry.default : own?.value
+    if (own) delete ctx[entry.property]
+    const value = inject(entry.key, fallback)
+    Object.defineProperty(ctx, entry.property, {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value,
+    })
+  }
 }
+
+/** 对象 → reactive / shallowReactive；原始值原样返回（@Reactive 设计为对象字段） */
+function toReactive(value: unknown, options: { shallow?: boolean }): unknown {
+  if (value !== null && typeof value === 'object') {
+    return options.shallow ? shallowReactive(value as object) : reactive(value as object)
+  }
+  return value
+}
+
+/** 安装 @Computed：每实例一个 computed，惰性求值 + 缓存 */
+function installComputed(
+  ctx: Record<string, any>,
+  meta: ReturnType<typeof getComponentMeta>,
+): void {
+  for (const [key, getter] of meta.computed) {
+    const cache = computed(() => getter.call(ctx))
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: false,
+      get: () => cache.value,
+    })
+  }
+}
+
+/** 安装 @Provide：在 @Setup 之后把字段当前值写入注入表 */
+function installProvides(
+  ctx: Record<string, any>,
+  meta: ReturnType<typeof getComponentMeta>,
+): void {
+  for (const entry of meta.provides) {
+    provide(entry.key, ctx[entry.property])
+  }
+}
+
+/**
+ * 安装 @Watch：每项注册到实例 scope，组件卸载时随 scope 自动停止。
+ *
+ * source 支持字段名 / 字段名数组 / getter；handler 是实例方法。
+ */
+function installWatches(
+  ctx: Record<string, any>,
+  meta: ReturnType<typeof getComponentMeta>,
+): void {
+  for (const entry of meta.watch) {
+    const getter = buildWatchGetter(ctx, entry.source)
+    watch(
+      getter as () => any,
+      (value: any, oldValue: any, onCleanup: any) => {
+        const handler = ctx[entry.method]
+        if (typeof handler === 'function') {
+          handler.call(ctx, value, oldValue, onCleanup)
+        }
+      },
+      entry.options,
+    )
+  }
+}
+
+/** 把 @Watch source 转成 watch 可消费的 getter（数组 → getter 数组） */
+function buildWatchGetter(
+  ctx: Record<string, any>,
+  source: ComponentMetaWatchSource,
+): (() => any) | Array<() => any> {
+  const toGetter = (item: string | ((this: any) => any)): (() => any) =>
+    typeof item === 'function' ? () => item.call(ctx) : () => ctx[item]
+
+  return Array.isArray(source)
+    ? source.map((item) => toGetter(item))
+    : toGetter(source)
+}
+
+/** 与 decorators.ts 的 WatchSource 对齐（避免 core 运行时依赖装饰器实现细节） */
+type ComponentMetaWatchSource =
+  | string
+  | string[]
+  | ((this: any) => any)
 
 /** 把装饰器记录的生命周期方法注册到实例 hooks 数组（顺序：父类 → 子类） */
 function registerClassLifecycle(

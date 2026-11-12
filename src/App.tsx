@@ -1,6 +1,7 @@
 import {
   ActViewComponent,
   Component,
+  Computed,
   Mounted,
   Prop,
   Ref,
@@ -40,6 +41,11 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
     console.log("[actview] Counter unmounted");
   }
 
+  @Computed
+  get double(): number {
+    return this.count * 2;
+  }
+
   render() {
     return (
       <button
@@ -47,7 +53,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
           this.count++;
         }}
       >
-        点击+1：{this.count}
+        点击+1：{this.count} / double：{this.double}
       </button>
     );
   }
