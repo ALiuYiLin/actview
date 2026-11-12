@@ -1,5 +1,5 @@
 // ============================================================
-// Suspense + lazy — 异步组件与加载态（M3）
+// Suspense + lazy — 异步组件与加载态（M3，第一版类组件迁移）
 //
 //   h(Suspense, { fallback: h('span', 'loading') }, h(AsyncComp))
 //   const LazyComp = lazy(() => import('./Comp'))
@@ -11,18 +11,17 @@
 //      Promise resolve / reject 后 resolve()（隐藏 fallback）；
 //   3. children 始终挂载（pending 时由外层 div 的 display:none 隐藏，
 //      不卸载重挂，避免异步组件 setup 反复执行）；fallback 仅在 pending 时追加；
-//   4. lazy(loader) 就是 async setup 组件：await loader 后返回
-//      `() => createVNode(Comp, props)`，把加载态交给 Suspense 统一处理。
+//   4. lazy(loader) 就是 async setup 类组件：await loader 后渲染真实组件。
 // ============================================================
 
-import { ref } from '@actview/reactivity'
-import { defineComponent, type ComponentTag } from '@actview/runtime-core'
+import type { ClassComponentCtor } from '@actview/runtime-core'
 import {
   Fragment,
   createVNode,
   type VNodeChild,
 } from '@actview/runtime-core/internal'
 import type { ComponentInternalInstance } from './instance'
+import { ActViewComponent, Component, Ref, Setup } from './decorators'
 import { getCurrentInstance, onBeforeUnmount } from './lifecycle'
 
 /** 最近 Suspense 的挂起上下文（renderer 用它 register / resolve async setup） */
@@ -45,64 +44,67 @@ export function popSuspense(instance: ComponentInternalInstance): void {
 
 /**
  * 当前最近的 Suspense 挂起上下文；不在 Suspense 内（或边界未就绪）→ null。
- * 返回的是 { register, resolve }，async setup 组件挂载时由 renderer 调用。
  */
 export function getCurrentSuspense(): SuspenseContext | null {
   const instance = suspenseStack[suspenseStack.length - 1]
   return instance?.suspenseCtx ?? null
 }
 
-export const Suspense = defineComponent<Record<string, any>>(
-  (props) => {
-    const self = getCurrentInstance()!
-    const pending = ref(false)
+@Component({ name: 'Suspense' })
+export class Suspense extends ActViewComponent<Record<string, any>> {
+  @Ref
+  pending = false
+
+  @Setup
+  setup(): void {
+    const self = getCurrentInstance()
+    if (!self) return
 
     // async setup 组件通过 renderer ↔ getCurrentSuspense 找到这里。
     // 注意：register 在子树「首次挂载」期间被调用，此时本组件的 render
     // effect 仍在 RUNNING（自触发保护会吞掉 pending 写入）——显式入队
     // 一次更新，保证 loading fallback 能渲染；resolve 同理（幂等去重）。
     self.suspenseCtx = {
-      register() {
-        pending.value = true
+      register: () => {
+        this.pending = true
         self.update()
       },
-      resolve() {
-        pending.value = false
+      resolve: () => {
+        this.pending = false
         self.update()
       },
     }
 
     pushSuspense(self)
     onBeforeUnmount(() => popSuspense(self))
+  }
 
-    return () => {
-      const children = props.children
+  render() {
+    const props = this.$props
+    const children = props.children
 
-      // children 始终挂载；pending 时整块 display:none 隐藏（不卸载，
-      // 保证异步组件 setup 只执行一次），fallback 在 pending 时追加为兄弟节点。
-      const content = createVNode('div', {
-        style: pending.value ? { display: 'none' } : null,
-        children,
-      })
+    // children 始终挂载；pending 时整块 display:none 隐藏（不卸载，保证异步
+    // 组件 setup 只执行一次），fallback 在 pending 时追加为兄弟节点。
+    const content = createVNode('div', {
+      style: this.pending ? { display: 'none' } : null,
+      children,
+    })
 
-      const nodes: VNodeChild[] = [content]
-      if (pending.value) nodes.push(props.fallback ?? null)
+    const nodes: VNodeChild[] = [content]
+    if (this.pending) nodes.push(props.fallback ?? null)
 
-      // 用 Fragment 组织「隐藏的 children 容器 + fallback」，无额外宿主节点
-      return createVNode(Fragment, { children: nodes })
-    }
-  },
-  'Suspense',
-)
+    // 用 Fragment 组织「隐藏的 children 容器 + fallback」，无额外宿主节点
+    return createVNode(Fragment, { children: nodes })
+  }
+}
 
 /**
  * 异步组件：loader 返回 Promise（可为模块，取 `mod.default ?? mod`）。
  *
- * 实现上就是一个 async setup 组件：await loader 后返回 render 函数；
  * 加载期间的 fallback 由最近的 Suspense 负责（无 Suspense 时先渲染 null，
  * resolve 后自动 queueJob 渲染内容）。loader 结果会缓存，多次挂载只加载一次。
  */
-export function lazy(loader: () => Promise<any>): ComponentTag {
+export function lazy(loader: () => Promise<any>): ClassComponentCtor {
   let loaded: Promise<any> | null = null
 
   const load = (): Promise<any> => {
@@ -110,13 +112,24 @@ export function lazy(loader: () => Promise<any>): ComponentTag {
     return loaded
   }
 
-  // async setup：SetupFunction 类型允许返回 Promise<RenderFunction>（M3 协议）
-  return defineComponent<Record<string, any>>(async (props) => {
-    const mod = await load()
-    const component = ((mod as { default?: unknown } | null)?.default ??
-      mod) as ComponentTag
+  @Component({ name: 'Lazy' })
+  class Lazy extends ActViewComponent<Record<string, any>> {
+    @Ref
+    resolved: any = null
 
-    // 每次渲染新建 vnode：props 浅拷贝，父更新时子组件能按 key 精确 patch
-    return () => createVNode(component, { ...props })
-  }, 'Lazy')
+    @Setup
+    async setup(): Promise<void> {
+      const mod = await load()
+      this.resolved =
+        (mod as { default?: unknown } | null)?.default ?? mod
+    }
+
+    render() {
+      if (!this.resolved) return null
+      // 每次渲染新建 vnode：props 浅拷贝，父更新时子组件能按 key 精确 patch
+      return createVNode(this.resolved, { ...this.$props })
+    }
+  }
+
+  return Lazy as unknown as ClassComponentCtor
 }

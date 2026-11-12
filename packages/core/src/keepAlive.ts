@@ -1,5 +1,5 @@
 // ============================================================
-// KeepAlive — 缓存组件实例与 DOM，切换时不销毁不重建（M3 最小集）
+// KeepAlive — 缓存组件实例与 DOM，切换时不销毁不重建（M3，类组件迁移）
 //
 //   机制（与 renderer 的 __keepAlive 分支协作）：
 //   1) render 给子组件 vnode 打 `__keepAlive = { cache, storage, key, max }`
@@ -7,22 +7,21 @@
 //      激活路径负责把 DOM 从 storage 移回容器 + instance.update()）。
 //   2) renderer 的 unmount 检测到标记 → DOM 移入隐藏 storage、实例保留
 //      （不 stop effect）、触发 deactivated，并把 vnode 写入 cache。
-//   3) KeepAlive 自身卸载时：活动子节点走正常卸载；失活缓存逐个真正销毁
-//      （scope.stop + 移除 DOM + isMounted=false + unmounted hooks）。
+//   3) KeepAlive 自身卸载时：活动子节点走正常卸载；失活缓存逐个真正销毁。
 //   4) max：每次 render 前对 cache 做 LRU 淘汰（超出上限的最旧项真正销毁）。
 //
 //   宿主节点：组件子树可能是 Fragment 多根，缓存 DOM 的移动 / 删除统一用
-//   ./hostNodes 的 collectHostNodes 处理全部宿主节点（renderer 的失活/激活
-//   路径共用同一套规则），因此多根组件也能完整缓存 / 恢复 / 销毁。
+//   ./hostNodes 的 collectHostNodes 处理全部宿主节点。
 // ============================================================
 
-import { defineComponent, isComponent } from '@actview/runtime-core'
+import { isComponent } from '@actview/runtime-core'
 import type { VNode } from '@actview/runtime-core/internal'
 import { isVNode } from '@actview/runtime-core/internal'
 import { updateProps } from './component'
+import { ActViewComponent, BeforeUnmount, Component, Setup } from './decorators'
 import { collectHostNodes } from './hostNodes'
 import type { ComponentInternalInstance } from './instance'
-import { getCurrentInstance, invokeHooks, onBeforeUnmount } from './lifecycle'
+import { getCurrentInstance, invokeHooks } from './lifecycle'
 
 /** include / exclude 匹配模式（数组可混合字符串与正则） */
 export type KeepAliveMatchPattern =
@@ -61,7 +60,7 @@ function matches(pattern: KeepAliveMatchPattern | undefined, name: string): bool
   return false
 }
 
-/** 组件名（defineComponent 写入的 name；KeepAlive include/exclude 用） */
+/** 组件名（类组件 name / @Component({ name })；KeepAlive include/exclude 用） */
 function getComponentName(child: VNode): string {
   const type = child.type as { name?: unknown }
   return typeof type === 'function' && typeof type.name === 'string'
@@ -86,39 +85,46 @@ function normalizeChild(children: unknown): any {
   return null
 }
 
-export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
+@Component({ name: 'KeepAlive' })
+export class KeepAlive extends ActViewComponent<KeepAliveProps> {
   /** 失活实例缓存：key → 组件 vnode（LRU：命中/新增移到末尾） */
-  const cache = new Map<unknown, VNode>()
+  private cache = new Map<unknown, VNode>()
   /** 失活组件的 DOM 隐藏容器（脱离文档，不产生可见 DOM） */
-  const storage = document.createElement('div')
-  storage.style.display = 'none'
-  storage.setAttribute('aria-hidden', 'true')
+  private storage = document.createElement('div')
+  /** 当前 KeepAlive 实例（@Setup 时写入；renderer 激活路径用 container） */
+  private self: ComponentInternalInstance | null = null
+  /** 最近一次 render 返回的 vnode 与 key（卸载时区分活动项/缓存项） */
+  private lastChild: VNode | null = null
+  private lastKey: unknown = undefined
 
-  // 当前 KeepAlive 实例：DOM 归还容器由 renderer 激活路径负责（instance.container）；
-  // 这里把 cache 挂到实例上，便于 DevTools / 调试观察缓存内容。
-  const self = getCurrentInstance()
-  if (self) {
-    ;(self as unknown as { __keepAliveCache?: Map<unknown, VNode> }).__keepAliveCache =
-      cache
+  @Setup
+  setup(): void {
+    this.storage.style.display = 'none'
+    this.storage.setAttribute('aria-hidden', 'true')
+
+    const self = getCurrentInstance()
+    this.self = self
+    if (self) {
+      ;(
+        self as unknown as { __keepAliveCache?: Map<unknown, VNode> }
+      ).__keepAliveCache = this.cache
+    }
   }
 
-  /** 最近一次 render 返回的 vnode 与 key（卸载时区分活动项/缓存项） */
-  let lastChild: VNode | null = null
-  let lastKey: unknown = undefined
-
-  const createMeta = (key: unknown): KeepAliveMeta => ({
-    cache,
-    storage,
-    key,
-    max: props.max,
-  })
+  private createMeta(key: unknown): KeepAliveMeta {
+    return {
+      cache: this.cache,
+      storage: this.storage,
+      key,
+      max: this.$props.max,
+    }
+  }
 
   /**
    * 真正销毁一个缓存实例（不经过 renderer 的 unmount 路径，避免 import
    * renderer 造成循环依赖）：停 scope/更新任务 → 移除全部宿主 DOM → 卸载钩子。
-   * 用 collectHostNodes 处理 Fragment 多根组件（组件子树可能对应多个 DOM 节点）。
    */
-  const destroyCached = (cached: VNode): void => {
+  private destroyCached(cached: VNode): void {
     delete (cached as any).__keepAlive
     const instance = cached.component as ComponentInternalInstance | null
     if (!instance) return
@@ -141,47 +147,50 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
    *
    * 注意：命中缓存时活动 vnode 仍留在 cache 里（Vue 同语义），因此它也可能
    * 成为「最旧项」被淘汰 —— 若淘汰的正是当前活动项，**不能销毁**（它还在
-   * 页面上）：只摘掉缓存标记，之后它卸载时由 renderer 走正常 unmount
-   * 路径（否则会 double unmounted / 停掉仍在展示的 effect）。
+   * 页面上）：只摘掉缓存标记，之后它卸载时由 renderer 走正常 unmount 路径。
    */
-  const pruneCache = (): void => {
-    const max = props.max
+  private pruneCache(): void {
+    const max = this.$props.max
     if (typeof max !== 'number' || !Number.isFinite(max)) return
-    while (cache.size > max) {
-      const oldestKey = cache.keys().next().value as unknown
-      const oldest = cache.get(oldestKey)
-      cache.delete(oldestKey)
+    while (this.cache.size > max) {
+      const oldestKey = this.cache.keys().next().value as unknown
+      const oldest = this.cache.get(oldestKey)
+      this.cache.delete(oldestKey)
       if (!oldest) continue
 
-      if (lastChild && isSameVNodeType(oldest, lastChild)) {
+      if (this.lastChild && isSameVNodeType(oldest, this.lastChild)) {
         // 活动项被淘汰：不销毁，仅移除缓存标记（接下来切走时正常卸载）
         delete (oldest as any).__keepAlive
         continue
       }
-      destroyCached(oldest)
+      this.destroyCached(oldest)
     }
   }
 
-  onBeforeUnmount(() => {
+  @BeforeUnmount
+  cleanup(): void {
     // 活动子节点：去掉缓存标记，让 renderer 走正常 unmount 路径
-    // （否则 renderer 的 __keepAlive 分支会把它移入 storage 而不停止 effect）
-    if (lastChild && (lastChild as any).__keepAlive) {
-      delete (lastChild as any).__keepAlive
+    if (this.lastChild && (this.lastChild as any).__keepAlive) {
+      delete (this.lastChild as any).__keepAlive
     }
     // 激活路径若未把活动项移出 cache，先剔除，避免重复销毁
-    if (lastKey !== undefined) cache.delete(lastKey)
-    for (const cached of cache.values()) destroyCached(cached)
-    cache.clear()
-    while (storage.firstChild) storage.removeChild(storage.firstChild)
-  })
+    if (this.lastKey !== undefined) this.cache.delete(this.lastKey)
+    for (const cached of this.cache.values()) this.destroyCached(cached)
+    this.cache.clear()
+    while (this.storage.firstChild) {
+      this.storage.removeChild(this.storage.firstChild)
+    }
+  }
 
-  return () => {
+  render() {
+    const props = this.$props
+
     // 先做 LRU 淘汰（renderer 在上一轮 unmount 时写入 cache 后才可能超限）
-    pruneCache()
+    this.pruneCache()
 
     const child = normalizeChild(props.children)
-    lastChild = isVNode(child) ? child : null
-    lastKey = undefined
+    this.lastChild = isVNode(child) ? child : null
+    this.lastKey = undefined
 
     // 非组件子节点：不参与缓存，原样交给 renderer
     if (!isVNode(child)) return child
@@ -194,16 +203,14 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
     if (props.exclude != null && matches(props.exclude, name)) return child
 
     const key = child.key != null ? child.key : (type as unknown)
-    lastKey = key
+    this.lastKey = key
 
-    const cached = cache.get(key)
+    const cached = this.cache.get(key)
     if (cached && cached.component) {
       // 命中：LRU 移到末尾
-      cache.delete(key)
-      cache.set(key, cached)
+      this.cache.delete(key)
+      this.cache.set(key, cached)
 
-      // vnode.component 的类型来自 runtime-core 的最小内部实例契约；
-      // 渲染器侧实际是 core 的 ComponentInternalInstance。
       const instance = cached.component as unknown as ComponentInternalInstance
       // 原地更新实例 props（shallowReactive；renderer 激活路径会再 update()）
       updateProps(instance, child.props, cached.props)
@@ -211,13 +218,13 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
       ;(cached as any).props = child.props
       ;(cached as any).ref = (child as any).ref
       // 重新打标记：本次激活结束后，下次卸载仍需走缓存分支
-      ;(cached as any).__keepAlive = createMeta(key)
-      lastChild = cached
+      ;(cached as any).__keepAlive = this.createMeta(key)
+      this.lastChild = cached
       return cached
     }
 
     // 未命中：打标记，renderer 卸载时据此把实例/DOM 移入缓存
-    ;(child as any).__keepAlive = createMeta(key)
+    ;(child as any).__keepAlive = this.createMeta(key)
     return child
   }
-}, 'KeepAlive')
+}
