@@ -1,7 +1,14 @@
 {
+  // ============================================================
+  // @actview/reactivity — 构建配置（composite project）
+  //
+  //   src → dist-types/*.d.ts（gitignore）；__tests__ 在 tsconfig.test.json。
+  //   依赖 @actview/shared：paths 指向源码，`tsc -b` build 模式会重定向到
+  //   shared 的声明产物（不会把 shared 源码按本包配置重复检查）。
+  // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // 派生自 Vue 源码：允许 enum 等非可擦除语法；不因上游/测试的未使用变量报错
+    // 派生自 Vue 源码：允许 enum 等非可擦除语法；不因上游未使用变量报错
     "strict": true,
     // 与上游 @vue/reactivity 3.5.39 的 tsconfig 对齐（es2016 lib）：
     // 源码里 @ts-expect-error 依赖 es2016 lib 下"新数组方法不存在"这一前提
@@ -10,11 +17,23 @@
     "erasableSyntaxOnly": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "types": ["vitest/globals", "node"],
+    "types": ["node"],
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+
+    /* workspace 依赖：源码路径 + references 重定向到声明产物 */
     "paths": {
       "@actview/shared": ["../shared/src/index.ts"],
-      "@actview/reactivity": ["./src/index.ts"]
+      "@actview/shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src", "__tests__", "vitest.config.ts", "../global.d.ts"]
+  "include": ["src", "../global.d.ts"],
+  "references": [{ "path": "../shared" }]
 }

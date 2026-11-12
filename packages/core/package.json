@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -b . && tsc -p tsconfig.test.json",
     "prepublishOnly": "pnpm build"
   },
   "files": [

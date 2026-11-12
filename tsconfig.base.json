@@ -1,6 +1,6 @@
 {
   // ============================================================
-  // 公共 TS 配置（tsconfig.json / tsconfig.test.json 共享）
+  // 公共 TS 配置（根 tsconfig.json / 各包 tsconfig.json / tsconfig.test.json 共享）
   //
   // JSX 统一指向 @actview/jsx（自研 JSX runtime + 公开作者层类型），
   // 避免 TS 默认找 react/jsx-runtime。
@@ -8,10 +8,18 @@
   // 包分层（详见 docs/types-architecture.md）：
   //   @actview/runtime-core     公开元素/组件契约 + 内部 VNode 类型
   //   @actview/jsx              JSX 作者层（全局 JSX 命名空间 / DOM 属性 / JSX runtime）
-  //   @actview/core             DOM 运行时公开层（渲染器，占位）
+  //   @actview/core             DOM 运行时公开层（渲染器）
   //   @actview/reactivity       响应式系统
   //   @actview/shared           内部共享工具
   //   actview                   聚合入口
+  //
+  // 模块解析（TypeScript project references）：
+  //   - 各包 `tsconfig.json`（composite 构建）把 workspace 依赖映射到
+  //     `packages/<dep>/dist-types/*.d.ts`（declaration 产物，gitignore）；
+  //   - 根 `tsconfig.json` 通过 references 编排构建，应用侧同样解析到声明产物；
+  //   - 各包 `tsconfig.test.json`（noEmit）把依赖映射回 `src`，让测试/类型测试
+  //     在源码视角下检查。
+  //   因此本文件**不再**提供全局 `paths`（避免两套解析语义漂移）。
   // ============================================================
   "compilerOptions": {
     "target": "es2023",
@@ -30,21 +38,6 @@
     /* JSX：actview 自研 runtime（非 react） */
     "jsx": "react-jsx",
     "jsxImportSource": "@actview/jsx",
-
-    /* Path aliases — resolves workspace packages */
-    "paths": {
-      "@actview/runtime-core": ["./packages/runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["./packages/runtime-core/src/*"],
-      "@actview/compiler": ["./packages/compiler/src/index.ts"],
-      "@actview/compiler/*": ["./packages/compiler/src/*"],
-      "@actview/jsx": ["./packages/jsx/src/index.ts"],
-      "@actview/jsx/*": ["./packages/jsx/src/*"],
-      "@actview/core": ["./packages/core/src/index.ts"],
-      "@actview/core/*": ["./packages/core/src/*"],
-      "@actview/reactivity": ["./packages/reactivity/src/index.ts"],
-      "@actview/shared": ["./packages/shared/src/index.ts"],
-      "actview": ["./packages/actview/src/index.ts"]
-    },
 
     /* Linting */
     "noUnusedLocals": true,

@@ -1,23 +1,50 @@
 {
+  // ============================================================
+  // @actview/core — 构建配置（TypeScript project references 的 composite project）
+  //
+  //   src → dist-types/*.d.ts（gitignore）；__tests__ 在 tsconfig.test.json。
+  //
+  //   paths 仍指向 workspace 源码：`tsc -b` 在 build 模式下会把「引用项目里的
+  //   源码 import」重定向到该项目的声明产物（source-of-project-reference
+  //   redirect），因此不会把 runtime-core / reactivity / shared 的源码按本包
+  //   配置重复检查；同时编辑器（语言服务）仍能跳到源码，无需先生成 dist-types。
+  //
+  //   注意：ES2016 + erasableSyntaxOnly:false 的特例保留在构建配置里 —— 它对齐
+  //   reactivity 的编译前提（上游 @ts-expect-error 基于 ES2016 lib）。
+  // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
-    // core 直接消费 @actview/reactivity / @actview/shared 的源码（workspace link）：
-    // 这两个包派生自 Vue，源码允许 enum 等非可擦除语法，且依赖 ES2016 lib
-    // （其 @ts-expect-error 断言基于“新数组方法不存在”）。这里对齐它们的编译
-    // 前提，否则跨包类型检查会报上游代码错误。彻底方案是 project references。
     "target": "ES2016",
     "lib": ["ES2016", "DOM"],
     "erasableSyntaxOnly": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "types": ["node"],
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+
+    /* workspace 依赖：源码路径 + references 重定向到声明产物 */
     "paths": {
       "@actview/runtime-core": ["../runtime-core/src/index.ts"],
       "@actview/runtime-core/*": ["../runtime-core/src/*"],
       "@actview/reactivity": ["../reactivity/src/index.ts"],
-      "@actview/shared": ["../shared/src/index.ts"]
+      "@actview/reactivity/*": ["../reactivity/src/*"],
+      "@actview/shared": ["../shared/src/index.ts"],
+      "@actview/shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src", "__tests__", "../global.d.ts"]
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../reactivity" },
+    { "path": "../runtime-core" }
+  ]
 }

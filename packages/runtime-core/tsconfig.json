@@ -1,10 +1,27 @@
 {
+  // ============================================================
+  // @actview/runtime-core — 构建配置（composite project）
+  //
+  //   src → dist-types/*.d.ts（gitignore）；type-tests 在 tsconfig.test.json。
+  //   无 workspace 依赖（平台无关类型基础 + 最小工厂）。
+  // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["node"]
+    "types": ["node"],
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+
+    "paths": {}
   },
-  "include": ["src", "type-tests"]
+  "include": ["src"]
 }

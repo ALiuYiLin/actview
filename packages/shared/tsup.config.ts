@@ -7,6 +7,10 @@ export default defineConfig({
     compilerOptions: {
       ignoreDeprecations: '6.0',
       erasableSyntaxOnly: false,
+      // 包 tsconfig.json 是 composite project（project references 构建用）；
+      // tsup 的 dts 步骤按入口单文件建 program，composite 的文件列表校验会报
+      // TS6307，因此在 dts 里关掉 composite（只影响 tsup 产物构建）。
+      composite: false,
     },
   },
   clean: true,

@@ -1,18 +1,47 @@
 {
+  // ============================================================
+  // 根配置 — 应用（src）+ 全部库包的 project references
+  //
+  //   `tsc -b tsconfig.json` 先按 references 顺序构建各 composite 库包
+  //   （声明产物 → packages/<pkg>/dist-types，gitignore），再检查应用源码。
+  //
+  //   路径解析：应用 import '@actview/*' 仍指向 workspace 源码；build 模式下
+  //   TS 会把「引用项目内的源码 import」重定向到该项目已构建的声明产物
+  //   （source-of-project-reference redirect）。因此：
+  //     - 根项目不会再按 ES2023 + erasableSyntaxOnly 去检查 reactivity 源码
+  //       （历史技术债：根 tsc 直接检查上游源码导致误报）；
+  //     - 编辑器里仍能直接跳到各包源码（不依赖 dist-types 是否已生成）。
+  // ============================================================
   "extends": "./tsconfig.base.json",
-  // 根配置只声明「应用 + 类型基础包」的检查范围；
-  // reactivity / shared 由各自 package tsconfig 负责（根配置的 ES2023 +
-  // erasableSyntaxOnly 与 reactivity 的 ES2016 上游约定不一致，直接纳入会误报，
-  // 后续改为 project references 解决）。
-  "include": [
-    "src",
-    "packages/global.d.ts",
-    "packages/runtime-core/src",
-    "packages/runtime-core/type-tests",
-    "packages/jsx/src",
-    "packages/jsx/type-tests",
-    "packages/compiler/src",
-    "packages/core/src"
-  ],
-  "exclude": ["**/node_modules", "**/dist"]
+  "compilerOptions": {
+    // 根项目不是 composite（应用不发布声明）；incremental 让 `tsc -b` 能记住
+    // 上次检查结果，避免每次都全量重查 app（tsbuildinfo 已 gitignore）。
+    "incremental": true,
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "paths": {
+      "@actview/runtime-core": ["./packages/runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["./packages/runtime-core/src/*"],
+      "@actview/compiler": ["./packages/compiler/src/index.ts"],
+      "@actview/compiler/*": ["./packages/compiler/src/*"],
+      "@actview/jsx": ["./packages/jsx/src/index.ts"],
+      "@actview/jsx/*": ["./packages/jsx/src/*"],
+      "@actview/core": ["./packages/core/src/index.ts"],
+      "@actview/core/*": ["./packages/core/src/*"],
+      "@actview/reactivity": ["./packages/reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["./packages/reactivity/src/*"],
+      "@actview/shared": ["./packages/shared/src/index.ts"],
+      "@actview/shared/*": ["./packages/shared/src/*"],
+      "actview": ["./packages/actview/src/index.ts"]
+    }
+  },
+  "include": ["src", "packages/global.d.ts"],
+  "exclude": ["node_modules", "**/dist", "**/dist-types"],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/reactivity" },
+    { "path": "./packages/runtime-core" },
+    { "path": "./packages/jsx" },
+    { "path": "./packages/compiler" },
+    { "path": "./packages/core" }
+  ]
 }

@@ -1,0 +1,21 @@
+{
+  // ============================================================
+  // @actview/compiler — 测试配置（noEmit）
+  //
+  //   __tests__（Babel/构建链测试）单独于构建配置检查；沿用源码 paths。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
+    "paths": {
+      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["../runtime-core/src/*"],
+      "@actview/jsx": ["../jsx/src/index.ts"],
+      "@actview/jsx/*": ["../jsx/src/*"]
+    }
+  },
+  "include": ["src", "__tests__"]
+}

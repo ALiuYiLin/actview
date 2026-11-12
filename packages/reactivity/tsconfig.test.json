@@ -1,0 +1,26 @@
+{
+  // ============================================================
+  // @actview/reactivity — 测试/类型测试配置（noEmit）
+  //
+  //   只做类型检查，不产生构建产物（composite 构建见 tsconfig.json）。
+  //   这里保持「直接消费 @actview/shared 源码」的历史语义：测试与 src 在
+  //   同一 program 里按 reactivity 自己的 ES2016 前提检查。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // 派生自 Vue 源码：允许 enum 等非可擦除语法；不因上游/测试的未使用变量报错
+    "strict": true,
+    // 与上游 @vue/reactivity 3.5.39 的 tsconfig 对齐（es2016 lib）
+    "target": "ES2016",
+    "lib": ["ES2016", "DOM"],
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["vitest/globals", "node"],
+    "paths": {
+      "@actview/shared": ["../shared/src/index.ts"],
+      "@actview/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src", "__tests__", "vitest.config.ts", "../global.d.ts"]
+}

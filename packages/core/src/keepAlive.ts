@@ -11,13 +11,16 @@
 //      （scope.stop + 移除 DOM + isMounted=false + unmounted hooks）。
 //   4) max：每次 render 前对 cache 做 LRU 淘汰（超出上限的最旧项真正销毁）。
 //
-//   限制：只支持单个组件子节点（组件 subTree 单根 DOM；Fragment 多根不支持）。
+//   宿主节点：组件子树可能是 Fragment 多根，缓存 DOM 的移动 / 删除统一用
+//   ./hostNodes 的 collectHostNodes 处理全部宿主节点（renderer 的失活/激活
+//   路径共用同一套规则），因此多根组件也能完整缓存 / 恢复 / 销毁。
 // ============================================================
 
 import { defineComponent, isComponent } from '@actview/runtime-core'
 import type { VNode } from '@actview/runtime-core/internal'
 import { isVNode } from '@actview/runtime-core/internal'
 import { updateProps } from './component'
+import { collectHostNodes } from './hostNodes'
 import type { ComponentInternalInstance } from './instance'
 import { getCurrentInstance, invokeHooks, onBeforeUnmount } from './lifecycle'
 
@@ -66,6 +69,11 @@ function getComponentName(child: VNode): string {
     : ''
 }
 
+/** VNode 类型 / key 相同（与 renderer 的 isSameVNodeType 判据一致） */
+function isSameVNodeType(a: VNode, b: VNode): boolean {
+  return a.type === b.type && a.key === b.key
+}
+
 /** props.children 归一化为单个子节点（数组展平后取第一个非空项） */
 function normalizeChild(children: unknown): any {
   if (children == null || typeof children === 'boolean') return null
@@ -107,7 +115,8 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
 
   /**
    * 真正销毁一个缓存实例（不经过 renderer 的 unmount 路径，避免 import
-   * renderer 造成循环依赖）：停 scope/更新任务 → 移除 DOM → 卸载钩子。
+   * renderer 造成循环依赖）：停 scope/更新任务 → 移除全部宿主 DOM → 卸载钩子。
+   * 用 collectHostNodes 处理 Fragment 多根组件（组件子树可能对应多个 DOM 节点）。
    */
   const destroyCached = (cached: VNode): void => {
     delete (cached as any).__keepAlive
@@ -117,16 +126,24 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
     instance.scope?.stop()
     if (instance.job) instance.job.active = false
 
-    // 子组件只支持单根：subTree.el 即宿主节点（可能已在 storage 中）
-    const el = (((instance.subTree as any)?.el ?? (cached as any).el) as Node | null)
-    if (el?.parentNode) el.parentNode.removeChild(el)
+    // 失活组件的全部宿主节点（多根 → 多个，通常已在 storage 中）
+    for (const node of collectHostNodes(instance.subTree ?? cached)) {
+      if (node.parentNode) node.parentNode.removeChild(node)
+    }
 
     instance.isMounted = false
     instance.container = null
     invokeHooks(instance.unmounted, instance)
   }
 
-  /** max LRU：缓存超过上限时淘汰最旧项（Map 插入序） */
+  /**
+   * max LRU：缓存超过上限时淘汰最旧项（Map 插入序）。
+   *
+   * 注意：命中缓存时活动 vnode 仍留在 cache 里（Vue 同语义），因此它也可能
+   * 成为「最旧项」被淘汰 —— 若淘汰的正是当前活动项，**不能销毁**（它还在
+   * 页面上）：只摘掉缓存标记，之后它卸载时由 renderer 走正常 unmount
+   * 路径（否则会 double unmounted / 停掉仍在展示的 effect）。
+   */
   const pruneCache = (): void => {
     const max = props.max
     if (typeof max !== 'number' || !Number.isFinite(max)) return
@@ -134,7 +151,14 @@ export const KeepAlive = defineComponent<KeepAliveProps>((props) => {
       const oldestKey = cache.keys().next().value as unknown
       const oldest = cache.get(oldestKey)
       cache.delete(oldestKey)
-      if (oldest) destroyCached(oldest)
+      if (!oldest) continue
+
+      if (lastChild && isSameVNodeType(oldest, lastChild)) {
+        // 活动项被淘汰：不销毁，仅移除缓存标记（接下来切走时正常卸载）
+        delete (oldest as any).__keepAlive
+        continue
+      }
+      destroyCached(oldest)
     }
   }
 

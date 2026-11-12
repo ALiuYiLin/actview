@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc -b .",
     "prepublishOnly": "pnpm build"
   },
   "files": [

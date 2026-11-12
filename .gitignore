@@ -13,6 +13,10 @@ dist-ssr
 *.local
 .pnpm-store
 
+# TypeScript project references：声明产物（emitDeclarationOnly）+ 增量缓存
+dist-types
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

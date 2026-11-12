@@ -365,7 +365,10 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 - DevTools（`devtools.ts`）：`setDevtoolsHook` / `getDevtoolsHook`，renderer 在 mount/update/unmount 上报 `{ id, name, instance, parent }`；未注册时零开销。
 - keyed LIS（`renderer.ts`）：`getSequence()`（贪心+二分+前驱回溯）最小化 DOM 移动；同 key 换 type / 新建节点记 0 强制移动。
 - 测试：`packages/core/__tests__/m3.spec.ts`（9）+ `m3b.spec.ts`（6）；全仓 449 passed / 4 skipped。
-- M3 设计内限制：同一 target 的多个 Teleport 仅按 append 顺序（无跨树锚点）；Transition 位于被整体移除的子树内时 leave 会被打断；KeepAlive 仅支持单根组件子树；Suspense 用 div 包裹 children（会多一层 DOM）。
+- M3 细节债（已处理）：
+  - **Teleport 跨树锚点**：父容器占位注释（`vnode.el`）+ 目标容器 `targetAnchor`（`__teleportTargetAnchor`）；children 挂在各自 targetAnchor 前；多个 Teleport 指向同一 target 时按挂载顺序稳定排列；`to` 切换迁移 DOM 且保留组件实例；卸载清理两个锚点。
+  - **KeepAlive 多根**：失活/激活/淘汰/卸载统一用 `hostNodes.ts` 的 `collectHostNodes(subTree)` 处理全部宿主节点（Fragment 多根可缓存/恢复/销毁）；附带修复 LRU 淘汰活动项导致的 double-unmounted（对齐 Vue：只摘缓存标记，切走时正常卸载一次）。
+- 剩余设计内限制：同一 target 的多个 Teleport 顺序 = 挂载顺序（父容器内重排 Teleport 不会改变目标内区间顺序）；Teleport 无 `disabled` 属性；`<Teleport>` 与 `<KeepAlive>` 组合属边界；Transition 位于被整体移除的子树内时 leave 会被打断；Suspense 用 div 包裹 children（多一层 DOM）。
 
 ### M4
 

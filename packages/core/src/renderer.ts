@@ -33,13 +33,16 @@
 //   - DevTools：mount / update / unmount 上报 getDevtoolsHook()（hook 为空零开销）。
 //
 // M3b 内置组件（Teleport / Transition / KeepAlive）：
-//   - Teleport：`type.__builtin === 'teleport'`，children patch 到
-//     resolveTeleportTarget(props.to) 的目标容器（不在本容器内，无宿主节点）；
+//   - Teleport：`type.__builtin === 'teleport'`，父容器插入占位注释
+//     （vnode.el）维持本树位置，children patch 到目标容器的 targetAnchor
+//     （vnode.__teleportTargetAnchor）之前；内容不在本容器，跨树顺序由
+//     两个注释锚点保证（多 Teleport 同 target / to 切换迁移 / 卸载清理）；
 //   - Transition：`type.__builtin === 'transition'`，单子节点 + enter/leave 类名，
 //     离场完成后才真正卸载旧子节点；
 //   - KeepAlive：keepAlive.ts 给可缓存子 vnode 打 `__keepAlive` 标记；renderer
-//     在 unmount 时把宿主节点移入 storage + deactivated（不 stop 不卸载），
-//     重新挂载带 component 的缓存 vnode 时移回 DOM + update + activated。
+//     在 unmount 时把**全部**宿主节点（Fragment 多根）移入 storage + deactivated
+//     （不 stop 不卸载），重新挂载带 component 的缓存 vnode 时全部移回 DOM +
+//     update + activated。宿主节点收集统一走 ./hostNodes（与 keepAlive 共用）。
 //
 // 依赖边界（§9）：patch / DOM 操作不读取响应式数据；setup / 钩子由
 // component.ts / lifecycle.ts 统一 pauseTracking；render 执行期间正常收集依赖。
@@ -65,6 +68,7 @@ import {
 import { getDevtoolsHook } from './devtools'
 import { createElement, patchProps } from './domProps'
 import { handleError } from './errorHandling'
+import { collectHostNodes, firstHostNode, lastHostNode } from './hostNodes'
 import type { AppContext, ComponentInternalInstance } from './instance'
 import { invokeHooks } from './lifecycle'
 import { setRef } from './refs'
@@ -138,7 +142,7 @@ function patch(
     processElement(n1, n2, container, anchor, parent)
   } else if (getBuiltinKind(type) === 'teleport') {
     if (n1) patchTeleport(n1, n2, parent)
-    else mountTeleport(n2, parent)
+    else mountTeleport(n2, container, anchor, parent)
   } else if (getBuiltinKind(type) === 'transition') {
     processTransition(n1, n2, container, anchor, parent)
   } else if (isComponent(type)) {
@@ -289,38 +293,70 @@ function processFragment(
     patchChildren(n1, n2, container, getNextHostNode(n1) ?? anchor, parent)
   }
 
-  n2.el = firstHostNode(children)
+  n2.el = firstHostNodeIn(children)
 }
 
-/** 第一个拥有宿主节点的子节点（空 / null 组件会被跳过） */
-function firstHostNode(children: VNode[]): Node | null {
+/** children 中第一个拥有宿主节点的子项（空 / null 渲染组件会被跳过） */
+function firstHostNodeIn(children: VNode[]): Node | null {
   for (const child of children) {
-    const el = child.el as Node | null
-    if (el) return el
+    const node = firstHostNode(child)
+    if (node) return node
   }
   return null
 }
 
 // ------------------------------------------------------------
-// 内置组件：Teleport（M3b）
+// 内置组件：Teleport（M3b / M3c 跨树锚点）
 // ------------------------------------------------------------
 
-/**
- * Teleport：children 挂到 `props.to` 解析出的目标容器（selector / Element）。
- * 自身没有宿主节点（vnode.el = null），目标容器可以在当前渲染树之外。
- */
-function mountTeleport(vnode: VNode, parent: ComponentInternalInstance | null): void {
-  const target = resolveTeleportTarget(vnode.props?.to)
-  const children = normalizeChildren(vnode.props?.children)
-  vnode.children = children
-  // M3：同一目标内多个 Teleport 只保证 append 顺序，不做跨树锚点插入
-  for (const child of children) patch(null, child, target, null, parent)
-  vnode.el = null
+/** Teleport vnode 上记录的目标容器锚点（children 挂它之前） */
+type TeleportRuntime = { __teleportTargetAnchor?: Node | null }
+
+/** 读取 Teleport vnode 在目标容器里的锚点注释 */
+function getTeleportTargetAnchor(vnode: VNode): Node | null {
+  return (
+    (vnode as unknown as TeleportRuntime).__teleportTargetAnchor ?? null
+  )
 }
 
 /**
- * Teleport 更新：children patch 到目标容器；`to` 变化时把旧 children 从旧
- * 目标卸载、新 children 挂到新目标（M3 支持 to 变化，不共享锚点）。
+ * Teleport：children 挂到 `props.to` 解析出的目标容器（selector / Element）。
+ *
+ * 两处锚点（注释节点）保证跨树顺序正确：
+ * - parentAnchor：插在**父容器**里（= vnode.el），维持 Teleport 在父容器中的
+ *   位置（后续兄弟节点的锚点 / getNextHostNode / moveHostNodes 都靠它）；
+ * - targetAnchor：append 在目标容器里（= vnode.__teleportTargetAnchor），
+ *   children 一律 patch 到它之前；多个 Teleport 指向同一目标时按挂载顺序
+ *   append 各自的 targetAnchor，因此内容顺序稳定、更新只影响自己的区间。
+ */
+function mountTeleport(
+  vnode: VNode,
+  container: Element,
+  anchor: Node | null,
+  parent: ComponentInternalInstance | null,
+): void {
+  const target = resolveTeleportTarget(vnode.props?.to)
+
+  // 父容器占位注释：代表 Teleport 在父树中的位置（自身不产生可见 DOM）
+  const parentAnchor = document.createComment('teleport')
+  vnode.el = parentAnchor
+  container.insertBefore(parentAnchor, anchor)
+
+  // 目标容器锚点：children 挂到它之前
+  const targetAnchor = document.createComment('teleport')
+  target.appendChild(targetAnchor)
+  ;(vnode as unknown as TeleportRuntime).__teleportTargetAnchor = targetAnchor
+
+  const children = normalizeChildren(vnode.props?.children)
+  vnode.children = children
+  for (const child of children) patch(null, child, target, targetAnchor, parent)
+}
+
+/**
+ * Teleport 更新：
+ * - 目标不变：children 在原 targetAnchor 前 diff（多个 Teleport 区间互不干扰）；
+ * - `to` 变化：把旧 children 的宿主节点迁移到新目标（保留实例 / DOM），
+ *   旧 targetAnchor 移除，新 targetAnchor append 到新目标后再 diff。
  */
 function patchTeleport(
   n1: VNode,
@@ -329,26 +365,50 @@ function patchTeleport(
 ): void {
   const nextChildren = normalizeChildren(n2.props?.children)
   n2.children = nextChildren
+  // 父容器占位注释随 vnode 复用（父容器位置不变）
+  n2.el = n1.el
 
   const prevTarget = resolveTeleportTarget(n1.props?.to)
   const nextTarget = resolveTeleportTarget(n2.props?.to)
+  const prevAnchor = getTeleportTargetAnchor(n1)
 
-  if (prevTarget !== nextTarget) {
-    for (const child of getChildren(n1)) unmount(child, parent)
-    for (const child of nextChildren) patch(null, child, nextTarget, null, parent)
-  } else {
-    patchChildren(n1, n2, nextTarget, null, parent)
+  if (prevTarget === nextTarget && prevAnchor) {
+    ;(n2 as unknown as TeleportRuntime).__teleportTargetAnchor = prevAnchor
+    patchChildren(n1, n2, nextTarget, prevAnchor, parent)
+    return
   }
 
-  n2.el = null
+  // `to` 变化（或旧 anchor 缺失）：迁移到新目标
+  const nextAnchor = document.createComment('teleport')
+  nextTarget.appendChild(nextAnchor)
+
+  // 1) 旧 children 的宿主节点按文档顺序搬到新 anchor 之前
+  for (const child of getChildren(n1)) {
+    for (const node of collectHostNodes(child)) {
+      nextTarget.insertBefore(node, nextAnchor)
+    }
+  }
+  // 2) 移除旧目标里的旧 anchor
+  if (prevAnchor) removeNode(prevAnchor)
+  ;(n2 as unknown as TeleportRuntime).__teleportTargetAnchor = nextAnchor
+  // 3) 在新目标内做 children diff（位置对齐就地 patch，新增插到 anchor 前）
+  patchChildren(n1, n2, nextTarget, nextAnchor, parent)
 }
 
-/** Teleport 卸载：卸载 children（DOM 从其实际父节点移除，无需目标容器） */
+/** Teleport 卸载：卸载 children + 移除目标锚点 + 父容器占位注释 */
 function unmountTeleport(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
 ): void {
   for (const child of getChildren(vnode)) unmount(child, parent)
+
+  const targetAnchor = getTeleportTargetAnchor(vnode)
+  if (targetAnchor) removeNode(targetAnchor)
+
+  const parentAnchor = vnode.el as Node | null
+  if (parentAnchor) removeNode(parentAnchor)
+
+  ;(vnode as unknown as TeleportRuntime).__teleportTargetAnchor = null
   vnode.el = null
 }
 
@@ -711,7 +771,7 @@ function patchKeyedChildren(
     }
     // LIS 上的复用节点保持原位（相对顺序已正确，不做 DOM 操作）
 
-    const firstHost = firstHostNodeDeep(nextChild)
+    const firstHost = firstHostNode(nextChild)
     if (firstHost) nextAnchor = firstHost
   }
 }
@@ -782,10 +842,8 @@ function mountComponent(
   const ref = resolveRef(vnode)
   if (ref != null) setRef(ref, instance.proxy)
 
-  // KeepAlive 首次挂载同样视为一次激活（mounted 之后触发 activated）
-  if (getKeepAliveMarker(vnode)) {
-    queuePostFlushCb(() => invokeHooks(instance.activated, instance))
-  }
+  // 注意：KeepAlive 内的**首次挂载**不触发 activated（激活钩子只在缓存 vnode
+  // 重新挂载时由 activateKeptAlive 触发；m3c 验收按此语义计数）。
 
   // DevTools：首次挂载完成（hook 未注册时零开销）
   notifyDevtools(instance, 'mount')
@@ -994,8 +1052,17 @@ function getKeepAliveMarker(vnode: VNode): KeepAliveMarker | null {
 }
 
 /**
- * 停用（缓存）组件：把子树宿主节点移入 storage，实例 / 子树 / scope 全部保留，
- * 只触发 deactivated。
+ * 组件实例当前子树的全部宿主节点（文档顺序）。
+ * 用共享的 ./hostNodes 收集：Fragment 多根 / 组件递归 / Transition 子节点都能
+ * 正确处理（KeepAlive 多根缓存的基础）。
+ */
+function componentHostNodes(instance: ComponentInternalInstance): Node[] {
+  return instance.subTree ? collectHostNodes(instance.subTree) : []
+}
+
+/**
+ * 停用（缓存）组件：把子树**全部**宿主节点（多根 Fragment → 多个）移入
+ * storage，实例 / 子树 / scope 全部保留，只触发 deactivated。
  *
  * 与原 unmountComponent 的区别：不 scope.stop()、不调用 unmounted、不卸载
  * 子树、不置空 vnode.el / vnode.component —— 缓存 vnode 再次挂载时由
@@ -1006,7 +1073,9 @@ function deactivateKeptAlive(vnode: VNode, marker: KeepAliveMarker): void {
   if (!instance) return
 
   // append 到 storage（detached 容器）→ 节点从页面移除但保持相对顺序
-  for (const node of collectHostNodes(vnode)) marker.storage.appendChild(node)
+  for (const node of componentHostNodes(instance)) {
+    marker.storage.appendChild(node)
+  }
 
   // 写入 KeepAlive 缓存：下次 render 命中后用同一 vnode / 实例激活
   marker.cache.set(marker.key, vnode)
@@ -1016,8 +1085,8 @@ function deactivateKeptAlive(vnode: VNode, marker: KeepAliveMarker): void {
 }
 
 /**
- * 激活缓存组件：宿主节点从 storage 移回 container，复用原实例重新渲染并触发
- * activated（跳过 createComponentInstance / setupComponent）。
+ * 激活缓存组件：全部宿主节点（多根 Fragment → 多个）从 storage 按顺序移回
+ * container，复用原实例重新渲染并触发 activated（跳过 create 实例 / setup）。
  */
 function activateKeptAlive(
   vnode: VNode,
@@ -1027,8 +1096,10 @@ function activateKeptAlive(
   const instance = vnode.component as unknown as ComponentInternalInstance | null
   if (!instance) return
 
-  // 从 storage 移回原容器（保持文档顺序）
-  for (const node of collectHostNodes(vnode)) container.insertBefore(node, anchor)
+  // 从 storage 移回原容器（连续 insertBefore 保持多根相对顺序）
+  for (const node of componentHostNodes(instance)) {
+    container.insertBefore(node, anchor)
+  }
 
   instance.vnode = vnode
   instance.container = container as unknown as ComponentInternalInstance['container']
@@ -1093,64 +1164,12 @@ function unmount(vnode: VNode, parent: ComponentInternalInstance | null): void {
 
 /**
  * VNode 的宿主 DOM 范围之后的那个节点（插入锚点 / 更新定位用）。
- * - Fragment：最后一个宿主节点的下一节点（空 Fragment → null）；
- * - 组件：沿 subTree 递归（组件根可能是 Fragment / 渲染 null）；
- * - 元素 / 文本：el.nextSibling。
+ * 宿主节点规则统一由 ./hostNodes 决定（Fragment 多节点 / 组件 subTree /
+ * Teleport 父容器占位注释 / Transition 子节点）。
  */
 function getNextHostNode(vnode: VNode): Node | null {
   const last = lastHostNode(vnode)
   return last ? last.nextSibling : null
-}
-
-/**
- * 收集 vnode 子树的全部宿主 DOM 节点（文档顺序）：
- * - 元素 / 文本 → [vnode.el]；
- * - Fragment → 递归 children（可能有多个宿主节点）；
- * - 组件 → 递归 instance.subTree（组件根可能是 Fragment，vnode.el 只是首节点）。
- */
-function collectHostNodes(vnode: VNode, out: Node[] = []): Node[] {
-  const { type } = vnode
-
-  // Teleport 的内容挂在目标容器（可能在本树之外）→ 不参与本树锚点计算，
-  // 避免跨容器 insertBefore 抛 NotFoundError；Transition 的宿主节点即子节点。
-  const builtin = getBuiltinKind(type)
-  if (builtin === 'teleport') return out
-  if (builtin === 'transition') {
-    for (const child of getChildren(vnode)) collectHostNodes(child, out)
-    return out
-  }
-
-  if (type === Fragment) {
-    for (const child of getChildren(vnode)) collectHostNodes(child, out)
-    return out
-  }
-
-  if (isComponent(type)) {
-    const instance = vnode.component as unknown as ComponentInternalInstance | null
-    if (instance && instance.subTree) {
-      collectHostNodes(instance.subTree, out)
-      return out
-    }
-    const el = vnode.el as Node | null
-    if (el) out.push(el)
-    return out
-  }
-
-  const el = vnode.el as Node | null
-  if (el) out.push(el)
-  return out
-}
-
-/** 子树第一个宿主节点（渲染 null 的组件 / 空 Fragment → null） */
-function firstHostNodeDeep(vnode: VNode): Node | null {
-  const nodes = collectHostNodes(vnode)
-  return nodes.length > 0 ? nodes[0] : null
-}
-
-/** 子树最后一个宿主节点（无宿主节点 → null） */
-function lastHostNode(vnode: VNode): Node | null {
-  const nodes = collectHostNodes(vnode)
-  return nodes.length > 0 ? nodes[nodes.length - 1] : null
 }
 
 /**
@@ -1187,7 +1206,7 @@ function nextHostNodeAfter(
   if (next) return next
 
   for (let i = index + 1; i < children.length; i++) {
-    const first = firstHostNodeDeep(children[i])
+    const first = firstHostNode(children[i])
     if (first) return first
   }
   return fallback
@@ -1200,7 +1219,7 @@ function anchorFromIndex(
   fallback: Node | null,
 ): Node | null {
   for (let i = from; i < children.length; i++) {
-    const first = firstHostNodeDeep(children[i])
+    const first = firstHostNode(children[i])
     if (first) return first
   }
   return fallback

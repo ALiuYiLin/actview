@@ -131,36 +131,17 @@ export const onUnmounted = (
 /**
  * 注册 activated 钩子：KeepAlive 缓存的组件被重新激活时由 renderer 调用
  * `invokeHooks(instance.activated, instance)`。
- *
- * activated / deactivated 不在 LifecycleType 联合内（实例字段已由
- * createComponentInstance 初始化），因此这里直接 push 对应数组。
  */
-export function onActivated(
+export const onActivated = (
   hook: Hook,
-  target: ComponentInternalInstance | null = currentInstance,
-): void {
-  if (!target) {
-    console.warn(
-      '[actview] onActivated 生命周期钩子只能在组件 setup 中注册，已忽略。',
-    )
-    return
-  }
-  target.activated.push(hook)
-}
+  target?: ComponentInternalInstance | null,
+): void => injectHook('activated', hook, target)
 
 /**
  * 注册 deactivated 钩子：KeepAlive 缓存的组件被移入缓存（失活）时由
  * renderer 调用 `invokeHooks(instance.deactivated, instance)`。
  */
-export function onDeactivated(
+export const onDeactivated = (
   hook: Hook,
-  target: ComponentInternalInstance | null = currentInstance,
-): void {
-  if (!target) {
-    console.warn(
-      '[actview] onDeactivated 生命周期钩子只能在组件 setup 中注册，已忽略。',
-    )
-    return
-  }
-  target.deactivated.push(hook)
-}
+  target?: ComponentInternalInstance | null,
+): void => injectHook('deactivated', hook, target)

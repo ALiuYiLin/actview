@@ -1,0 +1,23 @@
+{
+  // ============================================================
+  // @actview/jsx — 类型测试配置（noEmit）
+  //
+  //   type-tests（TSX 作者层契约）单独于构建配置检查；沿用源码 paths，
+  //   使 JSX 类型测试能直接看到 runtime-core 的源码类型。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
+    "jsxImportSource": "@actview/jsx",
+    "paths": {
+      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["../runtime-core/src/*"],
+      "@actview/jsx": ["./src/index.ts"],
+      "@actview/jsx/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "type-tests"]
+}

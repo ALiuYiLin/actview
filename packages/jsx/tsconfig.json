@@ -1,4 +1,11 @@
 {
+  // ============================================================
+  // @actview/jsx — 构建配置（composite project）
+  //
+  //   src → dist-types/*.d.ts（gitignore）；type-tests 在 tsconfig.test.json。
+  //   依赖 @actview/runtime-core：paths 指向源码，`tsc -b` build 模式会重定向到
+  //   runtime-core 的声明产物（project reference）。
+  // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
@@ -6,12 +13,22 @@
     "noUnusedParameters": true,
     "types": ["node"],
     "jsxImportSource": "@actview/jsx",
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+
+    /* workspace 依赖：源码路径 + references 重定向到声明产物 */
     "paths": {
       "@actview/runtime-core": ["../runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["../runtime-core/src/*"],
-      "@actview/jsx": ["./src/index.ts"],
-      "@actview/jsx/*": ["./src/*"]
+      "@actview/runtime-core/*": ["../runtime-core/src/*"]
     }
   },
-  "include": ["src", "type-tests"]
+  "include": ["src"],
+  "references": [{ "path": "../runtime-core" }]
 }

@@ -172,22 +172,29 @@ JSX runtime 只依赖公开 `createElement`（返回 `Element`），不接触 `V
 
 ## 6. 验证命令
 
+TypeScript **project references**：根 `tsconfig.json` 编排各 composite 库包（声明产物输出到 `packages/<pkg>/dist-types`，已 gitignore），各包 `tsconfig.test.json`（noEmit）负责 type-tests / 单测类型检查。
+
 ```bash
-# 类型（含 type-tests）
+# 全量类型（根 app + 全部库包 + type-tests）
+pnpm typecheck
+# 等价底层命令：tsc -b tsconfig.json（可二次运行验证 up-to-date）
+
+# 单包类型（构建 + test 配置）
 pnpm -C packages/runtime-core typecheck
 pnpm -C packages/jsx typecheck
 pnpm -C packages/compiler typecheck
+pnpm -C packages/core typecheck
 
-# 构建（esm + d.ts）
-pnpm -C packages/runtime-core build
-pnpm -C packages/jsx build
-pnpm -C packages/compiler build
+# 构建（esm + d.ts；tsup dts 已适配 composite：composite:false）
+pnpm build:packages
+pnpm build   # tsc -b tsconfig.json && vite build
 
-# 回归（reactivity + runtime-core + compiler）
+# 回归（reactivity + runtime-core + core + compiler）
 pnpm test
 ```
 
-> 根 `pnpm build` 的 `tsc` 步骤仍是旧配置债：根 `tsconfig.json` 把 reactivity 源码按 ES2023 + `erasableSyntaxOnly` 检查，与 `packages/reactivity/tsconfig.json`（ES2016、允许 enum）不一致，报错为既有问题；彻底解决需要把根配置改成 project references（后续步骤）。
+> 历史技术债已解决：根配置不再直接按 ES2023 + `erasableSyntaxOnly` 检查 reactivity 源码——`tsc -b` 通过 project reference redirect 使用各包声明产物（reactivity 的 ES2016/enum 特例只在其自身 composite 配置里生效）。
+> 应用入口的 `createApp(App)` 现在可由 **`ComponentFunction` 视图**通过类型检查（`createApp` 参数类型为 `ComponentTag | ComponentFunction`，运行时仍用 `isComponent` 严格校验）；发布库若要暴露"编译后对象类型"仍需 compiler 声明改写，见 §7。
 
 ---
 
@@ -197,10 +204,10 @@ pnpm test
 |---|---|
 | JSX runtime 的 Ref 顶层解包（`MaybeRef` 属性形态） | 类型已就绪，运行时解包待 JSX runtime 下一步实现 |
 | `defineComponent` 实现 | 已实现（`runtime-core/src/component.ts`）：在 setup 函数上写 `__actview_component` 标记并原样返回，返回类型 `ComponentTag<P>`；渲染层用 `isComponent` 判定 |
-| DOM renderer（`createApp` / `patch`） | 已实现 M1/M2（`@actview/core`）：createApp/mount/unmount、组件级 re-render、patch（含 keyed/unkeyed children diff）、provide/inject、public instance proxy、完整 patchProp；详见 `docs/renderer-design.md` |
+| DOM renderer（`createApp` / `patch`） | 已实现 M1–M3（`@actview/core`）：createApp/mount/unmount、组件级 re-render、patch（LIS keyed diff）、provide/inject、public instance proxy、完整 patchProp、错误处理、Suspense/lazy、Teleport/Transition/KeepAlive、DevTools；详见 `docs/renderer-design.md` |
 | compiler（TSX → `defineComponent`） | 已实现（`@actview/compiler`）：L1 `wrap.ts` + Vite 宿主；JSX 降级交给宿主 automatic runtime（esbuild/tsc），见 `docs/compiler-layers.md` |
-| 编译产物的 `.d.ts` 视角 | tsc 只看到源码（函数视角）。发布库若要暴露"编译后对象类型"，需要 compiler 附带声明改写（或显式 `defineComponent`），属后续阶段 |
-| 根 `tsconfig` / 构建脚本 | 需改为 project references（reactivity 与基础配置不一致） |
+| 编译产物的 `.d.ts` 视角 | tsc 只看到源码（函数视角）；`createApp` 已放宽为 `ComponentTag \| ComponentFunction` 让应用入口可检查。发布库若要暴露"编译后对象类型"，需要 compiler 附带声明改写（或显式 `defineComponent`），属后续阶段 |
+| 根 `tsconfig` / 构建脚本 | ✅ 已用 project references 解决（`dist-types` 声明产物 + 各包 `tsconfig.test.json`；根 `build` = `tsc -b && vite build`） |
 | React 元素兼容标记（`$$typeof`） | 公开层不暴露；是否需要内部兼容层待定 |
 
 ---

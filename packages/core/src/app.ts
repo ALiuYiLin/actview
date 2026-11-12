@@ -12,7 +12,7 @@
 // ============================================================
 
 import { isComponent } from '@actview/runtime-core'
-import type { ComponentTag } from '@actview/runtime-core'
+import type { ComponentFunction, ComponentTag } from '@actview/runtime-core'
 import { createVNode, type VNode } from '@actview/runtime-core/internal'
 import type {
   AppConfig,
@@ -52,11 +52,15 @@ export interface App {
 /**
  * 创建应用。
  *
- * @param rootComponent 根组件（marked setup 函数；普通函数直接报错）
+ * 类型上接受源码组件函数（ComponentFunction）与编译产物（ComponentTag）：
+ * 纯 tsc 视角看不到 compiler L1 的包装，源码函数视图可让应用入口通过类型检查；
+ * 运行时仍由 isComponent 校验（未包装的裸函数会给出明确错误）。
+ *
+ * @param rootComponent 根组件（编译期包装后的 marked setup 函数；运行时严格校验）
  * @param rootProps 根组件 props
  */
 export function createApp(
-  rootComponent: ComponentTag,
+  rootComponent: ComponentTag | ComponentFunction,
   rootProps: Record<string, any> | null = null,
 ): App {
   assertRootComponent(rootComponent)

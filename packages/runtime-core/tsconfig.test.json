@@ -1,0 +1,15 @@
+{
+  // ============================================================
+  // @actview/runtime-core — 类型测试配置（noEmit）
+  //
+  //   type-tests 是编译期契约（@ts-expect-error 断言），单独于构建配置检查。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"]
+  },
+  "include": ["src", "type-tests"]
+}

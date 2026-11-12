@@ -56,6 +56,8 @@ export type LifecycleType =
   | 'updated'
   | 'beforeUnmount'
   | 'unmounted'
+  | 'activated'
+  | 'deactivated'
 
 /** 错误捕获钩子 */
 export type ErrorCapturedHook = (err: unknown, instance: ComponentInternalInstance | null, info: string) => boolean | void

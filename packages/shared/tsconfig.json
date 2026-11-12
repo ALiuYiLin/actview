@@ -1,4 +1,11 @@
 {
+  // ============================================================
+  // @actview/shared — 构建配置（TypeScript project references 的 composite project）
+  //
+  //   只检查/发布 src 的声明（emitDeclarationOnly → dist-types，gitignore）；
+  //   __tests__ / type-tests 的检查在 tsconfig.test.json（noEmit）。
+  //   scripts.typecheck = `tsc -b .`（无测试，无 test 配置）。
+  // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     // 派生自 Vue 源码：不强制可擦除语法（enum 等），也不因上游未使用局部变量报错
@@ -6,7 +13,19 @@
     "erasableSyntaxOnly": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "types": ["node"]
+    "types": ["node"],
+
+    /* composite project：composite 不允许 noEmit，用 emitDeclarationOnly */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+
+    /* 本包无 workspace 依赖 */
+    "paths": {}
   },
   "include": ["src", "../global.d.ts"]
 }

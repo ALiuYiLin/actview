@@ -1,0 +1,25 @@
+{
+  // ============================================================
+  // @actview/core — 测试配置（noEmit）
+  //
+  //   __tests__（渲染器集成测试）单独于构建配置检查；沿用源码 paths，
+  //   保留 ES2016 + erasableSyntaxOnly:false（reactivity/shared 源码前提）。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2016",
+    "lib": ["ES2016", "DOM"],
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "types": ["node"],
+    "paths": {
+      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
+      "@actview/runtime-core/*": ["../runtime-core/src/*"],
+      "@actview/reactivity": ["../reactivity/src/index.ts"],
+      "@actview/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["src", "__tests__", "../global.d.ts"]
+}
