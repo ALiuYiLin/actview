@@ -1,7 +1,7 @@
 # 渲染器设计：`createApp(App).mount('#app')` 与组件级 re-render
 
 > 本文档定义 `@actview/core`（DOM 渲染器）的架构：应用创建、组件挂载、渲染、diff patch、以及基于响应式的**组件级 re-render** 模型。
-> 前置契约见 [types-architecture.md](./types-architecture.md)（`Component` = 带标记的 setup 函数）与 [compiler-layers.md](./compiler-layers.md)（组件包装 / JSX 降级）。
+> 前置契约见 [types-architecture.md](./types-architecture.md)（组件 = `@Component` 类）与 [compiler-layers.md](./compiler-layers.md)（L1 wrap 已删除、JSX 降级由宿主完成）。
 
 ---
 
@@ -16,8 +16,8 @@ createApp(App).mount('#app')
 ```
 
 - **组件级 re-render**：不做 React 式整树重渲染，也不做 Signal 式细粒度 DOM 更新；更新粒度 = 组件。
-- **setup 只执行一次**（组件契约），render 执行 N 次。
-- 组件边界 = setup 函数本体（`isComponent(vnode.type)` 判定），没有 `{ __setup }` 包装。
+- **`@Setup` 只执行一次**（类组件契约），render 执行 N 次。
+- 组件边界 = `@Component` 类（`isComponent(vnode.type)` 判定 `__actview_class_component` 标记），必须实现 `render()`。
 - 首帧同步挂载；后续更新走微任务批处理。
 - 平台无关：patch 逻辑通过 `createRenderer(options)` 与 DOM 解耦（M1 只实现 DOM，接口预留 SSR/自定义平台）。
 
@@ -28,7 +28,7 @@ createApp(App).mount('#app')
 | 积木 | 位置 | 用途 |
 |---|---|---|
 | `VNode` / `createVNode` / `Fragment` | `packages/runtime-core/src/vnode.ts` | 渲染器消费的树节点；`el` / `component` 槽位由渲染器写 |
-| `Component` = marked setup 函数、`isComponent` | `packages/runtime-core/src/component.ts` | 挂载 = 调用函数拿 render；组件判定不靠返回值形状 |
+| `ClassComponentCtor` / `isComponent` | `packages/runtime-core/src/component.ts` | 挂载 = `new Ctor(props)` → 安装 @Prop/@Ref → @Setup → render |
 | `RenderFunction = () => Element \| null` | 同上 | 组件更新的边界 |
 | `createElement` / jsx runtime | `packages/runtime-core/src/factory.ts`、`packages/jsx/src/jsx-runtime.ts` | VNode 来源 |
 | `ReactiveEffect(fn, { scheduler })`、`effect`、`pauseTracking`、`EffectScope`、`shallowReactive` | `packages/reactivity/src/{effect,effectScope,reactive}.ts` | 渲染 effect、依赖收集、调度、卸载清理 |
@@ -85,7 +85,7 @@ return vnode.component                        // 内部实例（public proxy 后
 ```ts
 interface ComponentInternalInstance {
   uid: number
-  type: ComponentTag                    // marked setup 函数
+  type: ClassComponentCtor               // @Component 类构造器
   parent: ComponentInternalInstance | null
   appContext: AppContext
   props: Record<string, any>            // shallowReactive（父写 props 触发子 effect）
@@ -299,7 +299,7 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 | 首帧时机 | **同步** | mount 返回后 DOM 就绪，测试/SSR/首屏友好 |
 | 更新调度 | **微任务批处理** | 同 tick 多次变化合并为一次 render |
 | children diff | M1 位置 patch/替换 → M2 unkeyed → M3 keyed | 每阶段都有可测试的正确性基线 |
-| 未标记函数当组件 | **dev 报错** | 避免两套语义；编译器保证组件是 marked setup 函数 |
+| 未标记 class / 函数当组件 | **dev 报错** | 避免两套语义；组件必须 `@Component` 类 |
 | 实例类型位置 | `core/src/instance.ts`（runtime-core 保留跨包基础契约） | 渲染器实现细节不进跨平台类型层 |
 | mount 返回值 | M1 返回内部实例；public proxy 后续补 | 先满足测试/调试，proxy 是增量 |
 

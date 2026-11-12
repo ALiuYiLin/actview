@@ -734,12 +734,22 @@ export function runClassComponent(instance: ComponentInternalInstance): void {
 
 > 先把“目标形态 + 响应式渲染”做通，不铺开周边能力。
 
-### 当前进度（2026-11-12）
+### 当前进度（2026-11-12，第一版完成）
 
-- ✅ 类组件运行时基础：`@Component` 标记、`isClassComponent`、`setupClassComponent`、`installRefs / installProps`、class 公开实例、生命周期装饰器注册；`packages/core/__tests__/class-component.spec.tsx`（3 条）通过，core 全量 60 条通过。
-- ✅ 目标 API 子集：`@Component`（强制）、`@Prop`、`@Ref`、`@Setup` / `@BeforeMount` / `@Mounted` / `@BeforeUpdate` / `@Updated` / `@BeforeUnmount` / `@Unmounted` / `@Activated` / `@Deactivated`。
-- ⏳ 过渡期：`defineComponent` 与函数组件路径暂时保留，保证既有测试绿；下一步迁移内置组件/测试/示例后删除。
-- ⏳ 待做：KeepAlive/Suspense/ErrorBoundary/lazy 类化；删除 `defineComponent`、`ComponentFunction`/`ComponentTag` 函数视图；删除 L1 wrap 与 Vite 包装步骤；`src/App.tsx` 迁移。
+- ✅ 类组件运行时：`@Component` 标记、`isClassComponent`、`setupClassComponent`、`installRefs / installProps`、class 公开实例、生命周期装饰器注册；
+- ✅ 目标 API 子集：`@Component`（强制）、`@Prop`、`@Ref`、`@Setup` / `@BeforeMount` / `@Mounted` / `@BeforeUpdate` / `@Updated` / `@BeforeUnmount` / `@Unmounted` / `@Activated` / `@Deactivated`；
+- ✅ 内置组件 KeepAlive / Suspense / ErrorBoundary / lazy 已迁移为 `@Component` 类；
+- ✅ 删除 `defineComponent`、函数组件路径、`ComponentFunction` / `ComponentTag` / `SetupFunction`；`isComponent` 只认类组件标记；
+- ✅ 删除 L1 wrap（`packages/compiler/src/{wrap,vite}.ts` 与 Vite 插件注册）；compiler 包保留占位，Babel 依赖保留；
+- ✅ `src/App.tsx` 迁移为目标类组件示例；`src/main.ts` 使用 `createApp(App)`；
+- ✅ 验证：`pnpm typecheck` / `pnpm test`（393 passed / 4 skipped）/ `pnpm build` / `pnpm build:packages` 全绿。
+
+### 本版未做（后续）
+
+- `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` / `@Bind`；
+- 静态分析 / manifest / 代码生成；
+- HMR / SSR / hydrate；
+- 版本发布策略（changeset）与 Stage-3 装饰器迁移。
 
 ### 做
 
