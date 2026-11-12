@@ -29,3 +29,5 @@ dist-types
 *.sw?
 reasonix.toml
 .reasonix
+
+.archify
