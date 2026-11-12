@@ -19,6 +19,7 @@ import type {
 } from '../src/index'
 
 import type {
+  ClassComponentCtor,
   Component,
   ComponentInternalInstance,
   SetupFunction,
@@ -112,8 +113,10 @@ const propsFromDefined: PropsFromDefined = { id: 'x' }
 export { propsFromDefined }
 export const definedAsSetup: SetupFunction<{ id: string }> = defined
 
-// isComponent：unknown 收窄到内部 Component（可当 setup 调用）
-export function narrowToComponent(value: unknown): Component | null {
+// isComponent：unknown 收窄到函数组件或类组件构造器
+export function narrowToComponent(
+  value: unknown,
+): Component | ClassComponentCtor | null {
   return isComponent(value) ? value : null
 }
 
@@ -134,4 +137,4 @@ export type SetupShape = typeof setup
 declare const instance: ComponentInternalInstance
 export const instanceUid: number = instance.uid
 export const instanceSubTree: VNode | null = instance.subTree
-export const instanceType: ComponentTag = instance.type
+export const instanceType: ComponentTag | ClassComponentCtor = instance.type

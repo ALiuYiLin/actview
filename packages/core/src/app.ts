@@ -12,7 +12,11 @@
 // ============================================================
 
 import { isComponent } from '@actview/runtime-core'
-import type { ComponentFunction, ComponentTag } from '@actview/runtime-core'
+import type {
+  ClassComponentCtor,
+  ComponentFunction,
+  ComponentTag,
+} from '@actview/runtime-core'
 import { createVNode, type VNode } from '@actview/runtime-core/internal'
 import type {
   AppConfig,
@@ -33,8 +37,8 @@ export interface App {
   _container: Element | null
   /** 应用配置（与 _context.config 同一对象） */
   config: AppConfig
-  /** 根组件 */
-  component: ComponentTag
+  /** 根组件（函数组件 tag 或类组件构造器） */
+  component: ComponentTag | ClassComponentCtor
   /**
    * 提供应用级注入值：写入 AppContext.provides（根组件的初始注入表），
    * 所有组件都能 inject 到。建议在 mount 之前调用（根组件 setup 时继承该表）。
@@ -60,7 +64,7 @@ export interface App {
  * @param rootProps 根组件 props
  */
 export function createApp(
-  rootComponent: ComponentTag | ComponentFunction,
+  rootComponent: ComponentTag | ComponentFunction | ClassComponentCtor,
   rootProps: Record<string, any> | null = null,
 ): App {
   assertRootComponent(rootComponent)
@@ -117,13 +121,13 @@ export function createApp(
   return app
 }
 
-/** 根组件运行时校验：必须是 isComponent（compiler 包装或显式 defineComponent） */
+/** 根组件运行时校验：必须是函数组件标记或 @Component 类组件 */
 function assertRootComponent(
   component: unknown,
-): asserts component is ComponentTag {
+): asserts component is ComponentTag | ClassComponentCtor {
   if (!isComponent(component)) {
     throw new Error(
-      '[actview] 根组件无效：根组件需经 compiler 包装或显式 defineComponent' +
+      '[actview] 根组件无效：需要 @Component 类组件（过渡期也接受 defineComponent 函数组件）' +
         `（当前为 ${typeof component}）`,
     )
   }

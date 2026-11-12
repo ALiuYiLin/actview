@@ -17,6 +17,7 @@ export type {
   ElementType,
   ComponentFunction,
   ComponentTag,
+  ClassComponent,
   ComponentProps,
   ElementChild,
   ElementChildren,
@@ -24,5 +25,11 @@ export type {
 
 export type { RenderFunction, SetupContext } from './component'
 
-export { defineComponent, isComponent } from './component'
+export {
+  CLASS_COMPONENT_MARKER,
+  defineComponent,
+  isClassComponent,
+  isComponent,
+} from './component'
+export type { ClassComponentCtor } from './component'
 export { Fragment, createElement, isValidElement } from './factory'

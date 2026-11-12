@@ -46,6 +46,31 @@ export type Component<P = Record<string, any>> = SetupFunction<P> & {
 /** 组件标记字段名（defineComponent 写入 / isComponent 读取） */
 export const COMPONENT_MARKER = '__actview_component'
 
+/** 类组件标记字段名（@Component 装饰器写入 / isClassComponent 读取） */
+export const CLASS_COMPONENT_MARKER = '__actview_class_component'
+
+/** 类组件构造器（运行时形状；由 @Component 标记） */
+export type ClassComponentCtor<P = Record<string, any>> = (new (
+  props: P,
+) => { render(): Element | null }) & {
+  readonly __actview_class_component?: true
+  readonly name?: string
+}
+
+/**
+ * 是否类组件：只看 @Component 写入的标记（强制显式装饰器，不做
+ * “有 render 方法就算组件”的隐式猜测）。
+ */
+export function isClassComponent(
+  value: unknown,
+): value is ClassComponentCtor {
+  return (
+    typeof value === 'function' &&
+    (value as { __actview_class_component?: unknown })
+      .__actview_class_component === true
+  )
+}
+
 /**
  * 定义组件：返回**同一个 setup 函数对象**，并在其上写入组件标记。
  *
@@ -78,15 +103,22 @@ export function defineComponent<P = Record<string, any>>(
 }
 
 /**
- * 是否组件（渲染层判断「是不是组件函数」的唯一入口）。
+ * 是否组件：函数组件（带 `__actview_component` 标记）或类组件
+ * （带 `__actview_class_component` 标记）。
  *
- * 只看函数对象上的 `__actview_component` 标记：普通函数、对象、仅带同名
- * 标记但不可调用的对象都不是组件。
+ * 第一版类组件目标形态下，函数组件路径后续会删除；这里先保留两个分支，
+ * 便于类路径与现有渲染器测试并行迁移。
  */
-export function isComponent(value: unknown): value is Component {
+export function isComponent(
+  value: unknown,
+): value is Component | ClassComponentCtor {
+  if (typeof value !== 'function') return false
+  const v = value as {
+    __actview_component?: unknown
+    __actview_class_component?: unknown
+  }
   return (
-    typeof value === 'function' &&
-    (value as { __actview_component?: unknown }).__actview_component === true
+    v.__actview_component === true || v.__actview_class_component === true
   )
 }
 
@@ -96,7 +128,7 @@ export function isComponent(value: unknown): value is Component {
  */
 export interface ComponentInternalInstance {
   readonly uid: number
-  readonly type: ComponentTag
+  readonly type: ComponentTag | ClassComponentCtor
   readonly parent: ComponentInternalInstance | null
   readonly props: Record<string, any>
   render: RenderFunction | null

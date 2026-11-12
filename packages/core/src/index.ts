@@ -15,6 +15,29 @@ export { ErrorBoundary } from './errorBoundary'
 export { Teleport } from './teleport'
 export { Transition } from './transition'
 export { KeepAlive } from './keepAlive'
+export {
+  ActViewComponent,
+  Activated,
+  BeforeMount,
+  BeforeUnmount,
+  BeforeUpdate,
+  Component,
+  Deactivated,
+  Mounted,
+  Prop,
+  Ref,
+  Setup,
+  Unmounted,
+  Updated,
+  getComponentMeta,
+} from './decorators'
+export type {
+  ComponentMeta,
+  ComponentOptions,
+  LifecycleName,
+  PropOptions,
+  RefOptions,
+} from './decorators'
 export { setDevtoolsHook, getDevtoolsHook } from './devtools'
 export type { DevtoolsComponentInfo, DevtoolsHook } from './devtools'
 export {

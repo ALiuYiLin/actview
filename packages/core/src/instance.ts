@@ -6,7 +6,11 @@
 // ComponentInternalInstance 的最小字段），本文件在其上补充渲染器字段。
 // ============================================================
 
-import type { ComponentTag, RenderFunction } from '@actview/runtime-core'
+import type {
+  ClassComponentCtor,
+  ComponentTag,
+  RenderFunction,
+} from '@actview/runtime-core'
 import type { VNode } from '@actview/runtime-core/internal'
 import type { EffectScope, ReactiveEffect } from '@actview/reactivity'
 
@@ -75,11 +79,13 @@ export interface SchedulerJob {
 /** 组件实例（渲染器实现） */
 export interface ComponentInternalInstance {
   uid: number
-  /** 组件类型 = 带标记的 setup 函数 */
-  type: ComponentTag
+  /** 组件类型：函数组件 tag 或类组件构造器（第一版类组件目标形态） */
+  type: ComponentTag | ClassComponentCtor
   parent: ComponentInternalInstance | null
   appContext: AppContext
   vnode: VNode
+  /** 类组件实例（第一版类组件路径使用；函数组件路径为 undefined） */
+  ctx?: object
   /** props（shallowReactive：父写 props 触发子 render effect） */
   props: Record<string, any>
   /** setup 返回的 render 函数 */

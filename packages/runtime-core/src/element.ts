@@ -35,6 +35,17 @@ export type ElementType =
   | symbol
   | ComponentFunction<any>
   | ComponentTag<any>
+  | ClassComponent<any>
+
+/**
+ * 类组件构造器（第一版类组件目标形态）。
+ *
+ * 类必须实现 render()，并由 `@Component` 标记；渲染器负责实例化、安装
+ * @Prop / @Ref 访问器、执行 setup 与生命周期，再驱动 render effect。
+ */
+export interface ClassComponent<P = Record<string, any>> {
+  new (props: P): { render(): Element | null }
+}
 
 /**
  * 源码层组件：用户书写的组件函数（compiler 转换之前）。
@@ -69,9 +80,15 @@ export type ComponentTag<P = Record<string, any>> = Component<P> &
  *
  * 用 `...rest` 吸收 setup 的第二个参数（SetupContext），避免 infer 失配。
  */
-export type ComponentProps<C> = C extends (props: infer P, ...rest: any[]) => any
+export type ComponentProps<C> = C extends new (
+  ...args: any[]
+) => { $props: infer P }
   ? P
-  : {}
+  : C extends new (props: infer P, ...rest: any[]) => any
+    ? P
+    : C extends (props: infer P, ...rest: any[]) => any
+      ? P
+      : {}
 
 /** 单个子节点（渲染器会忽略 boolean / null / undefined） */
 export type ElementChild =

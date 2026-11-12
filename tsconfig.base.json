@@ -43,6 +43,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* 第一版类组件：legacy decorators（esbuild / Babel 均可降级） */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   }
 }

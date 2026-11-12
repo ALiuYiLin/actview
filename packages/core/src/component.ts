@@ -20,10 +20,16 @@
 import {
   EffectScope,
   pauseTracking,
+  ref,
   resetTracking,
   shallowReactive,
 } from '@actview/reactivity'
 import type { RenderFunction, SetupContext } from '@actview/runtime-core'
+import {
+  isClassComponent,
+  type ClassComponentCtor,
+} from '@actview/runtime-core'
+import { getComponentMeta } from './decorators'
 import {
   Fragment,
   createTextVNode,
@@ -141,21 +147,178 @@ export function createComponentPublicInstance(
 }
 
 /**
+ * 第一版类组件 setup：
+ *
+ *   new Ctor(props) → installClassPublicInstance → installDeclaredFields
+ *   → @Setup（同步或 Promise）→ instance.render = () => ctx.render()
+ *
+ * @Ref / @Prop 的 accessor 必须在构造之后安装：ES2022 class field 的 define
+ * 语义会创建 own data property 并遮蔽原型 accessor（见设计文档 §3.3）。
+ */
+function setupClassComponent(
+  instance: ComponentInternalInstance,
+): Promise<RenderFunction> | null {
+  const Ctor = instance.type as unknown as ClassComponentCtor
+  const meta = getComponentMeta(Ctor)
+  const ctx = new Ctor(instance.props) as Record<string, any>
+
+  instance.ctx = ctx
+  instance.proxy = ctx as unknown as ComponentPublicInstance
+  installClassPublicInstance(ctx, instance)
+  installDeclaredFields(ctx, instance, meta)
+
+  const prev = setCurrentInstance(instance)
+  try {
+    let pending: Promise<RenderFunction> | null = null
+
+    instance.scope.run(() => {
+      pauseTracking()
+      try {
+        registerClassLifecycle(instance, ctx, meta)
+
+        const setupName = meta.setup
+        const result = setupName ? ctx[setupName]?.() : undefined
+
+        // 第一版允许 @Setup 返回 Promise（给 Suspense / lazy 留协议）；
+        // 先渲染 null 占位，resolve 后切回真实 render。
+        if (isThenable(result)) {
+          instance.render = (() => null) as unknown as RenderFunction
+          pending = Promise.resolve(result).then(() => {
+            instance.render = () => ctx.render()
+            return instance.render
+          })
+          return
+        }
+      } finally {
+        resetTracking()
+      }
+    })
+
+    if (!pending) {
+      instance.render = () => ctx.render()
+    }
+    return pending
+  } finally {
+    setCurrentInstance(prev)
+  }
+}
+
+/** 类实例公开字段：$ / $props / $el / $parent / $root / $forceUpdate / $nextTick */
+function installClassPublicInstance(
+  ctx: Record<string, any>,
+  instance: ComponentInternalInstance,
+): void {
+  const defineValue = (key: string, value: unknown): void => {
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: false,
+      value,
+    })
+  }
+  const defineGetter = (key: string, get: () => unknown): void => {
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: false,
+      get,
+    })
+  }
+
+  defineValue('$', instance)
+  defineGetter('$props', () => instance.props)
+  defineGetter('$el', () => (instance.vnode.el as Element | null) ?? null)
+  defineGetter('$parent', () => instance.parent?.proxy ?? null)
+  defineGetter('$root', () => {
+    let root = instance
+    while (root.parent) root = root.parent
+    return root.proxy
+  })
+  defineValue('$forceUpdate', () => instance.update())
+  defineValue('$nextTick', nextTick)
+  defineValue('$refs', {})
+}
+
+/**
+ * 安装 @Prop / @Ref 的每实例 accessor。
+ *
+ * 先摘掉 class field initializer 产生的 own data property，再安装 accessor：
+ *   - @Prop：读 instance.props[key]（缺省时用 initializer 值做 fallback）；
+ *   - @Ref：闭包持有一个真正 ref，get/set 与 this.count ≈ count.value 等价。
+ */
+function installDeclaredFields(
+  ctx: Record<string, any>,
+  instance: ComponentInternalInstance,
+  meta: ReturnType<typeof getComponentMeta>,
+): void {
+  const props = instance.props as Record<string, any>
+
+  for (const key of meta.props.keys()) {
+    const own = Object.getOwnPropertyDescriptor(ctx, key)
+    const fallback = own?.value
+    if (own) delete ctx[key]
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => (key in props ? props[key] : fallback),
+      set: (value: unknown) => {
+        props[key] = value
+      },
+    })
+  }
+
+  for (const key of meta.refs.keys()) {
+    const own = Object.getOwnPropertyDescriptor(ctx, key)
+    const initial = own?.value
+    if (own) delete ctx[key]
+    const r = ref(initial)
+    Object.defineProperty(ctx, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => r.value,
+      set: (value: unknown) => {
+        r.value = value
+      },
+    })
+  }
+}
+
+/** 把装饰器记录的生命周期方法注册到实例 hooks 数组（顺序：父类 → 子类） */
+function registerClassLifecycle(
+  instance: ComponentInternalInstance,
+  ctx: Record<string, any>,
+  meta: ReturnType<typeof getComponentMeta>,
+): void {
+  for (const name of Object.keys(meta.hooks) as Array<
+    keyof typeof meta.hooks
+  >) {
+    const methods = meta.hooks[name]
+    if (!methods) continue
+    const hooks = (instance as unknown as Record<string, Array<() => void>>)[
+      name as string
+    ]
+    if (!hooks) continue
+    for (const method of methods) {
+      hooks.push(() => {
+        ctx[method]?.()
+      })
+    }
+  }
+}
+
+/**
  * 初始化组件实例：执行一次 setup，把返回的 render 函数挂到实例上。
  *
- * 注意 pauseTracking：setup 在父组件 render effect 栈内执行，其中的
- * 响应式读取不能污染父 effect（§9）。
- *
- * 返回值（M3 async setup 协议）：
- * - 同步 setup：返回 null，`instance.render` 已就位；
- * - async setup：`instance.render` 先置 `() => null` 占位，返回
- *   Promise<RenderFunction>；渲染器负责在 resolve 后写回 render、queueJob，
- *   并把它与最近的 Suspense（register / resolve）及 handleError 关联。
+ * 类组件（@Component）走 setupClassComponent；函数组件（过渡期保留）走
+ * 下面的 setup 函数路径。类路径的 @Ref / @Prop accessor 在构造后立即安装。
  */
 export function setupComponent(
   instance: ComponentInternalInstance,
 ): Promise<RenderFunction> | null {
   initProps(instance, instance.vnode.props ?? null)
+
+  // 第一版类组件路径：@Component 标记的 class 构造器。
+  if (isClassComponent(instance.type)) {
+    return setupClassComponent(instance)
+  }
 
   const prev = setCurrentInstance(instance)
   try {
