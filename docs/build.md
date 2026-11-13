@@ -24,6 +24,7 @@ TSX 源码
 packages/
   actview/          用户聚合入口
   core/             类型 + 渲染器 + 装饰器 + 内置组件
+  devtools/         DevTools backend（无 UI）
   jsx/              JSX 作者层
   reactivity/       响应式系统（内部）
   shared/           内部工具
@@ -49,8 +50,8 @@ playground/
 pnpm dev            # playground/actview（Vite）
 pnpm build          # playground: tsc -b + vite build
 pnpm preview        # playground 预览
-pnpm typecheck      # 5 包 + playground
-pnpm test           # vitest（reactivity + core）
+pnpm typecheck      # 6 包 + playground
+pnpm test           # vitest（reactivity + core + devtools）
 pnpm build:packages # tsup 各包（含 d.ts）
 ```
 

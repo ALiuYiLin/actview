@@ -9,6 +9,7 @@
 packages/
   actview/          用户聚合入口（薄壳，只导出用户 API）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
+  devtools/         DevTools backend（树 / 状态 / 事件 / 性能；无 UI）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx-runtime / jsx-dev-runtime）
   reactivity/       响应式系统（core 内部使用）
   shared/           内部共享工具
@@ -20,6 +21,7 @@ playground/
 |---|---|---|
 | `actview` | 用户 API：`createApp` / `nextTick` / App 插件类型 / `ActViewComponent` / 全部装饰器 / 内置组件 / 公开类型 | `.` |
 | `@actview/core` | 组件类型、装饰器、运行时、DOM 渲染器、内置组件 | `.` / `./internal` |
+| `@actview/devtools` | DevTools backend：app/component 树、状态、事件、性能 | `.` |
 | `@actview/jsx` | 全局 JSX 命名空间、DOM/SVG 属性类型、automatic runtime | `.` / `./jsx-runtime` / `./jsx-dev-runtime` |
 | `@actview/reactivity` | `ref` / `reactive` / `computed` / `effect` / `watch` | `.`（内部使用） |
 | `@actview/shared` | 内部工具函数 | `.`（内部使用） |
@@ -29,6 +31,7 @@ playground/
 ```text
 reactivity → shared
 core → reactivity, shared
+devtools → core
 jsx → core（公开类型 + createElement/Fragment）
 actview → core（用户 API 聚合）
 playground/actview → actview
@@ -110,7 +113,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 pnpm dev            # playground/actview
 pnpm build          # playground 类型检查 + vite build
 pnpm test           # reactivity + core 测试
-pnpm typecheck      # 5 包 + playground
+pnpm typecheck      # 6 包 + playground
 pnpm build:packages # 各包 tsup + d.ts
 ```
 

@@ -144,7 +144,9 @@ new Ctor(props)
 
 ## 11. DevTools
 
-`setDevtoolsHook` / `getDevtoolsHook`；renderer 在 mount / update / unmount 上报 `{ id, name, instance, parent }`；未注册 hook 零开销。
+- core 协议：`setDevtoolsHook` / `getDevtoolsHook`，hook 为空时零开销；
+- 事件：app mount/unmount、component mount/update/unmount、render effect + computed 的 track/trigger、performance；
+- `@actview/devtools` backend 负责收集 app/component 树、事件 ring buffer、状态快照；暂无面板 / 扩展。
 
 ## 12. 验证
 

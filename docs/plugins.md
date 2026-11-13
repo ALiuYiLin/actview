@@ -1,7 +1,7 @@
 # App 插件系统
 
-> 第一版核心契约已实现：`app.use` / `app.onUnmount` / `app.config`。
-> 官方插件（router / devtools / logger 等）尚未实现；本文记录契约、安装规则与目标形态。
+> 第一版核心契约与 `@actview/devtools` backend 已实现；面板 / 浏览器扩展尚未实现。
+> 本文记录契约、安装规则与目标形态。
 
 ## 1. 插件契约
 
@@ -66,20 +66,32 @@ app.onUnmount(() => {
 
 ## 4. 官方插件规划
 
-### P0 `@actview/devtools`
+### P0 `@actview/devtools`（backend 已实现）
 
-功能：
+已实现：
 
-- 根据 `app.config.devtools` / dev 环境注册 `setDevtoolsHook`；
-- mount / update / unmount 采集；
-- 组件树、props/state、事件、Model 依赖图；
-- 接 `onTrack` / `onTrigger`（当前尚未接线）；
-- `app.onUnmount` 解除 hook。
+- `app.use(devtoolsPlugin)` 按 `app.config.devtools` / 选项注册 hook；
+- app / component 树；
+- mount / update / unmount / track / trigger / performance 事件；
+- `getSnapshot()` / `subscribe()` / `getComponentState()`；
+- props / state / computed / Model 状态读取；
+- `app.onUnmount` 清理。
+
+尚未实现：
+
+- 内嵌面板 / 浏览器扩展；
+- 状态编辑、时间旅行、源码定位；
+- 依赖图可视化。
 
 ```tsx
 if (import.meta.env.DEV) {
   app.use(devtoolsPlugin, { appName: 'My App' })
 }
+
+const backend = getDevtoolsBackend()
+backend.subscribe((snapshot) => {
+  // 后续扩展 / 面板消费
+})
 ```
 
 ### P0 `@actview/router`

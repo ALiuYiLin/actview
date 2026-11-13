@@ -10,6 +10,7 @@ import type { WatchOptions } from '@actview/reactivity'
 import type { ComponentMeta, WatchSource } from '../decorator/meta'
 import type { ComponentInternalInstance } from './instance'
 import { inject, provide } from './apiProvide'
+import { getDevtoolsHook, notifyDevtoolsReactive } from './devtools'
 /**
  * 安装声明字段的每实例 accessor：
  *   - @Prop：读 instance.props[key]（缺省时用 initializer 值做 fallback），只读；
@@ -101,9 +102,32 @@ function toReactive(value: unknown, options: { shallow?: boolean }): unknown {
 export function installComputed(
   ctx: Record<string, any>,
   meta: ComponentMeta,
+  instance?: ComponentInternalInstance,
 ): void {
+  const debug =
+    instance && getDevtoolsHook()
+      ? {
+          onTrack: (event: {
+            target: any
+            key: any
+            type: string
+          }) => {
+            notifyDevtoolsReactive(instance, 'track', event)
+          },
+          onTrigger: (event: {
+            target: any
+            key: any
+            type: string
+            newValue?: any
+            oldValue?: any
+          }) => {
+            notifyDevtoolsReactive(instance, 'trigger', event)
+          },
+        }
+      : undefined
+
   for (const [key, getter] of meta.computed) {
-    const cache = computed(() => getter.call(ctx))
+    const cache = computed(() => getter.call(ctx), debug)
     Object.defineProperty(ctx, key, {
       configurable: true,
       enumerable: false,

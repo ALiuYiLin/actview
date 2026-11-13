@@ -111,7 +111,7 @@ export class ComponentScope {
       this.installModelProps(entry)
       // @Prop 由上面的投影处理；这里只安装 ref/reactive/inject。
       installDeclaredFields(data, this.owner, meta, { bindProps: false })
-      installComputed(data, meta)
+      installComputed(data, meta, this.owner)
       this.collectModelHooks(data, meta)
 
       this.entries.set(token, entry)

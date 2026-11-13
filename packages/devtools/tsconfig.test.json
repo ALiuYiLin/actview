@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@actview/core": ["../core/src/index.ts"],
+      "@actview/core/*": ["../core/src/*"],
+      "@actview/devtools": ["./src/index.ts"],
+      "@actview/jsx": ["../jsx/src/index.ts"],
+      "@actview/jsx/*": ["../jsx/src/*"],
+      "@actview/reactivity": ["../reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["../reactivity/src/*"],
+      "@actview/shared": ["../shared/src/index.ts"],
+      "@actview/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src", "__tests__"],
+  "references": [{ "path": "." }]
+}

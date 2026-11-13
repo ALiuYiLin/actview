@@ -1,0 +1,29 @@
+{
+  // ============================================================
+  // @actview/devtools — backend 构建配置（composite project）
+  //   src → dist-types/*.d.ts；__tests__ 在 tsconfig.test.json。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "preserve",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../reactivity" },
+    { "path": "../core" }
+  ]
+}

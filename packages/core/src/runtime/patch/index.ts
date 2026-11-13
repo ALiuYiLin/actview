@@ -65,7 +65,7 @@ import {
   shouldUpdateComponent,
   updateProps,
 } from '../component'
-import { getDevtoolsHook } from '../devtools'
+import { getDevtoolsHook, notifyDevtoolsComponent, notifyDevtoolsPerformance, notifyDevtoolsReactive } from '../devtools'
 import { createElement, patchProps } from './patchProps'
 import { handleError } from '../errorHandling'
 import { collectHostNodes, firstHostNode, lastHostNode } from '../hostNodes'
@@ -88,7 +88,13 @@ type ContainerElement = Element & { _vnode?: VNode | null }
  * 直接调用 render()（未经 createApp）时的兜底 AppContext。
  * 正常路径由 app.mount 把 AppContext 写到根 VNode 的 appContext 上。
  */
-const fallbackAppContext: AppContext = { app: null, config: {}, provides: {} }
+const fallbackAppContext: AppContext = {
+  app: null,
+  appId: 0,
+  config: {},
+  provides: {},
+  root: null,
+}
 
 // ------------------------------------------------------------
 // 对外入口
@@ -846,7 +852,7 @@ function mountComponent(
   // 重新挂载时由 activateKeptAlive 触发；m3c 验收按此语义计数）。
 
   // DevTools：首次挂载完成（hook 未注册时零开销）
-  notifyDevtools(instance, 'mount')
+  notifyDevtoolsComponent(instance, 'mount')
 }
 
 /**
@@ -884,6 +890,11 @@ function setupRenderEffect(
   anchor: Node | null,
 ): void {
   const componentUpdateFn = (): void => {
+    instance.renderCount++
+    const perfStart = instance.appContext.config.performance
+      ? now()
+      : 0
+
     // ---- 首帧：同步挂载子树 ----
     if (!instance.isMounted) {
       invokeHooks(instance.beforeMount, instance)
@@ -907,6 +918,9 @@ function setupRenderEffect(
       }
 
       instance.isMounted = true
+      if (perfStart) {
+        notifyDevtoolsPerformance(instance, 'mount', now() - perfStart)
+      }
       // mounted 是 post hook：等整轮 patch 完成、DOM 就绪后执行
       // （子组件挂载先入队 → 子 mounted 先于父 mounted）
       queuePostFlushCb(() => invokeHooks(instance.mounted, instance))
@@ -946,7 +960,10 @@ function setupRenderEffect(
     }
 
     // DevTools：重渲染完成
-    notifyDevtools(instance, 'update')
+    if (perfStart) {
+      notifyDevtoolsPerformance(instance, 'update', now() - perfStart)
+    }
+    notifyDevtoolsComponent(instance, 'update')
     queuePostFlushCb(() => invokeHooks(instance.updated, instance))
   }
 
@@ -964,6 +981,24 @@ function setupRenderEffect(
   instance.scope.run(() => {
     const effect = new ReactiveEffect(componentUpdateFn)
     effect.scheduler = () => queueJob(instance.job)
+    if (getDevtoolsHook()) {
+      effect.onTrack = (event) => {
+        notifyDevtoolsReactive(instance, 'track', {
+          target: event.target,
+          key: event.key,
+          type: event.type,
+        })
+      }
+      effect.onTrigger = (event) => {
+        notifyDevtoolsReactive(instance, 'trigger', {
+          target: event.target,
+          key: event.key,
+          type: event.type,
+          newValue: event.newValue,
+          oldValue: event.oldValue,
+        })
+      }
+    }
     instance.effect = effect
     // 首帧同步执行（mount 返回时 DOM 已就绪）
     effect.run()
@@ -1029,7 +1064,7 @@ function unmountComponent(vnode: VNode): void {
   vnode.el = null
 
   // DevTools：卸载完成
-  notifyDevtools(instance, 'unmount')
+  notifyDevtoolsComponent(instance, 'unmount')
 }
 
 // ------------------------------------------------------------
@@ -1287,29 +1322,9 @@ function currentSuspense(): SuspenseContextLike | null {
     : null
 }
 
-/** DevTools 事件类型 */
-type DevtoolsEvent = 'mount' | 'update' | 'unmount'
-
-/**
- * 上报组件生命周期到 DevTools hook。
- * hook 未注册时直接返回（零开销，不构造 info 对象）。
- */
-function notifyDevtools(
-  instance: ComponentInternalInstance,
-  event: DevtoolsEvent,
-): void {
-  const hook = getDevtoolsHook()
-  if (!hook) return
-
-  const info = {
-    id: instance.uid,
-    name: (instance.type.name as string | undefined) || 'Anonymous',
-    instance,
-    parent: instance.parent,
-  }
-  if (event === 'mount') hook.onComponentMount?.(info)
-  else if (event === 'update') hook.onComponentUpdate?.(info)
-  else hook.onComponentUnmount?.(info)
+/** 性能计时（无 performance 环境下退回 Date.now） */
+function now(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now()
 }
 
 /** 已挂载 VNode 的子节点列表；未挂载过时从 props.children 归一化 */

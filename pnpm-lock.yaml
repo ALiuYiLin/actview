@@ -66,6 +66,12 @@ importers:
         specifier: workspace:^
         version: link:../shared
 
+  packages/devtools:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:^
+        version: link:../core
+
   packages/jsx:
     dependencies:
       '@actview/core':

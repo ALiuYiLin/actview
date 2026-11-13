@@ -10,7 +10,7 @@
 - 组件级 re-render、微任务调度、`nextTick`（已从 `actview` 导出）；
 - keyed children diff + LIS；
 - Teleport / Transition / TransitionGroup / KeepAlive / Suspense / lazy / ErrorBoundary / Dynamic；
-- 生命周期 hooks、错误传播、DevTools hook、provide/inject；
+- 生命周期 hooks、错误传播、DevTools hook / `@actview/devtools` backend（树 / 状态 / 事件 / 性能；无 UI）、provide/inject；
 - App 插件契约：`app.use` / `app.onUnmount` / `app.config`（devtools / performance / warnHandler）；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
 - 构建、类型检查、单元测试、playground。
@@ -25,7 +25,7 @@
 - Model `@Prop` 是 owner 组件同名 `@Prop` 的只读投影；组件必须声明；
 - `pre` Model 不能依赖 `after` Model（阶段冲突报错）；
 - 循环依赖直接报错，不做代理；
-- Model 不参与 DevTools 数据图展示。
+- Model 状态已可被 DevTools backend 读取；Model 依赖图 UI 尚未实现。
 
 ### 2.2 组件 / 运行时第一版限制
 
@@ -73,7 +73,8 @@
 14. **错误恢复**
     - ErrorBoundary 重试/重置；async setup 取消/超时；errorCaptured 完整传播。
 15. **DevTools**
-    - 组件树、props/state、事件、Model 依赖图、性能时间线、状态编辑。
+    - backend 已完成（树 / props/state/computed/Model / track/trigger / 性能 / 订阅）；
+    - 待做：内嵌面板 / 浏览器扩展、状态编辑、时间旅行、源码定位。
 
 ## 5. P2：DOM / 渲染器硬化
 

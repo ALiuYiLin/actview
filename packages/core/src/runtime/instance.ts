@@ -35,9 +35,15 @@ export interface AppConfig {
 export interface AppContext {
   /** createApp 返回的 app 对象（避免循环依赖，用 unknown） */
   app: unknown
+  /** 应用唯一 id（DevTools / 多应用区分） */
+  appId: number
+  /** 应用名（DevTools / 错误信息） */
+  name?: string
   config: AppConfig
   /** app.provide 注入表（根组件 injects 的初始表） */
   provides: Record<PropertyKey, any>
+  /** 当前挂载的根组件实例（未挂载为 null） */
+  root: ComponentInternalInstance | null
 }
 
 /**
@@ -111,6 +117,8 @@ export interface ComponentInternalInstance {
   scope: EffectScope
   /** 组件内 Model 作用域（每个组件实例一个；@UseModel 的缓存与生命周期） */
   modelScope?: ComponentScope
+  /** 渲染次数（mount 为 1；DevTools / 性能面板） */
+  renderCount: number
   isMounted: boolean
   /** 组件挂载的 DOM 容器（DOM 渲染器实现；跨平台渲染器可另立类型） */
   container: Element | null

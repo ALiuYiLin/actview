@@ -21,6 +21,9 @@ import type {
   ComponentPublicInstance,
 } from './instance'
 import { render } from './patch'
+import { notifyDevtoolsApp } from './devtools'
+
+let appUid = 0
 
 /** 挂载过 app 的容器（重复 mount 检测标记） */
 type MountedContainer = Element & { __actview_app__?: App }
@@ -81,8 +84,11 @@ export function createApp(
 
   const context: AppContext = {
     app: null,
+    appId: ++appUid,
+    name: rootComponent.name,
     config: { devtools: __DEV__, performance: false },
     provides: {},
+    root: null,
   }
   const installedPlugins = new Set<Plugin<any>>()
   const unmountHooks: Array<() => void> = []
@@ -147,6 +153,8 @@ export function createApp(
       const instance = (vnode.component as unknown as
         | ComponentInternalInstance
         | null) ?? null
+      context.root = instance
+      notifyDevtoolsApp(context, 'mount', instance)
       return instance?.proxy ?? null
     },
     unmount() {
@@ -158,6 +166,8 @@ export function createApp(
       } finally {
         delete container.__actview_app__
         app._container = null
+        notifyDevtoolsApp(context, 'unmount', context.root)
+        context.root = null
         // 插件清理只执行一次；清理异常不能阻断其它插件。
         for (const hook of unmountHooks.splice(0)) {
           try {

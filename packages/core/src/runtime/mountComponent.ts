@@ -89,7 +89,7 @@ export function mountClassComponent(
     withOwner(() => {
       // 1) 组件自身字段先就位：Model @Prop 需要读取 owner 的 @Prop accessor。
       installDeclaredFields(ctx, instance, meta)
-      installComputed(ctx, meta)
+      installComputed(ctx, meta, instance)
 
       // 2) 构造 Model + 安装字段/computed；@Setup 延迟到阶段执行。
       installUseModels(modelScope, ctx, meta)

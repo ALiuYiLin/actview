@@ -5,8 +5,9 @@
   // JSX 由使用 TSX 的项目显式配置（root app / core tests / jsx type-tests），
   // 统一指向 @actview/jsx 的 automatic runtime。
   //
-  // 包分层（详见 docs/types-architecture.md）：
+  // 包分层（详见 docs/architecture.md）：
   //   @actview/core             公开类型 + DOM 渲染器 + 装饰器 + 内置组件
+  //   @actview/devtools         DevTools backend（树 / 状态 / 事件 / 性能）
   //   @actview/jsx              JSX 作者层（全局 JSX 命名空间 / DOM 属性 / JSX runtime）
   //   @actview/reactivity       响应式系统（core 内部使用）
   //   @actview/shared           内部共享工具

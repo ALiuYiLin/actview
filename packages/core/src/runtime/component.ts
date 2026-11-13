@@ -66,6 +66,7 @@ export function createComponentInstance(
     effect: null as unknown as ComponentInternalInstance['effect'],
     job: null as unknown as ComponentInternalInstance['job'],
     scope: new EffectScope(true),
+    renderCount: 0,
     isMounted: false,
     container: null,
     // 注入表继承：子组件共享父实例的引用（零拷贝），首次 provide 时

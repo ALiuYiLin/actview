@@ -14,6 +14,7 @@ ActView 是一个 **类组件 + 装饰器** 的响应式前端框架：
 packages/
   actview/          用户聚合入口（createApp / 装饰器 / 内置组件）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
+  devtools/         DevTools backend（无 UI）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx automatic runtime）
   reactivity/       响应式系统（core 内部使用）
   shared/           内部共享工具

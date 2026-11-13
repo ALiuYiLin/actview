@@ -56,7 +56,13 @@ export type {
   WatchSource,
 } from './decorator'
 export { setDevtoolsHook, getDevtoolsHook } from './runtime/devtools'
-export type { DevtoolsComponentInfo, DevtoolsHook } from './runtime/devtools'
+export type {
+  DevtoolsAppInfo,
+  DevtoolsComponentInfo,
+  DevtoolsHook,
+  DevtoolsPerformanceEvent,
+  DevtoolsReactiveEvent,
+} from './runtime/devtools'
 export {
   getCurrentInstance,
   onBeforeMount,
