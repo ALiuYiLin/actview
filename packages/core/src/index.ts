@@ -7,7 +7,8 @@
 // ============================================================
 
 export { createApp } from './runtime/app'
-export type { App } from './runtime/app'
+export type { App, AppPlugin, Plugin } from './runtime/app'
+export type { AppConfig } from './runtime/instance'
 export { nextTick } from './runtime/scheduler'
 export { provide, inject } from './runtime/apiProvide'
 export { Suspense } from './components/Suspense'

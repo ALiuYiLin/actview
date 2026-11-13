@@ -11,6 +11,7 @@
 - keyed children diff + LIS；
 - Teleport / Transition / TransitionGroup / KeepAlive / Suspense / lazy / ErrorBoundary / Dynamic；
 - 生命周期 hooks、错误传播、DevTools hook、provide/inject；
+- App 插件契约：`app.use` / `app.onUnmount` / `app.config`（devtools / performance / warnHandler）；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
 - 构建、类型检查、单元测试、playground。
 
@@ -33,7 +34,7 @@
 - 无组件 emits / `$attrs` / `$emit`；
 - `@Prop` 无 required / default / validator / 类型运行时告警；
 - 无 TransitionGroup 的 move 动画（enter/leave 已有）；
-- 无 app 插件系统（`app.use` / `app.component` / `app.directive` / dev-only config）。
+- `app.component` / `app.directive` 尚未实现（`app.use` / `app.config` 已有；见 [plugins.md](./plugins.md)）。
 
 ### 2.3 平台 / 工程限制
 
@@ -52,7 +53,7 @@
 2. **`$attrs` / 属性透传**：未声明 props 的属性落到根节点；`inheritAttrs`。
 3. **Props 运行时能力**：required / default / validator / 类型告警。
 4. **公开 API 补齐**：`$attrs` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
-5. **App / 插件系统**：`app.use`、`app.component`、`app.directive`、`app.config.errorHandler` / `warnHandler` / `performance`。
+5. **全局注册表**：`app.component` + `Dynamic` 字符串解析；`app.directive` 等 JSX 指令语法确定后再做。
 
 ## 4. P1：生产可用性
 
@@ -94,7 +95,7 @@
 如果只先做三件事：
 
 1. **emits + `$attrs` + props 校验**（组件模型闭环）；
-2. **App 插件 API + 官方测试工具**（可被应用和生态使用）；
+2. **官方测试工具 + 全局组件注册表**（可被应用和生态使用）；
 3. **SSR/hydration 或 HMR/Vite 插件** 二选一先做（部署能力 vs 开发体验）。
 
 路由、DevTools、CLI、生态包可以在独立包中并行推进，不阻塞 core。
@@ -104,5 +105,6 @@
 - [architecture.md](./architecture.md) — 包结构 / 公开边界
 - [decorators.md](./decorators.md) — 类组件与装饰器
 - [dependency-injection.md](./dependency-injection.md) — Model / @UseModel 设计与限制
+- [plugins.md](./plugins.md) — App 插件契约与官方插件规划
 - [renderer.md](./renderer.md) — 渲染器现状与限制
 - [build.md](./build.md) — 构建链

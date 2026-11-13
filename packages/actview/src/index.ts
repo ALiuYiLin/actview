@@ -14,7 +14,7 @@
 // ============================================================
 
 export { createApp, nextTick } from '@actview/core'
-export type { App } from '@actview/core'
+export type { App, AppConfig, AppPlugin, Plugin } from '@actview/core'
 
 export {
   ActViewComponent,

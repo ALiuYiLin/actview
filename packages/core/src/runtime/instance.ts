@@ -13,8 +13,22 @@ import type { ComponentScope } from './componentScope'
 
 /** 应用配置（app.config） */
 export interface AppConfig {
-  /** 全局错误处理；未设置时 dev 下抛出/console.error */
-  errorHandler?: ((err: unknown, instance: ComponentInternalInstance | null, info: string) => void) | null
+  /** 全部未捕获错误最终交给它；无实例时 instance 为 null */
+  errorHandler?: ((
+    err: unknown,
+    instance: ComponentInternalInstance | null,
+    info: string,
+  ) => void) | null
+  /** 开发期警告处理；不设置时使用 console.warn */
+  warnHandler?: ((
+    msg: string,
+    instance?: ComponentInternalInstance | null,
+    trace?: string,
+  ) => void) | null
+  /** 开启 renderer 性能采集（插件 / DevTools 使用） */
+  performance?: boolean
+  /** DevTools 接入开关；默认 __DEV__ */
+  devtools?: boolean
 }
 
 /** 应用上下文：跨组件共享的全局信息 */

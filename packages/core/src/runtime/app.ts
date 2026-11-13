@@ -25,6 +25,17 @@ import { render } from './patch'
 /** 挂载过 app 的容器（重复 mount 检测标记） */
 type MountedContainer = Element & { __actview_app__?: App }
 
+/** App 插件对象形态 */
+export interface AppPlugin<Options = unknown> {
+  name?: string
+  install(app: App, options?: Options): void
+}
+
+/** App 插件：对象或函数形态 */
+export type Plugin<Options = unknown> =
+  | AppPlugin<Options>
+  | ((app: App, options?: Options) => void)
+
 /** createApp 返回的应用对象 */
 export interface App {
   /** 应用上下文（全局 config 等） */
@@ -40,6 +51,13 @@ export interface App {
    * 所有组件都能 inject 到。建议在 mount 之前调用（根组件 setup 时继承该表）。
    */
   provide<T>(key: PropertyKey, value: T): App
+  /**
+   * 安装插件；同一个插件对象 / 函数只安装一次。
+   * 第一版要求 mount 之前调用；插件 install 必须同步。
+   */
+  use<Options = unknown>(plugin: Plugin<Options>, options?: Options): App
+  /** 注册 app 卸载后的清理回调（插件用；多次调用按注册顺序执行） */
+  onUnmount(fn: () => void): App
   /**
    * 挂载到容器（DOM Element 或选择器字符串），返回根组件【公开实例 proxy】；
    * 未挂载成功（根组件 render 异常等）为 null。内部实例经 proxy.$ 访问。
@@ -61,7 +79,13 @@ export function createApp(
 ): App {
   assertRootComponent(rootComponent)
 
-  const context: AppContext = { app: null, config: {}, provides: {} }
+  const context: AppContext = {
+    app: null,
+    config: { devtools: __DEV__, performance: false },
+    provides: {},
+  }
+  const installedPlugins = new Set<Plugin<any>>()
+  const unmountHooks: Array<() => void> = []
 
   const app: App = {
     _context: context,
@@ -70,6 +94,32 @@ export function createApp(
     component: rootComponent,
     provide<T>(key: PropertyKey, value: T): App {
       context.provides[key] = value
+      return app
+    },
+    use<Options = unknown>(plugin: Plugin<Options>, options?: Options): App {
+      if (installedPlugins.has(plugin)) return app
+      if (app._container) {
+        throw new Error('[actview] app.use() 必须在 mount() 之前调用')
+      }
+
+      installedPlugins.add(plugin)
+      try {
+        if (typeof plugin === 'function') {
+          plugin(app, options)
+        } else if (plugin && typeof plugin.install === 'function') {
+          plugin.install(app, options)
+        } else {
+          throw new Error('[actview] 无效的插件：需要 install(app, options) 或函数')
+        }
+      } catch (err) {
+        // 安装失败允许修复后重试
+        installedPlugins.delete(plugin)
+        throw err
+      }
+      return app
+    },
+    onUnmount(fn: () => void): App {
+      unmountHooks.push(fn)
       return app
     },
     mount(rootContainer) {
@@ -103,9 +153,20 @@ export function createApp(
       const container = app._container as MountedContainer | null
       if (!container) return
 
-      render(null, container)
-      delete container.__actview_app__
-      app._container = null
+      try {
+        render(null, container)
+      } finally {
+        delete container.__actview_app__
+        app._container = null
+        // 插件清理只执行一次；清理异常不能阻断其它插件。
+        for (const hook of unmountHooks.splice(0)) {
+          try {
+            hook()
+          } catch (err) {
+            console.error('[actview] app.onUnmount 回调出错：', err)
+          }
+        }
+      }
     },
   }
 

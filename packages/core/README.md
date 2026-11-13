@@ -17,7 +17,7 @@ src/
 
 从 `@actview/core`（或用户入口 `actview`）使用：
 
-- `createApp` / `nextTick`；
+- `createApp` / `nextTick` / `app.use` / `app.onUnmount`；
 - `ActViewComponent` 与全部装饰器；
 - `Model` / `UseModel`（组件内数据层）；
 - `KeepAlive` / `Suspense` / `lazy`（loading/error/retry/timeout）/ `ErrorBoundary` / `Teleport` / `Transition` / `TransitionGroup` / `Dynamic`；

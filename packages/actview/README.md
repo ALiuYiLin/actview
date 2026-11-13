@@ -39,6 +39,7 @@ createApp(Counter).mount('#app')
 ## 导出范围
 
 - `createApp` / `nextTick` / `App`；
+- App 插件契约：`app.use` / `app.onUnmount` / `app.config`；类型 `AppPlugin` / `Plugin` / `AppConfig`；
 - `ActViewComponent` 与全部类组件装饰器（`@Component` / `@Prop` / `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` / 生命周期）；
 - 组件内数据层：`@Model` + `@UseModel(Token)`；
 - 内置组件：`KeepAlive` / `Suspense` / `lazy`（loading/error/retry/timeout）/ `ErrorBoundary` / `Teleport` / `Transition` / `TransitionGroup` / `Dynamic`；

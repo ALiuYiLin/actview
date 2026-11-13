@@ -18,7 +18,7 @@ playground/
 
 | 包 | 职责 | 入口 |
 |---|---|---|
-| `actview` | 用户 API：`createApp` / `ActViewComponent` / 全部装饰器 / 内置组件 / 公开类型 | `.` |
+| `actview` | 用户 API：`createApp` / `nextTick` / App 插件类型 / `ActViewComponent` / 全部装饰器 / 内置组件 / 公开类型 | `.` |
 | `@actview/core` | 组件类型、装饰器、运行时、DOM 渲染器、内置组件 | `.` / `./internal` |
 | `@actview/jsx` | 全局 JSX 命名空间、DOM/SVG 属性类型、automatic runtime | `.` / `./jsx-runtime` / `./jsx-dev-runtime` |
 | `@actview/reactivity` | `ref` / `reactive` / `computed` / `effect` / `watch` | `.`（内部使用） |
@@ -46,7 +46,7 @@ packages/core/src/
     element.ts                Element / ElementType / ClassComponent / BuiltinComponent / ComponentProps
     component.ts              RenderFunction / ClassComponentCtor / isClassComponent / isComponent
   runtime/
-    app.ts                    createApp / mount / unmount
+    app.ts                    createApp / mount / unmount / use / onUnmount
     mountComponent.ts         mountClassComponent：构造 → 安装 → @Setup → render
     componentScope.ts         组件内 Model 作用域（@UseModel 单实例 / 生命周期排序）
     installReactiveApi.ts     @Prop/@Ref/@Reactive/@Computed/@Inject/@Provide/@Watch 安装
@@ -120,6 +120,7 @@ pnpm build:packages # 各包 tsup + d.ts
 - 组件组合采用 props（组件构造器 / render function / children），不做 slots；
 - 组件 ref 使用显式 `ref={(el) => ...}` callback，不做 `defineExpose`；
 - 组件 emits / `$attrs` / `$emit` 尚未补齐；
+- App 插件契约已实现（`app.use` / `app.onUnmount` / `app.config`），官方插件与 `app.component` / `app.directive` 尚未实现，见 [plugins.md](./plugins.md)；
 - `patchComponent` / `patchElement` 逻辑仍在 `runtime/patch/index.ts`（与 children diff/unmount/KeepAlive 强耦合），`patchProps` 已独立；
 - 装饰器为 legacy（`experimentalDecorators`），Stage-3 迁移后续处理。
 
