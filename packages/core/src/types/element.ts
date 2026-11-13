@@ -1,7 +1,7 @@
 // ============================================================
 // 公开元素 / 组件类型契约（public type layer）
 //
-// 分层约定（详见 docs/types-architecture.md）：
+// 分层约定（详见 docs/architecture.md）：
 //   - 本文件 = 用户与公开 API 只能看到的「元素 / 组件」类型；
 //   - 渲染器内部类型（VNode 等）在 vnode.ts，只经 ./internal 入口暴露；
 //   - 公开 Element 只承诺 4 个稳定字段；渲染器字段（__v_isVNode /

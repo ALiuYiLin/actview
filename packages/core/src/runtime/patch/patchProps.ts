@@ -1,6 +1,6 @@
 // ============================================================
 // DOM props patch + 元素工厂 — 属性 / class / style / 事件 / SVG
-// （docs/renderer-design.md §7.3，M2 完整化）
+// （docs/renderer.md）
 //
 //   createElement：SVG 标签走 createElementNS，其余 createElement。
 //

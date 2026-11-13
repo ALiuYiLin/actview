@@ -7,7 +7,7 @@
 // M3：setup 可以返回 Promise（async setup）——先挂 `() => null` 占位，
 // 返回 Promise<RenderFunction> 给渲染器集成 Suspense / 错误处理。
 //
-// 依赖边界（docs/renderer-design.md §9）：
+// 依赖边界（docs/renderer.md）：
 //   - setup 在父组件 render effect 执行栈中运行，必须 pauseTracking，
 //     否则 setup 内的响应式读取会被父 effect 收集；
 //   - render 执行期间正常 tracking：组件依赖的唯一来源；

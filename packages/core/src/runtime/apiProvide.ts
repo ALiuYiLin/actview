@@ -1,5 +1,5 @@
 // ============================================================
-// provide / inject（M2，docs/renderer-design.md §10）
+// provide / inject（M2，docs/renderer.md）
 //
 // 语义（对齐 Vue 3）：
 //   - provide(key, value) 只能在该组件 setup 内调用：写入【当前实例】的

@@ -1,15 +1,6 @@
 # actview
 
-**ActView 框架统一入口（聚合包）** —— 从 `actview` 一个包拿到全部核心 API。
-
-`actview` 是面向使用者的聚合包：re-export `@actview/core` 的全部公开 API 与类型，`import { createApp, reactive } from 'actview'` 即可开始开发，无需分别安装/引用 `@actview/core`。
-
-## 核心功能
-
-- 统一 re-export `@actview/core` 的运行时 API（响应式、组件、生命周期、内置组件、SSR）
-- 统一导出类型（`App` / `SetupContext` / `ComponentOptions`）
-
-> 不含 `@actview/router`（路由是独立包，按需安装，对齐 Vue 生态中 vue-router 的模型）。
+ActView 用户聚合入口（薄壳）：只导出应用开发所需的 API。
 
 ## 安装
 
@@ -20,44 +11,58 @@ pnpm add actview
 ## 快速开始
 
 ```tsx
-import { createApp, reactive, defineComponent, onMounted } from 'actview'
+import {
+  ActViewComponent,
+  Component,
+  Ref,
+  Setup,
+  createApp,
+} from 'actview'
 
-const App = defineComponent({
+@Component({ name: 'Counter' })
+class Counter extends ActViewComponent {
+  @Ref count = 0
+
+  @Setup
   setup() {
-    const state = reactive({ count: 0 })
-    onMounted(() => console.log('mounted'))
-    return () => <div onClick={() => state.count++}>{state.count}</div>
-  },
-})
+    this.count = 0
+  }
 
-createApp(<App />).mount('#app')
+  render() {
+    return <button onClick={() => this.count++}>{this.count}</button>
+  }
+}
+
+createApp(Counter).mount('#app')
 ```
 
-## API（re-export 自 @actview/core）
+## 导出范围
 
-| 分组 | 导出 |
-|---|---|
-| 应用 | `createApp` |
-| 组件 | `defineComponent` |
-| 响应式 | `reactive` / `shallowReactive` / `readonly` / `markRaw` / `ref` / `isRef` / `unref` / `toRef` / `toRefs` / `computed` / `watch` / `watchEffect` / `nextTick` |
-| 生命周期 | `onMounted` / `onUpdated` / `onBeforeUnmount` / `onUnmounted` |
-| 依赖注入 | `provide` / `useInjects` |
-| 内置组件 | `Teleport` / `Transition` / `KeepAlive` / `ErrorBoundary` / `Suspense` / `lazy` |
-| SSR / 其他 | `renderToString` / `getCurrentScope` |
-| 类型 | `App` / `SetupContext` / `ComponentOptions` |
+- `createApp` / `App`；
+- `ActViewComponent` 与全部类组件装饰器（`@Component` / `@Prop` / `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` / 生命周期）；
+- 内置组件：`KeepAlive` / `Suspense` / `lazy` / `ErrorBoundary` / `Teleport` / `Transition`；
+- 公开类型：`Element` / `ClassComponent` / `BuiltinComponent` / `ComponentProps` / `ElementType` 等。
 
-## 依赖关系
+**不导出**：`ref` / `reactive` / `effect` / `computed` / `watch` / `provide` / `inject` / `getCurrentInstance` 等运行时内部 API。
 
-- `@actview/core`（全部 API 来源）
-- `@actview/jsx`（类型契约；实际使用时还需在 `tsconfig` 配 `jsxImportSource: "@actview/jsx"`）
+## 配置
+
+`tsconfig` 需要：
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx"
+  }
+}
+```
 
 ## 开发
 
 ```bash
-pnpm build   # tsup 打包 dist（薄壳，仅 re-export）
-pnpm test    # 走根目录 vitest
+pnpm -C packages/actview typecheck
+pnpm -C packages/actview build
 ```
 
-## License
-
-MIT
+文档：[architecture.md](../../docs/architecture.md)、[decorators.md](../../docs/decorators.md)。

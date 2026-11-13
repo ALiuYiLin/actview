@@ -1,5 +1,5 @@
 // ============================================================
-// Teleport — 内置组件标记 + 目标容器解析（docs/renderer-design.md §13 M3）
+// Teleport — 内置组件标记 + 目标容器解析（docs/renderer.md）
 //
 //   renderer 按 `type.__builtin === 'teleport'` 识别本组件，children 的
 //   patch / 插入 / 卸载由 renderer 负责（内容渲染到 target 容器，源码位置

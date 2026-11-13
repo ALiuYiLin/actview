@@ -12,7 +12,7 @@
 // 返回值语义：true = 已处理（renderer 不再 throw）；false = 未处理。
 // renderer 的用法统一为 `if (!handleError(...)) throw err`。
 //
-// 依赖收集边界（docs/renderer-design.md §9）：错误处理发生在 render
+// 依赖收集边界（docs/renderer.md）：错误处理发生在 render
 // effect 执行栈内（renderer 的 try/catch），钩子 / 全局 handler 里的响应式
 // 读取不应被正在运行的 effect 收集，因此全程 pauseTracking。
 // ============================================================

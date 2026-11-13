@@ -75,11 +75,10 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 
 ## 文档
 
-- [docs/class-component-design.md](docs/class-component-design.md) — 类组件 / 装饰器设计
-- [docs/types-architecture.md](docs/types-architecture.md) — 包分层与类型边界
-- [docs/renderer-design.md](docs/renderer-design.md) — 渲染器设计
-- [docs/compiler-layers.md](docs/compiler-layers.md) — 编译链（无 L1 wrap）
-- [docs/architecture-migration-checklist.md](docs/architecture-migration-checklist.md) — 架构对齐记录
+- [docs/architecture.md](docs/architecture.md) — 包结构、目录、公开边界
+- [docs/decorators.md](docs/decorators.md) — 类组件与全部装饰器
+- [docs/renderer.md](docs/renderer.md) — 渲染器 / patch / 内置组件
+- [docs/build.md](docs/build.md) — 构建链、TypeScript 配置、playground
 
 ## 状态
 

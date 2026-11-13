@@ -1,5 +1,5 @@
 // ============================================================
-// 调度器 — 组件级微任务批处理（docs/renderer-design.md §8）
+// 调度器 — 组件级微任务批处理（docs/renderer.md）
 //
 //   主队列（queue）：组件更新 job，按 id 升序执行（父组件 uid 小 → 先更新）
 //   post 队列：mounted / updated / ref 等，整轮 patch 结束后按入队顺序执行

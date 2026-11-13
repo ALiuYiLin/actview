@@ -1,20 +1,34 @@
 # @actview/core
 
-**ActView DOM 运行时公开层**（占位）—— 规划承载：DOM 渲染器（`createApp` / `patch` / 生命周期 / 内置组件）。
+ActView 核心包：组件类型、装饰器、运行时与 DOM 渲染器、内置组件。
 
-当前阶段只落地了类型基础与 JSX 作者层：
+## 内容
 
-- JSX 类型 / JSX runtime → [`@actview/jsx`](../jsx/README.md)
-- 公开元素/组件契约、内部 VNode 类型 → [`@actview/runtime-core`](../runtime-core/README.md)
-- 响应式系统 → [`@actview/reactivity`](../reactivity/README.md)
+```text
+src/
+  types/        Element / ClassComponent / BuiltinComponent / ComponentProps / VNode 类型
+  runtime/      createApp / mountClassComponent / installReactiveApi / installLifecycle / patch
+  lifecycle/    currentInstance + onXxx + invokeHooks
+  decorator/    @Component / @Prop / @Ref / @Reactive / @Computed / @Watch / @Provide / @Inject
+  components/   KeepAlive / Suspense / ErrorBoundary / Teleport / Transition
+```
 
-渲染器实现接入后，本包从 `@actview/runtime-core` 取内部类型（`/internal` 入口），对外只暴露公开 API。
+## 对外 API
+
+从 `@actview/core`（或用户入口 `actview`）使用：
+
+- `createApp` / `nextTick`；
+- `ActViewComponent` 与全部装饰器；
+- `KeepAlive` / `Suspense` / `lazy` / `ErrorBoundary` / `Teleport` / `Transition`；
+- 公开类型：`Element` / `ClassComponent` / `BuiltinComponent` / `ComponentProps`。
+
+`@actview/core/internal` 仅供内部/测试使用（VNode / ClassComponentCtor / ComponentInternalInstance）。
 
 ## 开发
 
 ```bash
-pnpm typecheck   # tsc -p tsconfig.json
-pnpm build       # tsup ESM + d.ts
+pnpm -C packages/core typecheck
+pnpm -C packages/core build       # tsup ESM + d.ts
 ```
 
-类型分层设计见 `docs/types-architecture.md`。
+设计文档：[architecture.md](../../docs/architecture.md)、[renderer.md](../../docs/renderer.md)、[decorators.md](../../docs/decorators.md)。

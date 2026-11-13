@@ -1,6 +1,6 @@
 // ============================================================
 // 生命周期 — currentInstance 栈式上下文 + 钩子注册/调用
-// （docs/renderer-design.md §9 / §10）
+// （docs/renderer.md）
 //
 //   - setup / 钩子执行期间 currentInstance 指向当前组件实例；
 //     setCurrentInstance 返回旧值，调用方在 finally 中恢复（嵌套 mount 场景）。

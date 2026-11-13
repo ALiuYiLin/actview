@@ -1,5 +1,5 @@
 // ============================================================
-// createApp / mount / unmount（M1，docs/renderer-design.md §4；M2 补 provide/proxy）
+// createApp / mount / unmount（M1，docs/renderer.md）
 //
 // 应用对象持有 AppContext（config / app 反指 / provides 注入表），mount 时
 // 创建根组件 VNode 并交给渲染器 render(vnode, container)；unmount 即
@@ -52,11 +52,7 @@ export interface App {
 /**
  * 创建应用。
  *
- * 类型上接受源码组件函数（ComponentFunction）与编译产物（ComponentTag）：
- * 纯 tsc 视角看不到 compiler L1 的包装，源码函数视图可让应用入口通过类型检查；
- * 运行时仍由 isComponent 校验（未包装的裸函数会给出明确错误）。
- *
- * @param rootComponent 根组件（编译期包装后的 marked setup 函数；运行时严格校验）
+ * @param rootComponent 根组件（@Component 类构造器；运行时用 isComponent 严格校验）
  * @param rootProps 根组件 props
  */
 export function createApp(

@@ -1,5 +1,5 @@
 // ============================================================
-// ref 处理（docs/renderer-design.md §7.3）
+// ref 处理（docs/renderer.md）
 //
 //   元素 ref → DOM 节点；组件 ref → 组件实例；卸载时传入 null。
 //   M1 支持函数 ref 与 Ref 对象（{ value }）两种形态。
