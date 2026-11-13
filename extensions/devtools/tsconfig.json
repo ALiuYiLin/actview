@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "lib": ["ES2023", "DOM"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "actview": ["../../packages/actview/src/index.ts"],
+      "actview/*": ["../../packages/actview/src/*"],
+      "@actview/core": ["../../packages/core/src/index.ts"],
+      "@actview/core/*": ["../../packages/core/src/*"],
+      "@actview/jsx": ["../../packages/jsx/src/index.ts"],
+      "@actview/jsx/*": ["../../packages/jsx/src/*"],
+      "@actview/reactivity": ["../../packages/reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["../../packages/reactivity/src/*"],
+      "@actview/shared": ["../../packages/shared/src/index.ts"],
+      "@actview/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src", "../../packages/global.d.ts"]
+}

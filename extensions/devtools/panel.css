@@ -24,6 +24,13 @@ html, body {
 
 body { display: flex; flex-direction: column; }
 
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
 .topbar {
   display: flex;
   align-items: center;

@@ -15,7 +15,7 @@ packages/
   reactivity/       响应式系统（core 内部使用）
   shared/           内部共享工具
 extensions/
-  devtools/         Chrome DevTools 扩展 v0.1（静态文件，无构建）
+  devtools/         Chrome DevTools 扩展（面板 UI 用 ActView 实现）
 playground/
   actview/          私有示例应用（不发布）
 ```

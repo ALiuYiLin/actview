@@ -32,7 +32,7 @@ packages/
 playground/
   actview/          私有示例应用（不发布）
 extensions/
-  devtools/         Chrome DevTools 扩展（静态文件，无构建步骤）
+  devtools/         Chrome DevTools 扩展（面板 UI 用 ActView，pnpm build:extension）
 ```
 
 - `pnpm-workspace.yaml` 包含 `packages/*` 与 `playground/*`；
@@ -56,6 +56,7 @@ pnpm preview        # playground 预览
 pnpm typecheck      # 7 包 + playground
 pnpm test           # vitest（reactivity + core + devtools + router）
 pnpm build:packages # tsup 各包（含 d.ts）
+pnpm build:extension # ActView 实现的面板 UI → extensions/devtools/build/panel.js
 ```
 
 ## 5. playground

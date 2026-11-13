@@ -2,6 +2,8 @@
 
 ActView 的 Chrome DevTools 扩展（Manifest V3）。
 
+面板 UI 使用 **ActView 自身**实现（`src/panel.tsx`），构建产物为 `build/panel.js`。
+
 ## 功能（v0.1）
 
 - Components
@@ -35,10 +37,18 @@ if (import.meta.env.DEV) {
 
 ## 加载扩展
 
+先构建面板 UI：
+
+```bash
+pnpm build:extension
+```
+
+然后：
+
 1. Chrome → `chrome://extensions`
 2. 打开「开发者模式」
 3. 「加载已解压的扩展程序」选择 `extensions/devtools`
-4. 打开任意 ActView 页面 → DevTools → ActView 面板
+4. 打开任意 ActView 页面 → 打开 DevTools → ActView 面板
 
 ## 文件
 
@@ -46,7 +56,10 @@ if (import.meta.env.DEV) {
 manifest.json
 devtools.html / devtools.js    创建 DevTools 面板
 content-script.js              页面 ↔ 扩展桥接
-panel.html / panel.css / panel.js
+panel.html / panel.css         面板壳
+src/panel.tsx                  ActView 实现的面板 UI
+build/panel.js                 构建产物（提交，供 unpacked 加载）
+vite.config.ts                 面板构建配置
 ```
 
 ## 通信协议
