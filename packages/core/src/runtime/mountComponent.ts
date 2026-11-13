@@ -87,18 +87,19 @@ export function mountClassComponent(
 
   const start = (): RenderFunction | Promise<RenderFunction> =>
     withOwner(() => {
-      // 1) 构造 Model + 安装字段/computed；@Setup 延迟到阶段执行。
+      // 1) 组件自身字段先就位：Model @Prop 需要读取 owner 的 @Prop accessor。
+      installDeclaredFields(ctx, instance, meta)
+      installComputed(ctx, meta)
+
+      // 2) 构造 Model + 安装字段/computed；@Setup 延迟到阶段执行。
       installUseModels(modelScope, ctx, meta)
       modelScope.validatePhases()
 
-      // 2) 组件字段 / computed / 生命周期先就位。
-      installDeclaredFields(ctx, instance, meta)
-      installComputed(ctx, meta)
+      // 3) 组件生命周期注册；Model hooks 按挂载/卸载方向排序。
       registerClassLifecycle(instance, ctx, meta)
-      // 挂载类 Model hooks 先于 owner，卸载类后于 owner。
       modelScope.applyLifecycleOrder()
 
-      // 3) Model pre setup → 组件 setup → Model after setup。
+      // 4) Model pre setup → 组件 setup → Model after setup。
       const prePending = modelScope.runPhase('pre')
       return prePending ? prePending.then(runComponentSetup) : runComponentSetup()
     })

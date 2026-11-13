@@ -12,8 +12,8 @@
 | 2 | 数据类实例作用域 = **per-component-instance**（每个组件实例一份） |
 | 3 | 数据类**复用组件生命周期装饰器**：`@Setup` / `@BeforeMount` / `@Mounted` / `@BeforeUpdate` / `@Updated` / `@BeforeUnmount` / `@Unmounted` / `@Activated` / `@Deactivated`，不新增 `@Init/@Dispose` |
 | 4 | 第一版**不做** `@Scope('app')` / `@Scope('inherited')` / `@Named` |
-| 5 | Model `@Setup` 支持 `pre/after`（相对 owner 组件 `@Setup`）：默认 `pre`；带 `@Prop` 的 Model 默认 `after`；可显式覆盖 |
-| 6 | Model 支持 `@Prop`（owner 赋值）与 `@Provide`（跨组件共享），支持 async `@Setup` |
+| 5 | Model `@Setup` 支持 `pre/after`（相对 owner 组件 `@Setup`）：默认 `pre`；`@Setup('after')` 可显式推迟 |
+| 6 | Model `@Prop` 是组件同名 `@Prop` 的**只读投影**（组件必须声明）；Model 支持 `@Provide`（跨组件共享）与 async `@Setup` |
 
 ### 1.1 命名：`@Model` + `@UseModel`
 
@@ -76,8 +76,8 @@
 | `@Inject` | 读取祖先 `provide`（复用 owner 组件的注入表） |
 | `@UseModel` | 注入其他数据类（递归解析，scope 内缓存） |
 | `@Setup` 及生命周期装饰器 | 与组件生命周期同一时机（见 §5） |
-| `@Prop` | owner 组件赋值的普通输入字段；不做 owner.props 自动映射 | 默认 `@Setup('after')`，组件在自身 `@Setup` 赋值后 Model 再读取 |
-| `@Provide` | Model setup 后把字段值 provide 给后代 | 写入 owner 注入表；跨组件共享值/对象；快照语义（同组件 `@Provide`） |
+| `@Prop` | 只读投影 owner 组件的同名 `@Prop`（组件必须声明）；父更新自动反映，写入报错，Model 不需要时可以不写 |
+| `@Provide` | Model setup 后把字段值 provide 给后代；写入 owner 注入表，快照语义（同组件 `@Provide`） |
 
 ## 4. Token 与 Scope
 
@@ -115,28 +115,28 @@ counterData!: CounterData
 ### 5.1 初始化顺序
 
 ```text
-owner component 实例化
+owner component 实例化 + initProps
 → ComponentScope 创建
-→ 解析 @UseModel（深度优先：构造 + 安装 @Ref/@Reactive/@Computed/@Inject）
-→ 组件安装自己的字段 / @Computed / 生命周期
+→ 组件安装 @Prop/@Ref/@Reactive/@Computed/@Inject
+→ 解析 @UseModel（构造 Model；@Prop 投影 owner 的 @Prop）
 → Model pre @Setup（依赖顺序；默认）
 → 组件 @Setup（sync 或 async）
-→ Model after @Setup（依赖顺序；@Prop / @Setup('after')）
+→ Model after @Setup（仅显式 @Setup('after')）
 → 各 Model 的 @Provide/@Watch 安装（在各自 setup 后）
 → 组件 @Provide/@Watch
 → render
 ```
 
 - **组件 `@Setup` 是基准点**：`pre` 在它之前，`after` 在它之后；
-- Model 默认 `pre`；带 `@Prop` 的 Model 默认 `after`（等待组件给字段赋值）；
-- 显式 `@Setup('pre')` / `@Setup('after')` 可覆盖默认；
+- Model 默认 `pre`；`@Setup('after')` 用于需要等组件 setup 派生状态的场景；
+- `@Prop` 不再影响 setup 阶段：组件 props 在 Model 构造前已经就绪，Model 直接读取投影；
 - 数据类之间按依赖深度排序；同一 scope 内共享实例；
 - 数据类 `@Setup` 只执行一次；
 - `pre` Model 不能依赖 `after` Model（阶段冲突会直接报错）。
 
-> 例：`@Model class M { @Prop initCount!: number; @Setup setup(){ this.count=this.initCount } }`
-> 组件在 `@Setup` 里 `this.m.initCount = 1`，Model 默认 after，因此 setup 能读到 1。
-> 如果显式写 `@Setup('pre')`，Model setup 会在组件赋值之前执行。
+> 例：组件 `@Prop initCount = 1`；Model `@Prop initCount!: number`；
+> Model 的 `@Setup` 直接读 `this.initCount`，不需要组件手动赋值。
+> 如果 Model 需要等组件的 `@Setup` 执行完，可写 `@Setup('after')`。
 
 ### 5.2 生命周期 hook 顺序
 
@@ -167,12 +167,13 @@ owner component 实例化
 new Ctor(props)
 → installClassPublicInstance
 → createComponentScope(instance)
+→ 组件 installDeclaredFields（@Prop accessor 就位）
 → installUseModels(scope, component)
-  → resolve：构造 Model + 安装 @Ref/@Reactive/@Computed/@Inject
-→ 组件 installDeclaredFields / installComputed / 生命周期注册
+  → resolve：构造 Model；安装 @Prop 投影 / @Ref/@Reactive/@Computed/@Inject
+→ 生命周期注册
 → scope.runPhase('pre')   // Model pre @Setup + Provide/Watch
 → 组件 @Setup             // 可 async
-→ scope.runPhase('after') // @Prop / @Setup('after') + Provide/Watch
+→ scope.runPhase('after') // 仅 @Setup('after') + Provide/Watch
 → 组件 @Provide/@Watch
 → render
 ```
@@ -180,7 +181,7 @@ new Ctor(props)
 关键点：
 
 - Model 字段安装复用 `installReactiveApi`，但 owner 是组件实例（ref、watch、inject 都绑在 owner 上）；
-- Model `@Prop` 不绑定 owner props，只作为 owner 组件赋值的普通字段；
+- Model `@Prop` 是 owner 组件同名 `@Prop` 的只读 accessor；组件必须声明，父更新自动反映；
 - Model `@Provide` 在 Model setup 完成后写入 owner 注入表，后代可 `@Inject`；
 - `@UseModel` 字段安装为实例 accessor 或直接赋值；scope 缓存保证单实例；
 - 数据类 `@Watch` 的 handler 以数据类实例为 `this`，watch 随 owner scope 停止；
@@ -229,7 +230,7 @@ class Page extends ActViewComponent {
 | `core/src/runtime/instance.ts` | `modelScope?` |
 | `core/src/index.ts` / `actview` | 导出 `Model` / `UseModel` / `ModelToken` |
 
-验收测试 `packages/core/__tests__/model.spec.tsx`（12 项）：
+验收测试 `packages/core/__tests__/model.spec.tsx`（13 项）：
 
 - `@Ref/@Computed` 驱动 render，方法修改状态触发更新；
 - 两个组件实例的数据隔离；
@@ -240,17 +241,18 @@ class Page extends ActViewComponent {
 - `@Model` 不允许实现 `render()`；
 - 循环依赖报错并给出链路；
 - async Model `@Setup` 等待 resolve 后渲染；
-- Model `@Prop` 由 owner 组件 `@Setup` 赋值，默认 after setup 读取；
+- Model `@Prop` 投影 owner 组件 `@Prop`（默认 pre setup 可读）且只读；
+- 组件未声明同名 prop 时 mount 报错；
 - Model `@Provide` 跨组件提供值，后代 `@Inject` 读取；
 - `@Setup('after')` 相对组件 setup 的执行顺序。
 
-全仓：`pnpm test` **409 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
+全仓：`pnpm test` **410 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ### 第一版限制
 
 - `@Model` 构造函数必须无参（token 直接 `new`）；
-- `@Prop` 是 owner 组件赋值的普通字段，不自动映射 owner.props；
-- 带 `@Prop` 的 Model 默认 `@Setup('after')`；显式 `pre` 时需自己保证赋值早于 setup；
+- `@Prop` 必须由 owner 组件声明；Model 上的 `@Prop` 只是只读投影；
+- `@Prop` / 组件 prop 均只读，写入会报错；
 - `pre` Model 不能依赖 `after` Model（阶段冲突直接报错）；
 - 无 app scope / inherited scope / qualifier；
 - 循环依赖直接报错，不做代理；
@@ -260,7 +262,7 @@ class Page extends ActViewComponent {
 
 - 裸 `@UseModel` 类型推断（需要可选编译插件）；
 - `@Scope('app')` / `@Scope('inherited')` / `@Named`；
-- Model 构造参数注入 / owner props 自动绑定；
+- Model 构造参数注入；
 - 循环依赖代理；
 - Model 的 DevTools 可视化；
 - HMR / SSR 的 scope 生命周期。

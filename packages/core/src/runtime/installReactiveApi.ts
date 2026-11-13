@@ -12,7 +12,7 @@ import type { ComponentInternalInstance } from './instance'
 import { inject, provide } from './apiProvide'
 /**
  * 安装声明字段的每实例 accessor：
- *   - @Prop：读 instance.props[key]（缺省时用 initializer 值做 fallback）；
+ *   - @Prop：读 instance.props[key]（缺省时用 initializer 值做 fallback），只读；
  *   - @Ref：闭包持有一个真正 ref，get/set 与 this.count ≈ count.value 等价；
  *   - @Reactive：对象 / 数组字段变成 reactive（或 shallowReactive）代理；
  *   - @Inject：setup 期解析一次注入值，写入实例字段。
@@ -36,8 +36,10 @@ export function installDeclaredFields(
         configurable: true,
         enumerable: true,
         get: () => (key in props ? props[key] : fallback),
-        set: (value: unknown) => {
-          props[key] = value
+        set: () => {
+          throw new Error(
+            `[actview] prop "${String(key)}" 是只读的（由父组件传入）`,
+          )
         },
       })
     }

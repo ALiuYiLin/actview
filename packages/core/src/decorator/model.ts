@@ -21,8 +21,8 @@ import {
  *
  * 约束：
  * - 不能实现 render()（不参与渲染）；
- * - 支持 @Prop（owner 赋值）/@Provide（跨组件共享）与 async @Setup；
- * - @Setup('pre'|'after') 相对 owner 组件 setup；带 @Prop 默认 after；
+ * - 支持 @Prop（只读投影 owner 组件的同名 @Prop）、@Provide（跨组件共享）与 async @Setup；
+ * - @Setup('pre'|'after') 相对 owner 组件 setup；默认 pre；
  * - 通过 @UseModel(Token) 注入；生命周期与 owner 组件一致。
  */
 export function Model<T extends Function>(target: T): T {

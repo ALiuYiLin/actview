@@ -3,8 +3,9 @@
 //
 // 每个组件实例一个 scope：@UseModel(Token) 在同一 scope 内解析为单实例；
 // @Setup('pre'|'after') 相对 owner 组件 @Setup：
-//   pre  → 组件 setup 前（默认；带 @Prop 的 Model 默认 after）
-//   after→ 组件 setup 后（等待组件给 @Prop 赋值）
+//   pre  → 组件 setup 前（默认）
+//   after→ 组件 setup 后
+// Model @Prop 是 owner 组件同名 @Prop 的只读投影。
 // ============================================================
 
 import { pauseTracking, resetTracking } from '@actview/reactivity'
@@ -106,7 +107,9 @@ export class ComponentScope {
     this.resolving.push(entry)
     try {
       installUseModels(this, data, meta)
-      // Model @Prop 是 owner 组件赋值的普通字段，不映射到 owner props。
+      // Model @Prop 是 owner 组件 prop 的只读投影。
+      this.installModelProps(entry)
+      // @Prop 由上面的投影处理；这里只安装 ref/reactive/inject。
       installDeclaredFields(data, this.owner, meta, { bindProps: false })
       installComputed(data, meta)
       this.collectModelHooks(data, meta)
@@ -176,6 +179,36 @@ export class ComponentScope {
         phase
       ]
       target.push(...hooks)
+    }
+  }
+
+  /** Model @Prop：只读投影 owner 组件的同名 @Prop；组件必须声明。 */
+  private installModelProps(entry: ModelEntry): void {
+    if (entry.meta.props.size === 0) return
+    const ownerMeta = getComponentMeta(
+      this.owner.type as unknown as Function,
+    )
+    const ownerCtx = this.owner.ctx as Record<string, any> | undefined
+    for (const key of entry.meta.props.keys()) {
+      if (!ownerMeta.props.has(key)) {
+        throw new Error(
+          `[actview] Model "${entry.token.name || 'Anonymous'}" 的 @Prop "${key}" ` +
+            `未在组件 "${ownerMeta.name || 'Anonymous'}" 声明；` +
+            '请在 owner 组件上声明同名 @Prop',
+        )
+      }
+      const own = Object.getOwnPropertyDescriptor(entry.data, key)
+      if (own) delete entry.data[key]
+      Object.defineProperty(entry.data, key, {
+        configurable: true,
+        enumerable: true,
+        get: () => ownerCtx?.[key],
+        set: () => {
+          throw new Error(
+            `[actview] Model prop "${key}" 是只读的（由 owner 组件 @Prop 传入）`,
+          )
+        },
+      })
     }
   }
 
@@ -252,9 +285,7 @@ export function installUseModels(
 }
 
 function resolvePhase(meta: ComponentMeta): 'pre' | 'after' {
-  if (meta.setupMode) return meta.setupMode
-  // 带 @Prop 的 Model 默认等待 owner 组件 @Setup 赋值后再 setup。
-  return meta.props.size > 0 ? 'after' : 'pre'
+  return meta.setupMode ?? 'pre'
 }
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {

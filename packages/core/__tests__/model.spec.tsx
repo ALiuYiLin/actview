@@ -6,7 +6,7 @@
 //   - 生命周期复用（@Setup/@Mounted/@Unmounted 顺序）
 // ============================================================
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ActViewComponent,
   Component,
@@ -353,7 +353,7 @@ describe('@actview/core：@Model / @UseModel', () => {
     expect(root.textContent).toBe('ready')
   })
 
-  it('Model @Prop：owner 组件 @Setup 赋值后，Model 默认 after setup 读取', async () => {
+  it('Model @Prop：投影 owner 组件 @Prop（默认 pre setup 可读）', async () => {
     @Model
     class PropData {
       @Prop
@@ -371,13 +371,11 @@ describe('@actview/core：@Model / @UseModel', () => {
 
     @Component({ name: 'PropHost' })
     class PropHost extends ActViewComponent {
+      @Prop
+      initCount = 7
+
       @UseModel(PropData)
       data!: PropData
-
-      @Setup
-      setup(): void {
-        this.data.initCount = 7
-      }
 
       render() {
         return <span>{this.data.count}</span>
@@ -385,9 +383,38 @@ describe('@actview/core：@Model / @UseModel', () => {
     }
 
     const root = mountRoot()
-    createApp(PropHost).mount(root)
+    const app = createApp(PropHost)
+    const instance = app.mount(root) as unknown as PropHost
     await flush()
     expect(root.textContent).toBe('7')
+
+    // Model @Prop 只读
+    expect(() => {
+      ;(instance.data as PropData).initCount = 9
+    }).toThrow(/只读/)
+  })
+
+  it('Model @Prop：组件未声明同名 prop → mount 报错', () => {
+    @Model
+    class MissingData {
+      @Prop
+      missing!: number
+    }
+
+    @Component({ name: 'MissingHost' })
+    class MissingHost extends ActViewComponent {
+      @UseModel(MissingData)
+      data!: MissingData
+
+      render() {
+        return <span>missing</span>
+      }
+    }
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const root = mountRoot()
+    expect(() => createApp(MissingHost).mount(root)).toThrow(/未在组件/)
+    errorSpy.mockRestore()
   })
 
   it('Model @Provide：跨组件 provide，后代 @Inject 读取', async () => {
@@ -417,13 +444,11 @@ describe('@actview/core：@Model / @UseModel', () => {
 
     @Component({ name: 'ThemeHost' })
     class ThemeHost extends ActViewComponent {
+      @Prop
+      theme = 'dark'
+
       @UseModel(ThemeData)
       data!: ThemeData
-
-      @Setup
-      setup(): void {
-        this.data.theme = 'dark'
-      }
 
       render() {
         return <Child />
