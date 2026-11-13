@@ -147,7 +147,69 @@ class Child extends ActViewComponent {
 }
 ```
 
-## 7. 注意事项
+## 7. 组合与组件 ref（不做 slots / defineExpose）
+
+ActView 采用 React 风格组合：**不提供 slot API**，通过 props 传组件构造器、render function 或 `children`。
+
+```tsx
+import type { ClassComponent } from 'actview'
+
+@Component({ name: 'Layout' })
+class Layout extends ActViewComponent {
+  @Prop
+  SideBarItem!: ClassComponent<{ active: boolean }>
+
+  @Prop
+  active = false
+
+  render() {
+    const SideBarItem = this.SideBarItem
+    return <SideBarItem active={this.active} />
+  }
+}
+```
+
+- 默认内容：`props.children`；
+- 具名区域：多个 prop；
+- 作用域内容：render function prop（如 `@Prop renderItem!: (item: Item) => ElementChild`）；
+- **不要把 `<SideBar />` 这种 VNode 作为 prop**：ActView VNode 可变，复用会不稳定。
+
+组件 ref 使用显式 callback + 类实例：
+
+```tsx
+interface SideBarHandle {
+  open(): void
+}
+
+@Component({ name: 'SideBar' })
+class SideBar extends ActViewComponent implements SideBarHandle {
+  open() {}
+  render() { return <aside /> }
+}
+
+@Component({ name: 'Layout' })
+class Layout extends ActViewComponent {
+  sideBar: SideBarHandle | null = null
+
+  render() {
+    return (
+      <SideBar
+        ref={(el) => {
+          this.sideBar = el as SideBarHandle | null
+        }}
+      />
+    )
+  }
+}
+```
+
+- 不需要 `defineExpose`：ref 拿到的是类实例；
+- 用 TypeScript interface 约束公开面，父组件只依赖接口；
+- `@Ref` 是组件本地响应式状态，**不会自动绑定子组件**；组件 ref 建议用普通字段（不触发重渲染）；
+- ref 在 mount 前 / unmount 后为 `null`，类型应允许 null；
+- 真正私有状态用 `#private`；`private` 只是编译期检查。
+
+## 8. 注意事项
 
 - 组件必须由渲染器实例化；手动 `new Counter()` 不会安装 `@Ref` / `@Prop` accessor，也不会创建 Model scope；
 - 构造函数内部读到的是普通字段（accessor 尚未安装），初始化请放在 `@Setup`；

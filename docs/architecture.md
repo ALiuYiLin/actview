@@ -116,7 +116,9 @@ pnpm build:packages # 各包 tsup + d.ts
 ## 6. 当前边界
 
 - 未实现 HMR / SSR / hydrate / 静态分析 / 代码生成；
-- 组件 slots/emits/$attrs/expose 等 API 尚未补齐；
+- 组件组合采用 props（组件构造器 / render function / children），不做 slots；
+- 组件 ref 使用显式 `ref={(el) => ...}` callback，不做 `defineExpose`；
+- 组件 emits / `$attrs` / `$emit` 尚未补齐；
 - `patchComponent` / `patchElement` 逻辑仍在 `runtime/patch/index.ts`（与 children diff/unmount/KeepAlive 强耦合），`patchProps` 已独立；
 - 装饰器为 legacy（`experimentalDecorators`），Stage-3 迁移后续处理。
 

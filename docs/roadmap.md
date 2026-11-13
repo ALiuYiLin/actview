@@ -28,9 +28,9 @@
 
 ### 2.2 组件 / 运行时第一版限制
 
-- 无插槽（默认/具名/作用域），只有 `props.children`；
-- 无组件 emits / `$attrs` / `$slots` / `$emit`；
-- 无显式 `defineExpose` / 组件公开 API 边界；
+- 组合约定：**不做 slots**——组件通过 props 传组件构造器、render function 或 `children` 组合；
+- 组件 ref：使用显式 `ref={(el) => ...}` callback，父组件持有类实例；**不做 `defineExpose`**；
+- 无组件 emits / `$attrs` / `$emit`；
 - `@Prop` 无 required / default / validator / 类型运行时告警；
 - 异步组件只有 `lazy`，无 loading/error/retry/timeout 组合；
 - 无 TransitionGroup / 动态组件辅助 API；
@@ -50,15 +50,13 @@
 
 ## 3. P0：框架核心 API 完整性
 
-1. **组件插槽**：默认、具名、作用域插槽；类型推导与 children 归一化。
-2. **组件事件**：`emits` 声明、`$emit`、父组件监听、事件类型。
-3. **`$attrs` / 属性透传**：未声明 props 的属性落到根节点；`inheritAttrs`。
-4. **组件 ref / `defineExpose`**：父组件只访问显式公开的 API。
-5. **Props 运行时能力**：required / default / validator / 类型告警。
-6. **异步组件增强**：loading / error / retry / timeout；与 Suspense/ErrorBoundary 组合。
-7. **动态组件与 TransitionGroup**。
-8. **公开 API 补齐**：`nextTick` 进入 `actview`；`$attrs` / `$slots` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
-9. **App / 插件系统**：`app.use`、`app.component`、`app.directive`、`app.config.errorHandler` / `warnHandler` / `performance`。
+1. **组件事件**：`emits` 声明、`$emit`、父组件监听、事件类型。
+2. **`$attrs` / 属性透传**：未声明 props 的属性落到根节点；`inheritAttrs`。
+3. **Props 运行时能力**：required / default / validator / 类型告警。
+4. **异步组件增强**：loading / error / retry / timeout；与 Suspense/ErrorBoundary 组合。
+5. **动态组件与 TransitionGroup**。
+6. **公开 API 补齐**：`nextTick` 进入 `actview`；`$attrs` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
+7. **App / 插件系统**：`app.use`、`app.component`、`app.directive`、`app.config.errorHandler` / `warnHandler` / `performance`。
 
 ## 4. P1：生产可用性
 
@@ -99,7 +97,7 @@
 
 如果只先做三件事：
 
-1. **Slots + emits + `$attrs` + `defineExpose` + props 校验**（组件模型闭环）；
+1. **emits + `$attrs` + props 校验**（组件模型闭环）；
 2. **App 插件 API + `nextTick` 等公开 API + 官方测试工具**（可被应用和生态使用）；
 3. **SSR/hydration 或 HMR/Vite 插件** 二选一先做（部署能力 vs 开发体验）。
 
