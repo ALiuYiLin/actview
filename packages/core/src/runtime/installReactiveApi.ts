@@ -23,21 +23,24 @@ export function installDeclaredFields(
   ctx: Record<string, any>,
   instance: ComponentInternalInstance,
   meta: ComponentMeta,
+  options: { bindProps?: boolean } = {},
 ): void {
   const props = instance.props as Record<string, any>
 
-  for (const key of meta.props.keys()) {
-    const own = Object.getOwnPropertyDescriptor(ctx, key)
-    const fallback = own?.value
-    if (own) delete ctx[key]
-    Object.defineProperty(ctx, key, {
-      configurable: true,
-      enumerable: true,
-      get: () => (key in props ? props[key] : fallback),
-      set: (value: unknown) => {
-        props[key] = value
-      },
-    })
+  if (options.bindProps !== false) {
+    for (const key of meta.props.keys()) {
+      const own = Object.getOwnPropertyDescriptor(ctx, key)
+      const fallback = own?.value
+      if (own) delete ctx[key]
+      Object.defineProperty(ctx, key, {
+        configurable: true,
+        enumerable: true,
+        get: () => (key in props ? props[key] : fallback),
+        set: (value: unknown) => {
+          props[key] = value
+        },
+      })
+    }
   }
 
   for (const key of meta.refs.keys()) {

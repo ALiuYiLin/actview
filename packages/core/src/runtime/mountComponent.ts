@@ -1,8 +1,14 @@
 // ============================================================
 // @actview/core — mountClassComponent
 //
-// 类组件挂载编排：new Ctor → 公开实例 → installReactiveApi →
-// installLifecycle → @Setup → @Provide/@Watch → render。
+// 类组件挂载编排：
+//   new Ctor → Model 安装（pre setup）→ 组件字段/生命周期 →
+//   组件 @Setup → Model after setup → @Provide/@Watch → render
+//
+// Model 的 @Setup 基准是 owner 组件 @Setup：
+//   - pre（默认）：组件 setup 前；
+//   - after：组件 setup 后（带 @Prop 的 Model 默认 after）。
+// 任一阶段返回 Promise 时先渲染 null，resolve 后再切真实 render。
 // ============================================================
 
 import { pauseTracking, resetTracking } from '@actview/reactivity'
@@ -24,20 +30,18 @@ import {
 import { registerClassLifecycle } from './installLifecycle'
 import { nextTick } from './scheduler'
 import { ComponentScope, installUseModels } from './componentScope'
+
 /**
- * 类组件 setup：
- *
- *   new Ctor(props) → 公开实例 → scope 内安装 @Prop/@Ref/@Reactive/@Computed/
- *   @Inject → 注册生命周期 → @Setup → @Provide/@Watch → render
+ * 类组件挂载。
  *
  * @Ref / @Prop 的 accessor 必须在构造之后安装：ES2022 class field 的 define
- * 语义会创建 own data property 并遮蔽原型 accessor（见设计文档 §3.3）。
+ * 语义会创建 own data property 并遮蔽原型 accessor。
  */
 export function mountClassComponent(
   instance: ComponentInternalInstance,
 ): Promise<RenderFunction> | null {
   const Ctor = instance.type as unknown as ClassComponentCtor
-  const meta = getComponentMeta(Ctor)
+  const meta: ComponentMeta = getComponentMeta(Ctor)
   const ctx = new Ctor(instance.props) as Record<string, any>
 
   instance.ctx = ctx
@@ -47,66 +51,69 @@ export function mountClassComponent(
   const modelScope = new ComponentScope(instance)
   instance.modelScope = modelScope
 
-  const prev = setCurrentInstance(instance)
-  try {
-    let pending: Promise<RenderFunction> | null = null
+  const withOwner = <T>(fn: () => T): T => {
+    const prev = setCurrentInstance(instance)
+    pauseTracking()
+    try {
+      return instance.scope.run(fn) as T
+    } finally {
+      resetTracking()
+      setCurrentInstance(prev)
+    }
+  }
 
-    instance.scope.run(() => {
-      pauseTracking()
-      try {
-        // 组件内 Model 先解析：其 @Setup 早于组件 @Setup，数据依赖深度优先。
-        installUseModels(modelScope, ctx, meta)
-
-        // 字段 / 注入 / computed 必须在 setup 前就位。
-        installDeclaredFields(ctx, instance, meta)
-        installComputed(ctx, meta)
-        registerClassLifecycle(instance, ctx, meta)
-
-        // 生命周期顺序：挂载类 Model 先于 owner，卸载类 owner 先于 Model。
-        modelScope.applyLifecycleOrder()
-
-        const setupName = meta.setup
-        const result = setupName ? ctx[setupName]?.() : undefined
-
-        // 允许 @Setup 返回 Promise（async setup）：先渲染 null 占位，
-        // resolve 后再安装 @Provide/@Watch 并切回真实 render。
-        if (isThenable(result)) {
-          instance.render = (() => null) as unknown as RenderFunction
-          pending = Promise.resolve(result).then(() => {
-            const prevInner = setCurrentInstance(instance)
-            try {
-              instance.scope.run(() => {
-                pauseTracking()
-                try {
-                  installProvides(ctx, meta)
-                  installWatches(ctx, meta)
-                } finally {
-                  resetTracking()
-                }
-              })
-            } finally {
-              setCurrentInstance(prevInner)
-            }
-            instance.render = () => ctx.render()
-            return instance.render
-          })
-          return
-        }
-
-        installProvides(ctx, meta)
-        installWatches(ctx, meta)
-      } finally {
-        resetTracking()
-      }
+  const finalize = (): RenderFunction =>
+    withOwner(() => {
+      installProvides(ctx, meta)
+      installWatches(ctx, meta)
+      instance.render = () => ctx.render()
+      return instance.render
     })
 
-    if (!pending) {
-      instance.render = () => ctx.render()
-    }
-    return pending
-  } finally {
-    setCurrentInstance(prev)
+  const finishAfterSetups = (): RenderFunction | Promise<RenderFunction> => {
+    const afterPending = modelScope.runPhase('after')
+    return afterPending ? afterPending.then(finalize) : finalize()
   }
+
+  const runComponentSetup = (): RenderFunction | Promise<RenderFunction> =>
+    withOwner(() => {
+      const setupName = meta.setup
+      const result = setupName ? ctx[setupName]?.() : undefined
+      if (isThenable(result)) {
+        return Promise.resolve(result).then(finishAfterSetups)
+      }
+      return finishAfterSetups()
+    })
+
+  const start = (): RenderFunction | Promise<RenderFunction> =>
+    withOwner(() => {
+      // 1) 构造 Model + 安装字段/computed；@Setup 延迟到阶段执行。
+      installUseModels(modelScope, ctx, meta)
+      modelScope.validatePhases()
+
+      // 2) 组件字段 / computed / 生命周期先就位。
+      installDeclaredFields(ctx, instance, meta)
+      installComputed(ctx, meta)
+      registerClassLifecycle(instance, ctx, meta)
+      // 挂载类 Model hooks 先于 owner，卸载类后于 owner。
+      modelScope.applyLifecycleOrder()
+
+      // 3) Model pre setup → 组件 setup → Model after setup。
+      const prePending = modelScope.runPhase('pre')
+      return prePending ? prePending.then(runComponentSetup) : runComponentSetup()
+    })
+
+  const result = start()
+  if (isThenable(result)) {
+    instance.render = (() => null) as unknown as RenderFunction
+    return Promise.resolve(result).then((render) => {
+      instance.render = render
+      return render
+    })
+  }
+
+  instance.render = result
+  return null
 }
 
 /** 类实例公开字段：$ / $props / $el / $parent / $root / $forceUpdate / $nextTick */

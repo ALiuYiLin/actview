@@ -77,6 +77,8 @@ export interface ComponentMeta {
   models: Map<string, ModelToken>
   hooks: Partial<Record<LifecycleName, string[]>>
   setup?: string
+  /** @Setup('pre' | 'after')：仅对 @Model 有意义，相对 owner 组件 @Setup */
+  setupMode?: 'pre' | 'after'
   render?: string
 }
 
@@ -148,6 +150,7 @@ export function mergeMeta(
     models: new Map([...parent.models, ...own.models]),
     hooks,
     setup: own.setup ?? parent.setup,
+    setupMode: own.setupMode ?? parent.setupMode,
     render: own.render ?? parent.render,
   }
 }

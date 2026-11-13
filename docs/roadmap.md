@@ -6,7 +6,7 @@
 ## 1. 当前基线（已有）
 
 - 类组件 + 装饰器组件模型（`@Component` / `@Prop` / `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject`）；
-- 组件内数据层 `@Model` + `@UseModel(Token)`（per-component scope）；
+- 组件内数据层 `@Model` + `@UseModel(Token)`（per-component scope，支持 async `@Setup`、`@Prop`、`@Provide`、`@Setup('pre'|'after')`）；
 - 组件级 re-render、微任务调度、`nextTick`；
 - keyed children diff + LIS；
 - Teleport / Transition / KeepAlive / Suspense / lazy / ErrorBoundary；
@@ -21,8 +21,8 @@
 - `@UseModel` 必须显式 token：`@UseModel(CounterData)`，不支持裸 `@UseModel counterData`；
 - 每个 Model **只能 per-component**，没有 `@Scope('app')` / `inherited` / `@Named`；
 - Model 构造函数必须无参；
-- Model `@Setup` 必须同步，async Model 初始化未支持；
-- Model 不支持 `@Prop` / `@Provide`（props 由组件写入，跨组件共享用 provide/inject）；
+- `@Prop` 是 owner 组件赋值的普通字段，不自动绑定 owner.props；带 `@Prop` 的 Model 默认 after setup；
+- `pre` Model 不能依赖 `after` Model（阶段冲突报错）；
 - 循环依赖直接报错，不做代理；
 - Model 不参与 DevTools 数据图展示。
 

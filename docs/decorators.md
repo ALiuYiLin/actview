@@ -95,9 +95,11 @@ class Counter extends ActViewComponent {
 
 - 显式 token：`@UseModel(CounterData)`（TS 类型擦除 + esbuild 无 `design:type`）；
 - 每个组件实例一个 `ComponentScope`，同一 token 单实例；多个 Model 依赖同一 Model 时共享；
-- Model 支持 `@Ref/@Reactive/@Computed/@Watch/@Inject/@UseModel` + 全部生命周期装饰器；
-- Model `@Setup` 早于 owner 组件 `@Setup`；挂载类 hooks 先于 owner，卸载类 hooks 后于 owner；
-- 不支持 `@Prop` / `@Provide`；跨组件共享继续用组件上的 `@Provide/@Inject`；
+- Model 支持 `@Ref/@Reactive/@Computed/@Watch/@Inject/@UseModel/@Prop/@Provide` + 全部生命周期装饰器；
+- Model `@Setup` 默认在 owner 组件 `@Setup` 之前；`@Setup('after')` 在其后；带 `@Prop` 的 Model 默认 after（等待组件赋值）；
+- 挂载类 hooks 先于 owner，卸载类 hooks 后于 owner；
+- Model `@Provide` 写入 owner 注入表，后代可 `@Inject`；跨组件共享值/对象；
+- `@Setup` 支持 async（pre/after 阶段都会等待 Promise）；
 - 完整设计见 [dependency-injection.md](./dependency-injection.md)。
 
 ## 4. 生命周期装饰器
@@ -105,22 +107,24 @@ class Counter extends ActViewComponent {
 `@Setup`、`@BeforeMount`、`@Mounted`、`@BeforeUpdate`、`@Updated`、`@BeforeUnmount`、`@Unmounted`、`@Activated`、`@Deactivated`。
 
 `@Setup` 在实例创建后、首帧前执行一次；可返回 Promise（async setup，首帧渲染 null，resolve 后渲染）。
+Model 额外支持 `@Setup('pre')` / `@Setup('after')`：以 owner 组件 `@Setup` 为基准，默认 `pre`；带 `@Prop` 的 Model 默认 `after`。
 
 ## 5. 安装顺序
 
 ```text
 new Ctor(props)
 → 公开实例（$ / $props / $el / ...）
-→ ComponentScope + @UseModel（Model 先初始化）
-→ @Prop / @Ref / @Reactive / @Inject
-→ @Computed
+→ ComponentScope + @UseModel（构造 Model、安装字段）
+→ 组件 @Prop / @Ref / @Reactive / @Inject / @Computed
 → 生命周期注册 + Model hooks 排序
-→ @Setup（Model @Setup 已先执行）
-→ @Provide / @Watch
+→ Model pre @Setup（+ Model @Provide/@Watch）
+→ 组件 @Setup（可 async）
+→ Model after @Setup（@Prop / @Setup('after')）
+→ 组件 @Provide / @Watch
 → render
 ```
 
-async 组件 `@Setup` 时，`@Provide` / `@Watch` 在 Promise resolve 后安装；第一版 Model `@Setup` 要求同步。
+async 组件 / Model `@Setup` 时，后续阶段会等待 Promise；期间首帧渲染 null。
 
 ## 6. 注入示例
 

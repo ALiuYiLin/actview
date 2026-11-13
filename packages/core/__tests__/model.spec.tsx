@@ -14,6 +14,7 @@ import {
   Inject,
   Model,
   Mounted,
+  Prop,
   Provide,
   Ref,
   Setup,
@@ -30,6 +31,11 @@ function mountRoot(): HTMLElement {
   const root = document.createElement('div')
   document.body.appendChild(root)
   return root
+}
+
+/** async Model/组件 setup 的 pending 会跨多个微任务批次 */
+async function flush(times = 8): Promise<void> {
+  for (let i = 0; i < times; i++) await nextTick()
 }
 
 afterEach(() => {
@@ -307,5 +313,158 @@ describe('@actview/core：@Model / @UseModel', () => {
     const owner = { props: {}, injects: {}, scope: {} } as any
     const scope = new ComponentScope(owner)
     expect(() => scope.resolve(CycleA)).toThrow(/循环依赖/)
+  })
+
+  it('async Model @Setup：等待 resolve 后再渲染组件', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    @Model
+    class AsyncData {
+      @Ref
+      ready = false
+
+      @Setup
+      async setup(): Promise<void> {
+        await gate
+        this.ready = true
+      }
+    }
+
+    @Component({ name: 'AsyncHost' })
+    class AsyncHost extends ActViewComponent {
+      @UseModel(AsyncData)
+      data!: AsyncData
+
+      render() {
+        return <span>{this.data.ready ? 'ready' : 'waiting'}</span>
+      }
+    }
+
+    const root = mountRoot()
+    createApp(AsyncHost).mount(root)
+    await flush()
+    expect(root.textContent).toBe('')
+
+    release()
+    await flush()
+    expect(root.textContent).toBe('ready')
+  })
+
+  it('Model @Prop：owner 组件 @Setup 赋值后，Model 默认 after setup 读取', async () => {
+    @Model
+    class PropData {
+      @Prop
+      initCount!: number
+
+      @Ref
+      count = 0
+
+      @Setup
+      async setup(): Promise<void> {
+        await Promise.resolve()
+        this.count = this.initCount
+      }
+    }
+
+    @Component({ name: 'PropHost' })
+    class PropHost extends ActViewComponent {
+      @UseModel(PropData)
+      data!: PropData
+
+      @Setup
+      setup(): void {
+        this.data.initCount = 7
+      }
+
+      render() {
+        return <span>{this.data.count}</span>
+      }
+    }
+
+    const root = mountRoot()
+    createApp(PropHost).mount(root)
+    await flush()
+    expect(root.textContent).toBe('7')
+  })
+
+  it('Model @Provide：跨组件 provide，后代 @Inject 读取', async () => {
+    @Model
+    class ThemeData {
+      @Prop
+      theme!: string
+
+      @Provide()
+      value = ''
+
+      @Setup
+      setup(): void {
+        this.value = this.theme
+      }
+    }
+
+    @Component({ name: 'Child' })
+    class Child extends ActViewComponent {
+      @Inject('value')
+      theme!: string
+
+      render() {
+        return <span>{this.theme}</span>
+      }
+    }
+
+    @Component({ name: 'ThemeHost' })
+    class ThemeHost extends ActViewComponent {
+      @UseModel(ThemeData)
+      data!: ThemeData
+
+      @Setup
+      setup(): void {
+        this.data.theme = 'dark'
+      }
+
+      render() {
+        return <Child />
+      }
+    }
+
+    const root = mountRoot()
+    createApp(ThemeHost).mount(root)
+    await flush()
+    expect(root.textContent).toBe('dark')
+  })
+
+  it('@Setup("after")：Model setup 在组件 setup 之后执行', async () => {
+    const order: string[] = []
+
+    @Model
+    class AfterData {
+      @Setup('after')
+      setup(): void {
+        order.push('model.after')
+      }
+    }
+
+    @Component({ name: 'OrderHost' })
+    class OrderHost extends ActViewComponent {
+      @UseModel(AfterData)
+      data!: AfterData
+
+      @Setup
+      setup(): void {
+        order.push('component.setup')
+      }
+
+      render() {
+        return <span>order</span>
+      }
+    }
+
+    const root = mountRoot()
+    createApp(OrderHost).mount(root)
+    await flush()
+    expect(order).toEqual(['component.setup', 'model.after'])
   })
 })

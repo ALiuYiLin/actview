@@ -21,7 +21,8 @@ import {
  *
  * 约束：
  * - 不能实现 render()（不参与渲染）；
- * - 第一版不支持 @Prop / @Provide（props 由组件写入 Model，跨组件共享用 provide/inject）；
+ * - 支持 @Prop（owner 赋值）/@Provide（跨组件共享）与 async @Setup；
+ * - @Setup('pre'|'after') 相对 owner 组件 setup；带 @Prop 默认 after；
  * - 通过 @UseModel(Token) 注入；生命周期与 owner 组件一致。
  */
 export function Model<T extends Function>(target: T): T {
@@ -36,18 +37,6 @@ export function Model<T extends Function>(target: T): T {
   }
 
   const own = ownMeta(target)
-  if (own.props.size > 0) {
-    throw new Error(
-      `[actview] @Model 类 "${target.name || 'Anonymous'}" 暂不支持 @Prop；` +
-        '由组件在 @Setup 中把 props 写入 Model',
-    )
-  }
-  if (own.provides.length > 0) {
-    throw new Error(
-      `[actview] @Model 类 "${target.name || 'Anonymous'}" 暂不支持 @Provide；` +
-        '跨组件共享请使用组件上的 @Provide/@Inject',
-    )
-  }
   own.name = own.name ?? target.name
 
   const parentCtor = Object.getPrototypeOf(target) as Function | null
