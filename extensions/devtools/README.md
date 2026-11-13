@@ -69,6 +69,26 @@ content → panel : chrome.runtime.sendMessage（转发 page 消息）
 - `startPicker` / `stopPicker`
 - `picked` / `picker-empty` / `picker-cancelled`
 
+## 排查连接
+
+面板顶部状态：
+
+- `no content script; reload the extension and page`
+  → 扩展 content script 未注入；在 `chrome://extensions` 重新加载扩展，并刷新页面。
+- `extension injected; waiting for @actview/devtools`
+  → content script 已注入，但页面没有安装 backend；确认 `app.use(devtoolsPlugin)` 且页面已重载。
+- `connected`
+  → 正常。
+
+页面控制台可检查：
+
+```js
+window.__ACTVIEW_DEVTOOLS__ // { bridge: true, version: 1 }
+document.documentElement.dataset.actviewDevtoolsContent // "1"
+```
+
+只有两个标记都存在，扩展 ↔ 页面链路才完整。
+
 ## 当前限制
 
 - 无搜索框 / 依赖图 / 时间旅行 / 状态编辑；

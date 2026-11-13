@@ -7,6 +7,7 @@
 
   const state = {
     connected: false,
+    contentReady: false,
     apps: [],
     components: [],
     events: [],
@@ -43,8 +44,20 @@
 
   function setConnected(connected) {
     state.connected = connected
-    statusEl.textContent = connected ? 'connected' : 'disconnected'
-    statusEl.className = `status ${connected ? 'connected' : 'disconnected'}`
+    if (!connected) state.contentReady = false
+    renderStatus()
+  }
+
+  function renderStatus() {
+    if (state.connected) {
+      statusEl.textContent = 'connected'
+      statusEl.className = 'status connected'
+      return
+    }
+    statusEl.className = `status ${state.contentReady ? '' : 'disconnected'}`.trim()
+    statusEl.textContent = state.contentReady
+      ? 'extension injected; waiting for @actview/devtools'
+      : 'no content script; reload the extension and page'
   }
 
   function requestState() {
@@ -387,6 +400,10 @@
     if (sender.tab && sender.tab.id !== tabId) return
 
     switch (message.type) {
+      case 'content-ready':
+        state.contentReady = true
+        renderStatus()
+        break
       case 'snapshot':
         applySnapshot(message.payload || {})
         break

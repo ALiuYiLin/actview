@@ -230,6 +230,11 @@ export function startDevtoolsBridge(
     scheduleSnapshot()
   })
   window.addEventListener('message', onMessage)
+  // 调试标记：控制台可快速确认页面 bridge 是否启动。
+  ;(window as unknown as Record<string, unknown>).__ACTVIEW_DEVTOOLS__ = {
+    bridge: true,
+    version: 1,
+  }
   // 页面插件晚于 content script 启动时，主动广播一次。
   sendSnapshot()
 
@@ -239,6 +244,8 @@ export function startDevtoolsBridge(
     if (timer) clearTimeout(timer)
     stopPicker()
     clearHighlight()
+    const global = window as unknown as Record<string, unknown>
+    if (global.__ACTVIEW_DEVTOOLS__) delete global.__ACTVIEW_DEVTOOLS__
     activeBridge = null
   }
   return activeBridge

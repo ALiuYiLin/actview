@@ -5,6 +5,11 @@ const PAGE_SOURCE = 'actview-devtools-page'
 const CONTENT_SOURCE = 'actview-devtools-content'
 const PANEL_SOURCE = 'actview-devtools-panel'
 
+// 调试标记：页面控制台可确认 content script 已注入。
+if (document.documentElement) {
+  document.documentElement.dataset.actviewDevtoolsContent = '1'
+}
+
 function sendToExtension(message) {
   try {
     chrome.runtime.sendMessage(message, () => {
@@ -27,8 +32,17 @@ window.addEventListener('message', (event) => {
   })
 })
 
+function sendReady() {
+  sendToExtension({
+    source: PAGE_SOURCE,
+    type: 'content-ready',
+    payload: { url: location.href, title: document.title },
+  })
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || message.source !== PANEL_SOURCE) return
+  if (message.type === 'connect') sendReady()
   window.postMessage(
     {
       source: CONTENT_SOURCE,
@@ -41,3 +55,4 @@ chrome.runtime.onMessage.addListener((message) => {
 
 // 页面 bridge 可能晚于 content script 启动；panel 连接时会再次触发。
 window.postMessage({ source: CONTENT_SOURCE, type: 'hello' }, '*')
+sendReady()
