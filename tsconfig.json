@@ -32,7 +32,7 @@
       "actview": ["./packages/actview/src/index.ts"]
     }
   },
-  "include": ["src", "packages/global.d.ts"],
+  "include": ["packages/global.d.ts"],
   "exclude": ["node_modules", "**/dist", "**/dist-types"],
   "references": [
     { "path": "./packages/shared" },

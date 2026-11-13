@@ -1,0 +1,37 @@
+{
+  // ============================================================
+  // playground/actview — 私有示例应用（不作为发布包）
+  //
+  // 应用只从用户入口 `actview` 导入；依赖解析走 workspace 源码 +
+  // project references（与根 tsconfig 相同的策略）。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "actview": ["../../packages/actview/src/index.ts"],
+      "actview/*": ["../../packages/actview/src/*"],
+      "@actview/core": ["../../packages/core/src/index.ts"],
+      "@actview/core/*": ["../../packages/core/src/*"],
+      "@actview/jsx": ["../../packages/jsx/src/index.ts"],
+      "@actview/jsx/*": ["../../packages/jsx/src/*"],
+      "@actview/reactivity": ["../../packages/reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["../../packages/reactivity/src/*"],
+      "@actview/shared": ["../../packages/shared/src/index.ts"],
+      "@actview/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/reactivity" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/jsx" },
+    { "path": "../../packages/actview" }
+  ]
+}

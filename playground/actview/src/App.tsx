@@ -7,7 +7,7 @@ import {
   Ref,
   Setup,
   Unmounted,
-} from "@actview/core";
+} from "actview";
 
 /**
  * 第一版类组件目标形态示例。

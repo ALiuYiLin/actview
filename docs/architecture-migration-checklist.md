@@ -17,6 +17,7 @@
 | `jsx` 依赖方向 | `jsx → core`（仅公开类型 + createElement/Fragment） |
 | 测试 | `core/__tests__` 全部迁移；runtime-core 测试/type-tests 迁入 core；全仓 397 passed / 4 skipped |
 | 配置 | root references / typecheck / build:packages / vite aliases / pnpm workspace 已更新 |
+| playground | 根 `src/` + `index.html` + `public/` 已迁入 `playground/actview`（私有子包）；`examples/ssr` 已删除 |
 
 ## 保留的合理内聚 / 剩余项
 

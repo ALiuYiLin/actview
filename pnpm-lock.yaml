@@ -80,6 +80,19 @@ importers:
 
   packages/shared: {}
 
+  playground/actview:
+    dependencies:
+      actview:
+        specifier: workspace:*
+        version: link:../../packages/actview
+    devDependencies:
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+      vite:
+        specifier: ^6.4.3
+        version: 6.4.3(@types/node@26.0.1)(yaml@2.9.0)
+
 packages:
 
   '@acemir/cssom@0.9.31':

@@ -626,7 +626,7 @@ async `@Setup` 时，`@Provide` / `@Watch` 在 Promise resolve 之后安装（`i
   - `ErrorBoundary` 改为 class（`@ErrorCaptured`）；
   - `Teleport`/`Transition` 仍是 renderer 特判 marker，不需要变成 class；
 - `createApp` / `app.mount` 根组件只接受 class；`ComponentPublicInstance` 类型改为 class 实例形态；
-- 测试迁移：`packages/core/__tests__`（57 条）、`packages/runtime-core`、`packages/jsx` 中所有 `defineComponent(...)` 组件改为 class；`src/App.tsx` 按 §2 改写；
+- 测试迁移：`packages/core/__tests__`（57 条）、`packages/runtime-core`、`packages/jsx` 中所有 `defineComponent(...)` 组件改为 class；`playground/actview/src/App.tsx` 按 §2 改写；
 - 验收：全仓测试/typecheck/build 通过；代码库中 `defineComponent` 引用归零（除了迁移说明/历史文档）。
 
 ### Phase 3：删除 L1 wrap 阶段（Babel 保留）
@@ -659,7 +659,7 @@ async `@Setup` 时，`@Provide` / `@Watch` 在 Promise resolve 之后安装（`i
 | `packages/compiler/src/{wrap.ts,index.ts,vite.ts}` | 删除 wrap；保留可选静态分析/装饰器 transform |
 | `vite.config.ts` | 移除 wrap 插件注册（若 Babel 装饰器 transform 仍需要则替换为 decorators 插件） |
 | 测试 | core/runtime-core/jsx 全部迁移；compiler wrap tests 删除/重写为分析测试 |
-| 文档/示例 | `src/App.tsx`、`docs/compiler-layers.md`、`docs/types-architecture.md`、`docs/renderer-design.md`、changeset |
+| 文档/示例 | `playground/actview/src/App.tsx`、`docs/compiler-layers.md`、`docs/types-architecture.md`、`docs/renderer-design.md`、changeset |
 
 ### 验收清单
 
@@ -770,7 +770,7 @@ export function runClassComponent(instance: ComponentInternalInstance): void {
 - ✅ 内置组件 KeepAlive / Suspense / ErrorBoundary / lazy 已迁移为 `@Component` 类；
 - ✅ 删除 `defineComponent`、函数组件路径、`ComponentFunction` / `ComponentTag` / `SetupFunction`；`isComponent` 只认类组件标记；
 - ✅ 删除 L1 wrap（`packages/compiler/src/{wrap,vite}.ts` 与 Vite 插件注册）；compiler 包保留占位，Babel 依赖保留；
-- ✅ `src/App.tsx` 迁移为目标类组件示例；`src/main.ts` 使用 `createApp(App)`；
+- ✅ `playground/actview/src/App.tsx` 迁移为目标类组件示例；`playground/actview/src/main.ts` 使用 `createApp(App)`；
 - ✅ `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` 已实现：
   - `@Reactive`：对象 / 数组字段安装 reactive（或 shallowReactive）代理；
   - `@Computed`：getter 按实例创建 computed（惰性 + 缓存）；

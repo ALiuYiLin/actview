@@ -1,0 +1,20 @@
+{
+  "name": "@actview/playground-actview",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "ActView private playground app",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "actview": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "^6.4.3"
+  }
+}
