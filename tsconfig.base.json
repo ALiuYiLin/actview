@@ -8,6 +8,7 @@
   // 包分层（详见 docs/architecture.md）：
   //   @actview/core             公开类型 + DOM 渲染器 + 装饰器 + 内置组件
   //   @actview/devtools         DevTools backend（树 / 状态 / 事件 / 性能）
+  //   @actview/router            路由（RouterView / RouterLink / history / guards）
   //   @actview/jsx              JSX 作者层（全局 JSX 命名空间 / DOM 属性 / JSX runtime）
   //   @actview/reactivity       响应式系统（core 内部使用）
   //   @actview/shared           内部共享工具

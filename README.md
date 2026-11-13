@@ -15,6 +15,7 @@ packages/
   actview/          用户聚合入口（createApp / 装饰器 / 内置组件）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
   devtools/         DevTools backend（无 UI）
+  router/           路由（RouterView / RouterLink / guards）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx automatic runtime）
   reactivity/       响应式系统（core 内部使用）
   shared/           内部共享工具
@@ -81,6 +82,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 - [docs/decorators.md](docs/decorators.md) — 类组件与全部装饰器
 - [docs/dependency-injection.md](docs/dependency-injection.md) — 组件内 Model / @UseModel
 - [docs/plugins.md](docs/plugins.md) — App 插件契约与官方插件规划
+- [packages/router/README.md](packages/router/README.md) — 路由 v1 使用说明
 - [docs/renderer.md](docs/renderer.md) — 渲染器 / patch / 内置组件
 - [docs/roadmap.md](docs/roadmap.md) — 框架能力路线图与第一版限制
 - [docs/build.md](docs/build.md) — 构建链、TypeScript 配置、playground

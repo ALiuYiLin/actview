@@ -94,20 +94,33 @@ backend.subscribe((snapshot) => {
 })
 ```
 
-### P0 `@actview/router`
+### P0 `@actview/router`（v1 已实现）
 
-功能：
+已实现：
 
-- `createRouter({ routes, history })`；
-- `app.use(router)` 提供 router、注册路由组件；
-- 嵌套路由、参数、守卫、懒加载、滚动恢复；
-- 与 KeepAlive / Transition / Suspense 配合。
+- `createRouter({ history, routes })`；
+- `createWebHistory` / `createWebHashHistory` / `createMemoryHistory`；
+- `RouterView` / `RouterLink`；
+- 嵌套路由、`:params`、通配、query/hash、命名路由；
+- 全局 `beforeEach` / `afterEach`、路由 `beforeEnter`、redirect；
+- 路由级 lazy loader；
+- `props: true` params 透传、`meta` 合并；
+- `router.resolve` / `push` / `replace` / `currentRoute`。
+
+尚未实现：
+
+- 命名视图；
+- in-component guards（离开前确认）；
+- scrollPosition 恢复；
+- SSR / 路由数据预取；
+- 字符串全局组件注册（直接 import 使用）。
 
 ```tsx
 const router = createRouter({
+  history: createWebHistory(),
   routes: [
     { path: '/', component: Home },
-    { path: '/user/:id', component: User },
+    { path: '/user/:id', component: User, props: true },
   ],
 })
 

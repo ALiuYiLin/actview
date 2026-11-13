@@ -1,0 +1,21 @@
+{
+  "name": "@actview/router",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "ActView router (history, nested routes, guards, RouterView/RouterLink)",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@actview/core": "workspace:^",
+    "@actview/reactivity": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -b . && tsc -p tsconfig.test.json"
+  },
+  "files": [
+    "dist"
+  ]
+}

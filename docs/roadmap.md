@@ -12,6 +12,7 @@
 - Teleport / Transition / TransitionGroup / KeepAlive / Suspense / lazy / ErrorBoundary / Dynamic；
 - 生命周期 hooks、错误传播、DevTools hook / `@actview/devtools` backend（树 / 状态 / 事件 / 性能；无 UI）、provide/inject；
 - App 插件契约：`app.use` / `app.onUnmount` / `app.config`（devtools / performance / warnHandler）；
+- `@actview/router` v1：RouterView/RouterLink、嵌套路由/params/query、guards、lazy、三种 history；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
 - 构建、类型检查、单元测试、playground。
 
@@ -41,7 +42,6 @@
 - 无 SSR / hydrate / `renderToString` / streaming；
 - 无 HMR、Vite 开发插件、错误 overlay；
 - 无官方测试工具包（当前测试是仓库内部测试）；
-- 无路由包（`@actview/router` 尚不存在）；
 - 无 CLI / 脚手架 / 文档站 / DevTools UI；
 - 仅 DOM 渲染器，没有 `createRenderer` 自定义平台抽象；
 - 装饰器为 legacy（`experimentalDecorators`），未迁移 Stage 3；
@@ -65,8 +65,8 @@
     - Vite 插件：HMR、组件/Model 状态保留、错误 overlay、source map；
     - 开发警告、生产裁剪、组件栈定位。
 12. **路由**
-    - 独立 `@actview/router`：嵌套路由、参数、守卫、懒加载、滚动恢复、SSR 集成；
-    - 与 KeepAlive / Transition 配合。
+    - v1 已完成（RouterView/RouterLink、嵌套、params/query、guards、lazy、history）；
+    - 待做：命名视图、in-component guards、scrollPosition、SSR/数据预取、KeepAlive/Transition 组合。
 13. **官方测试工具**
     - `mount` / `trigger` / `flushPromises` / DOM 断言；
     - SSR、异步组件、ErrorBoundary、KeepAlive 测试基建。
