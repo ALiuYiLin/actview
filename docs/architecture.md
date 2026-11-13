@@ -116,5 +116,8 @@ pnpm build:packages # 各包 tsup + d.ts
 ## 6. 当前边界
 
 - 未实现 HMR / SSR / hydrate / 静态分析 / 代码生成；
+- 组件 slots/emits/$attrs/expose 等 API 尚未补齐；
 - `patchComponent` / `patchElement` 逻辑仍在 `runtime/patch/index.ts`（与 children diff/unmount/KeepAlive 强耦合），`patchProps` 已独立；
 - 装饰器为 legacy（`experimentalDecorators`），Stage-3 迁移后续处理。
+
+完整缺口与优先级见 [roadmap.md](./roadmap.md)。
