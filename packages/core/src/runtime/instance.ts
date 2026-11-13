@@ -9,6 +9,7 @@
 import type { ClassComponentCtor, RenderFunction } from '../internal'
 import type { VNode } from '../internal'
 import type { EffectScope, ReactiveEffect } from '@actview/reactivity'
+import type { ComponentScope } from './componentScope'
 
 /** 应用配置（app.config） */
 export interface AppConfig {
@@ -94,6 +95,8 @@ export interface ComponentInternalInstance {
   job: SchedulerJob
   /** 组件作用域：setup 期间的 watch/computed/render effect 统一停止 */
   scope: EffectScope
+  /** 组件内 Model 作用域（每个组件实例一个；@UseModel 的缓存与生命周期） */
+  modelScope?: ComponentScope
   isMounted: boolean
   /** 组件挂载的 DOM 容器（DOM 渲染器实现；跨平台渲染器可另立类型） */
   container: Element | null

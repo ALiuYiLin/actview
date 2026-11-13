@@ -48,6 +48,7 @@ packages/core/src/
   runtime/
     app.ts                    createApp / mount / unmount
     mountComponent.ts         mountClassComponent：构造 → 安装 → @Setup → render
+    componentScope.ts         组件内 Model 作用域（@UseModel 单实例 / 生命周期排序）
     installReactiveApi.ts     @Prop/@Ref/@Reactive/@Computed/@Inject/@Provide/@Watch 安装
     installLifecycle.ts       生命周期装饰器 → hooks
     component.ts              实例创建 / props / renderComponentRoot / shouldUpdate
@@ -63,6 +64,7 @@ packages/core/src/
     index.ts                  统一出口
     meta.ts                   元数据存储 / 类型 / 合并
     component.ts              @Component + ActViewComponent
+    model.ts                  @Model + @UseModel（组件内数据层）
     reactive.ts               @Prop/@Ref/@Reactive/@Computed/@Watch/@Provide/@Inject
     lifecycle.ts              @Setup + 生命周期装饰器
   components/
@@ -92,6 +94,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 - 组件 = 带 `__actview_class_component` 标记的 class 构造器（`@Component` 强制）；
 - `render()` 必须实现；JSX 标签类型由 `ClassComponent` / `ComponentProps` 支持；
 - `@Ref` 在渲染器构造实例后安装每实例 accessor，`this.count` 类型为 `number`；
+- 数据层可以用 `@Model` + `@UseModel(Token)` 拆出，见 [dependency-injection.md](./dependency-injection.md)；
 - 完整 API 与安装顺序见 [decorators.md](./decorators.md)。
 
 ## 4. 类型与公开边界

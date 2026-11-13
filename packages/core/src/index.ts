@@ -25,6 +25,7 @@ export {
   Computed,
   Deactivated,
   Inject,
+  Model,
   Mounted,
   Prop,
   Provide,
@@ -33,6 +34,7 @@ export {
   Setup,
   Unmounted,
   Updated,
+  UseModel,
   Watch,
   getComponentMeta,
 } from './decorator'
@@ -41,6 +43,7 @@ export type {
   ComponentOptions,
   InjectMeta,
   LifecycleName,
+  ModelToken,
   PropOptions,
   ProvideMeta,
   ReactiveOptions,

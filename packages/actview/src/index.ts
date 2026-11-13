@@ -26,6 +26,7 @@ export {
   Computed,
   Deactivated,
   Inject,
+  Model,
   Mounted,
   Prop,
   Provide,
@@ -34,6 +35,7 @@ export {
   Setup,
   Unmounted,
   Updated,
+  UseModel,
   Watch,
 } from '@actview/core'
 
@@ -54,4 +56,5 @@ export type {
   ElementChild,
   ElementChildren,
   ElementType,
+  ModelToken,
 } from '@actview/core'

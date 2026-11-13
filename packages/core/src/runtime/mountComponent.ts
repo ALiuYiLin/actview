@@ -23,6 +23,7 @@ import {
 } from './installReactiveApi'
 import { registerClassLifecycle } from './installLifecycle'
 import { nextTick } from './scheduler'
+import { ComponentScope, installUseModels } from './componentScope'
 /**
  * 类组件 setup：
  *
@@ -43,6 +44,9 @@ export function mountClassComponent(
   instance.proxy = ctx as unknown as ComponentPublicInstance
   installClassPublicInstance(ctx, instance)
 
+  const modelScope = new ComponentScope(instance)
+  instance.modelScope = modelScope
+
   const prev = setCurrentInstance(instance)
   try {
     let pending: Promise<RenderFunction> | null = null
@@ -50,10 +54,16 @@ export function mountClassComponent(
     instance.scope.run(() => {
       pauseTracking()
       try {
+        // 组件内 Model 先解析：其 @Setup 早于组件 @Setup，数据依赖深度优先。
+        installUseModels(modelScope, ctx, meta)
+
         // 字段 / 注入 / computed 必须在 setup 前就位。
         installDeclaredFields(ctx, instance, meta)
         installComputed(ctx, meta)
         registerClassLifecycle(instance, ctx, meta)
+
+        // 生命周期顺序：挂载类 Model 先于 owner，卸载类 owner 先于 Model。
+        modelScope.applyLifecycleOrder()
 
         const setupName = meta.setup
         const result = setupName ? ctx[setupName]?.() : undefined

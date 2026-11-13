@@ -15,6 +15,25 @@ export type RenderFunction = () => Element | null
 /** 类组件标记字段名（@Component 装饰器写入 / isClassComponent 读取） */
 export const CLASS_COMPONENT_MARKER = '__actview_class_component'
 
+/** 组件内 Model 标记字段名（@Model 装饰器写入 / isModel 读取） */
+export const MODEL_MARKER = '__actview_model'
+
+/** Model 类构造器（组件内可注入数据层） */
+export type ModelConstructor<P = Record<string, any>> = (new (
+  ...args: any[]
+) => object) & {
+  readonly __actview_model?: true
+  readonly name?: string
+}
+
+/** 是否组件内 Model（@Model 标记） */
+export function isModel(value: unknown): value is ModelConstructor {
+  return (
+    typeof value === 'function' &&
+    (value as { __actview_model?: unknown }).__actview_model === true
+  )
+}
+
 /** 类组件构造器（运行时形状；由 @Component 标记） */
 export type ClassComponentCtor<P = Record<string, any>> = (new (
   props: P,

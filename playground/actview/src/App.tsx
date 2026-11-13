@@ -2,58 +2,73 @@ import {
   ActViewComponent,
   Component,
   Computed,
+  Model,
   Mounted,
   Prop,
   Ref,
   Setup,
   Unmounted,
+  UseModel,
 } from "actview";
 
 /**
- * 第一版类组件目标形态示例。
+ * 组件内数据层示例（@Model + @UseModel）。
  *
- * - @Component 强制标记为组件（必须实现 render）
- * - @Prop 映射父组件传入的 props（initializer 作为缺省值）
- * - @Ref 让 this.count 等价于 count.value（渲染器安装 accessor）
- * - @Setup 在实例创建后、首帧前执行一次
- * - @Mounted / @Unmounted 挂载 / 卸载时执行
+ * - @Model：per-component 单实例，不参与 render；
+ * - @UseModel(Token)：显式注入 Model；
+ * - Model 与组件复用同一套生命周期装饰器。
  */
-@Component({ name: "Counter" })
-export class Counter extends ActViewComponent<{ initial?: number }> {
-  @Prop
-  initial = 1;
-
+@Model
+class CounterData {
   @Ref
   count = 0;
-
-  @Setup
-  setup(): void {
-    this.count = this.initial;
-  }
-
-  @Mounted
-  mounted(): void {
-    console.log("[actview] Counter mounted");
-  }
-
-  @Unmounted
-  unmounted(): void {
-    console.log("[actview] Counter unmounted");
-  }
 
   @Computed
   get double(): number {
     return this.count * 2;
   }
 
+  @Setup
+  setup(): void {
+    console.log("[actview] CounterData setup");
+  }
+
+  @Mounted
+  mounted(): void {
+    console.log("[actview] CounterData mounted");
+  }
+
+  @Unmounted
+  unmounted(): void {
+    console.log("[actview] CounterData unmounted");
+  }
+
+  increment(): void {
+    this.count++;
+  }
+}
+
+@Component({ name: "Counter" })
+export class Counter extends ActViewComponent<{ initial?: number }> {
+  @Prop
+  initial = 1;
+
+  @UseModel(CounterData)
+  data!: CounterData;
+
+  @Setup
+  setup(): void {
+    this.data.count = this.initial;
+  }
+
   render() {
     return (
       <button
         onClick={() => {
-          this.count++;
+          this.data.increment();
         }}
       >
-        点击+1：{this.count} / double：{this.double}
+        点击+1：{this.data.count} / double：{this.data.double}
       </button>
     );
   }

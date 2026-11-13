@@ -6,6 +6,7 @@
 // ============================================================
 
 import type { WatchOptions } from '@actview/reactivity'
+import type { ModelConstructor } from '../types/component'
 
 /** 组件元数据 key（static 字段） */
 export const META_KEY = '__actview_component_meta__'
@@ -60,6 +61,9 @@ export interface InjectMeta {
   default?: unknown
 }
 
+/** @UseModel 元数据：字段名 → Model 类 token */
+export type ModelToken = ModelConstructor
+
 /** 类组件元数据 */
 export interface ComponentMeta {
   name?: string
@@ -70,6 +74,7 @@ export interface ComponentMeta {
   watch: WatchMeta[]
   provides: ProvideMeta[]
   injects: InjectMeta[]
+  models: Map<string, ModelToken>
   hooks: Partial<Record<LifecycleName, string[]>>
   setup?: string
   render?: string
@@ -90,6 +95,7 @@ export function createComponentMeta(): ComponentMeta {
     watch: [],
     provides: [],
     injects: [],
+    models: new Map(),
     hooks: {},
   }
 }
@@ -139,6 +145,7 @@ export function mergeMeta(
     watch: [...parent.watch, ...own.watch],
     provides: [...parent.provides, ...own.provides],
     injects: [...parent.injects, ...own.injects],
+    models: new Map([...parent.models, ...own.models]),
     hooks,
     setup: own.setup ?? parent.setup,
     render: own.render ?? parent.render,

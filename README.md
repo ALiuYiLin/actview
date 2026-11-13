@@ -4,6 +4,7 @@ ActView 是一个 **类组件 + 装饰器** 的响应式前端框架：
 
 - 组件 = `@Component` 类，必须实现 `render()`；
 - `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` 声明状态与依赖；
+- `@Model` + `@UseModel(Token)` 支持组件内数据层拆分（per-component 单实例）；
 - 渲染器采用组件级 re-render（render effect + 微任务调度），DOM diff 支持 keyed + LIS；
 - JSX 由宿主的 automatic runtime 降级（`jsxImportSource: @actview/jsx`），无编译期组件包装。
 
@@ -77,6 +78,7 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 
 - [docs/architecture.md](docs/architecture.md) — 包结构、目录、公开边界
 - [docs/decorators.md](docs/decorators.md) — 类组件与全部装饰器
+- [docs/dependency-injection.md](docs/dependency-injection.md) — 组件内 Model / @UseModel
 - [docs/renderer.md](docs/renderer.md) — 渲染器 / patch / 内置组件
 - [docs/build.md](docs/build.md) — 构建链、TypeScript 配置、playground
 

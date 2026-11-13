@@ -40,6 +40,7 @@ createApp(Counter).mount('#app')
 
 - `createApp` / `App`；
 - `ActViewComponent` 与全部类组件装饰器（`@Component` / `@Prop` / `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject` / 生命周期）；
+- 组件内数据层：`@Model` + `@UseModel(Token)`；
 - 内置组件：`KeepAlive` / `Suspense` / `lazy` / `ErrorBoundary` / `Teleport` / `Transition`；
 - 公开类型：`Element` / `ClassComponent` / `BuiltinComponent` / `ComponentProps` / `ElementType` 等。
 
