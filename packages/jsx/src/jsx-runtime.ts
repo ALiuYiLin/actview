@@ -12,8 +12,8 @@
 //   - 顶层 ref 值解包（MaybeRef 属性形态）由后续 runtime 统一处理。
 // ============================================================
 
-import { createElement, Fragment } from '@actview/runtime-core'
-import type { Element, ElementType } from '@actview/runtime-core'
+import { createElement, Fragment } from '@actview/core'
+import type { Element, ElementType } from '@actview/core'
 
 // 副作用：把全局 JSX 命名空间（IntrinsicElements 等）挂进本模块的消费方。
 import './jsx'

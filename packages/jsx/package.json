@@ -9,7 +9,7 @@
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },
   "dependencies": {
-    "@actview/runtime-core": "workspace:^"
+    "@actview/core": "workspace:^"
   },
   "scripts": {
     "build": "tsup",

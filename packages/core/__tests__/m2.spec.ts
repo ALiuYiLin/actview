@@ -18,8 +18,8 @@ import {
   provide,
 } from '../src/index'
 import type { ComponentPublicInstance } from '../src/index'
-import { createVNode } from '@actview/runtime-core/internal'
-import type { VNode } from '@actview/runtime-core/internal'
+import { createVNode } from '../src/internal'
+import type { VNode } from '../src/internal'
 import { ref } from '@actview/reactivity'
 import type { Ref } from '@actview/reactivity'
 

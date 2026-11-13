@@ -12,7 +12,7 @@
     "build": "tsc -b tsconfig.json && vite build",
     "build:packages": "pnpm --filter \"./packages/*\" run build",
     "preview": "vite preview",
-    "typecheck": "tsc -b tsconfig.json && pnpm -C packages/shared typecheck && pnpm -C packages/reactivity typecheck && pnpm -C packages/runtime-core typecheck && pnpm -C packages/jsx typecheck && pnpm -C packages/compiler typecheck && pnpm -C packages/core typecheck",
+    "typecheck": "tsc -b tsconfig.json && pnpm -C packages/shared typecheck && pnpm -C packages/reactivity typecheck && pnpm -C packages/core typecheck && pnpm -C packages/jsx typecheck && pnpm -C packages/actview typecheck",
     "test": "vitest run",
     "changeset": "changeset",
     "changeset:status": "changeset status",
@@ -21,10 +21,10 @@
     "release": "changeset version && changeset publish"
   },
   "devDependencies": {
-    "@actview/compiler": "workspace:*",
+    "@actview/core": "workspace:*",
     "@actview/jsx": "workspace:*",
     "@actview/reactivity": "workspace:*",
-    "@actview/runtime-core": "workspace:*",
+    "actview": "workspace:*",
     "@babel/core": "^8.0.1",
     "@changesets/cli": "^3.0.0",
     "@testing-library/user-event": "^14.6.6",

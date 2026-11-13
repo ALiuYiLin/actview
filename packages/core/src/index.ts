@@ -6,15 +6,15 @@
 //     $forceUpdate、完整 patchProp（DOM property / SVG / 事件选项）
 // ============================================================
 
-export { createApp } from './app'
-export type { App } from './app'
-export { nextTick } from './scheduler'
-export { provide, inject } from './apiProvide'
-export { Suspense, lazy } from './suspense'
-export { ErrorBoundary } from './errorBoundary'
-export { Teleport } from './teleport'
-export { Transition } from './transition'
-export { KeepAlive } from './keepAlive'
+export { createApp } from './runtime/app'
+export type { App } from './runtime/app'
+export { nextTick } from './runtime/scheduler'
+export { provide, inject } from './runtime/apiProvide'
+export { Suspense, lazy } from './components/Suspense'
+export { ErrorBoundary } from './components/ErrorBoundary'
+export { Teleport } from './components/Teleport'
+export { Transition } from './components/Transition'
+export { KeepAlive } from './components/KeepAlive'
 export {
   ActViewComponent,
   Activated,
@@ -35,7 +35,7 @@ export {
   Updated,
   Watch,
   getComponentMeta,
-} from './decorators'
+} from './decorator'
 export type {
   ComponentMeta,
   ComponentOptions,
@@ -47,9 +47,9 @@ export type {
   RefOptions,
   WatchMeta,
   WatchSource,
-} from './decorators'
-export { setDevtoolsHook, getDevtoolsHook } from './devtools'
-export type { DevtoolsComponentInfo, DevtoolsHook } from './devtools'
+} from './decorator'
+export { setDevtoolsHook, getDevtoolsHook } from './runtime/devtools'
+export type { DevtoolsComponentInfo, DevtoolsHook } from './runtime/devtools'
 export {
   getCurrentInstance,
   onBeforeMount,
@@ -67,9 +67,10 @@ export {
 export {
   Fragment,
   createElement,
+  isClassComponent,
   isComponent,
   isValidElement,
-} from '@actview/runtime-core'
+} from './internal'
 
 export type {
   BuiltinComponent,
@@ -80,6 +81,6 @@ export type {
   ElementChildren,
   ElementType,
   RenderFunction,
-} from '@actview/runtime-core'
+} from './internal'
 
-export type { ComponentPublicInstance } from './instance'
+export type { ComponentPublicInstance } from './runtime/instance'

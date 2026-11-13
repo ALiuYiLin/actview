@@ -14,12 +14,12 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "types": ["node"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
     "paths": {
-      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["../runtime-core/src/*"],
       "@actview/reactivity": ["../reactivity/src/index.ts"],
       "@actview/shared": ["../shared/src/index.ts"]
     }
   },
-  "include": ["src", "__tests__", "../global.d.ts"]
+  "include": ["src", "__tests__", "type-tests", "../global.d.ts"]
 }

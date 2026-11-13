@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => ({
   define: {
     __DEV__: JSON.stringify(mode !== 'production'),
   },
+  // TSX 统一走 @actview/jsx 的 automatic runtime（测试 / dev / build）
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: '@actview/jsx',
+  },
   optimizeDeps: {
     // workspace 包直接消费源码（走 Vite transform，__DEV__ define 才能生效）
     exclude: [
@@ -33,13 +38,12 @@ export default defineConfig(({ mode }) => ({
       // '@actview/jsx/jsx-runtime'（build），必须能解析到源码。
       '@actview/jsx/jsx-runtime': src('./packages/jsx/src/jsx-runtime.ts'),
       '@actview/jsx/jsx-dev-runtime': src('./packages/jsx/src/jsx-dev-runtime.ts'),
-      '@actview/runtime-core/internal': src('./packages/runtime-core/src/internal.ts'),
+      '@actview/core/internal': src('./packages/core/src/internal.ts'),
       '@actview/jsx': src('./packages/jsx/src/index.ts'),
-      '@actview/runtime-core': src('./packages/runtime-core/src/index.ts'),
       '@actview/core': src('./packages/core/src/index.ts'),
-      // 直接映射到源码，dev / build 均免预构建（pnpm workspace link 存在时也一致）
       '@actview/reactivity': src('./packages/reactivity/src/index.ts'),
       '@actview/shared': src('./packages/shared/src/index.ts'),
+      'actview': src('./packages/actview/src/index.ts'),
     },
   },
   test: {

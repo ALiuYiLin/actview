@@ -8,7 +8,7 @@
 //   - JSX automatic runtime（jsx / jsxs / jsxDEV / Fragment）
 //
 // DOM 渲染器（createApp / patch / 生命周期）属于 @actview/core，后续接入。
-// 内部渲染器类型一律走 @actview/runtime-core/internal，不在此导出。
+// 内部渲染器类型一律走 @actview/core/internal，不在此导出。
 // ============================================================
 
 // 副作用：加载全局 JSX 命名空间（IntrinsicElements / Element / ElementType）
@@ -23,9 +23,9 @@ export type {
   ElementChild,
   ElementChildren,
   RenderFunction,
-} from '@actview/runtime-core'
+} from '@actview/core'
 
 export type * from './jsx/attrs'
 
-export { createElement, isValidElement, Fragment } from '@actview/runtime-core'
+export { createElement, isValidElement, Fragment } from '@actview/core'
 export { jsx, jsxs, jsxDEV } from './jsx-runtime'

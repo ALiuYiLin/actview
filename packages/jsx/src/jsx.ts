@@ -14,7 +14,7 @@
 import type {
   Element as RuntimeElement,
   ElementType as RuntimeElementType,
-} from '@actview/runtime-core'
+} from '@actview/core'
 
 import type {
   HTMLAttributes,

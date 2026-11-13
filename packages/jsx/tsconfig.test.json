@@ -2,22 +2,31 @@
   // ============================================================
   // @actview/jsx — 类型测试配置（noEmit）
   //
-  //   type-tests（TSX 作者层契约）单独于构建配置检查；沿用源码 paths，
-  //   使 JSX 类型测试能直接看到 runtime-core 的源码类型。
+  //   type-tests（TSX 作者层契约）单独于构建配置检查；使用源码 paths
+  //   直接检查 @actview/core / reactivity 的公开类型。
+  //   reactivity 源码需要 ES2016 + erasableSyntaxOnly:false（上游编译前提）。
   // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "target": "ES2016",
+    "lib": ["ES2016", "DOM"],
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "types": ["node"],
+    "jsx": "react-jsx",
     "jsxImportSource": "@actview/jsx",
     "paths": {
-      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["../runtime-core/src/*"],
+      "@actview/core": ["../core/src/index.ts"],
+      "@actview/core/*": ["../core/src/*"],
+      "@actview/reactivity": ["../reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["../reactivity/src/*"],
+      "@actview/shared": ["../shared/src/index.ts"],
+      "@actview/shared/*": ["../shared/src/*"],
       "@actview/jsx": ["./src/index.ts"],
       "@actview/jsx/*": ["./src/*"]
     }
   },
-  "include": ["src", "type-tests"]
+  "include": ["src", "type-tests", "../global.d.ts"]
 }

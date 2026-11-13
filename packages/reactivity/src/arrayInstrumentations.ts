@@ -206,18 +206,16 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   toReversed() {
-    // @ts-expect-error user code may run in es2016+
-    return reactiveReadArray(this).toReversed()
+    // 运行时由用户环境的 Array 提供；类型层用 any 避开 lib 版本差异
+    return (reactiveReadArray(this) as any).toReversed()
   },
 
   toSorted(comparer?: (a: unknown, b: unknown) => number) {
-    // @ts-expect-error user code may run in es2016+
-    return reactiveReadArray(this).toSorted(comparer)
+    return (reactiveReadArray(this) as any).toSorted(comparer)
   },
 
   toSpliced(...args: unknown[]) {
-    // @ts-expect-error user code may run in es2016+
-    return (reactiveReadArray(this).toSpliced as any)(...args)
+    return (reactiveReadArray(this) as any).toSpliced(...args)
   },
 
   unshift(...args: unknown[]) {
@@ -277,8 +275,7 @@ function apply(
 ) {
   const arr = shallowReadArray(self)
   const needsWrap = arr !== self && !isShallow(self)
-  // @ts-expect-error our code is limited to es2016 but user code is not
-  const methodFn = arr[method]
+  const methodFn = (arr as any)[method]
 
   // #11759
   // If the method being called is from a user-extended Array, the arguments will be unknown

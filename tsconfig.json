@@ -18,11 +18,9 @@
     // 上次检查结果，避免每次都全量重查 app（tsbuildinfo 已 gitignore）。
     "incremental": true,
     "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
     "paths": {
-      "@actview/runtime-core": ["./packages/runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["./packages/runtime-core/src/*"],
-      "@actview/compiler": ["./packages/compiler/src/index.ts"],
-      "@actview/compiler/*": ["./packages/compiler/src/*"],
       "@actview/jsx": ["./packages/jsx/src/index.ts"],
       "@actview/jsx/*": ["./packages/jsx/src/*"],
       "@actview/core": ["./packages/core/src/index.ts"],
@@ -39,9 +37,8 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/reactivity" },
-    { "path": "./packages/runtime-core" },
+    { "path": "./packages/core" },
     { "path": "./packages/jsx" },
-    { "path": "./packages/compiler" },
-    { "path": "./packages/core" }
+    { "path": "./packages/actview" }
   ]
 }

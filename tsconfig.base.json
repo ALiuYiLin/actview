@@ -35,9 +35,7 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    /* JSX：actview 自研 runtime（非 react） */
-    "jsx": "react-jsx",
-    "jsxImportSource": "@actview/jsx",
+    /* JSX：由使用 TSX 的项目显式开启（root app / core tests / jsx type-tests） */
 
     /* Linting */
     "noUnusedLocals": true,

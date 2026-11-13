@@ -9,6 +9,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
+    "jsx": "preserve",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "types": ["node"],
@@ -21,14 +22,12 @@
     "declaration": true,
     "outDir": "dist-types",
     "rootDir": "src",
-    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
-
-    /* workspace 依赖：源码路径 + references 重定向到声明产物 */
-    "paths": {
-      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["../runtime-core/src/*"]
-    }
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo"
   },
   "include": ["src"],
-  "references": [{ "path": "../runtime-core" }]
+  "references": [
+    { "path": "../shared" },
+    { "path": "../reactivity" },
+    { "path": "../core" }
+  ]
 }

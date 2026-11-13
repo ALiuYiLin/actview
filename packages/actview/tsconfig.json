@@ -1,0 +1,30 @@
+{
+  // ============================================================
+  // actview — 聚合入口构建配置（composite project）
+  //
+  //   src → dist-types/*.d.ts；只 re-export @actview/core 的用户 API。
+  // ============================================================
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "preserve",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
+
+    /* composite project：只发声明 */
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../reactivity" },
+    { "path": "../core" }
+  ]
+}

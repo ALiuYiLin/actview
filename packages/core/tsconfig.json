@@ -15,8 +15,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
+    "jsx": "preserve",
     "target": "ES2016",
-    "lib": ["ES2016", "DOM"],
+    "lib": ["ES2023", "DOM"],
     "erasableSyntaxOnly": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -33,8 +34,6 @@
 
     /* workspace 依赖：源码路径 + references 重定向到声明产物 */
     "paths": {
-      "@actview/runtime-core": ["../runtime-core/src/index.ts"],
-      "@actview/runtime-core/*": ["../runtime-core/src/*"],
       "@actview/reactivity": ["../reactivity/src/index.ts"],
       "@actview/reactivity/*": ["../reactivity/src/*"],
       "@actview/shared": ["../shared/src/index.ts"],
@@ -44,7 +43,6 @@
   "include": ["src", "../global.d.ts"],
   "references": [
     { "path": "../shared" },
-    { "path": "../reactivity" },
-    { "path": "../runtime-core" }
+    { "path": "../reactivity" }
   ]
 }

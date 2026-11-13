@@ -7,7 +7,7 @@
 //   - Ref / MaybeRef 只作为属性取值形态，不代表运行时内部结构。
 // ============================================================
 
-import type { ElementChildren } from '@actview/runtime-core'
+import type { ElementChildren } from '@actview/core'
 /**
  * ref 最小结构：只做结构互认，不 import @actview/reactivity 的运行时类型
  * （其 Ref / ComputedRef 均满足本结构，可互相赋值）。

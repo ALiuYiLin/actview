@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@actview/reactivity": "workspace:^",
-    "@actview/runtime-core": "workspace:^"
+    "@actview/shared": "workspace:^"
   },
   "scripts": {
     "build": "tsup",

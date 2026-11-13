@@ -2,8 +2,12 @@
   "name": "actview",
   "version": "4.0.3",
   "type": "module",
+  "description": "ActView aggregator entry — user-facing API only (class components + decorators + built-ins)",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@actview/core": "workspace:^"
   },
   "peerDependencies": {
     
@@ -13,6 +17,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc -b .",
     "prepublishOnly": "pnpm build"
   },
   "files": [
