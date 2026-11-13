@@ -18,6 +18,8 @@
       "actview/*": ["../../packages/actview/src/*"],
       "@actview/core": ["../../packages/core/src/index.ts"],
       "@actview/core/*": ["../../packages/core/src/*"],
+      "@actview/devtools": ["../../packages/devtools/src/index.ts"],
+      "@actview/devtools/*": ["../../packages/devtools/src/*"],
       "@actview/jsx": ["../../packages/jsx/src/index.ts"],
       "@actview/jsx/*": ["../../packages/jsx/src/*"],
       "@actview/reactivity": ["../../packages/reactivity/src/index.ts"],
@@ -31,6 +33,7 @@
     { "path": "../../packages/shared" },
     { "path": "../../packages/reactivity" },
     { "path": "../../packages/core" },
+    { "path": "../../packages/devtools" },
     { "path": "../../packages/jsx" },
     { "path": "../../packages/actview" }
   ]

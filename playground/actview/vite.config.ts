@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
     exclude: [
       'actview',
       '@actview/core',
+      '@actview/devtools',
       '@actview/jsx',
       '@actview/reactivity',
       '@actview/shared',
@@ -24,6 +25,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       'actview': pkg('../../packages/actview/src/index.ts'),
+      '@actview/devtools': pkg('../../packages/devtools/src/index.ts'),
       '@actview/jsx/jsx-runtime': pkg('../../packages/jsx/src/jsx-runtime.ts'),
       '@actview/jsx/jsx-dev-runtime': pkg('../../packages/jsx/src/jsx-dev-runtime.ts'),
       '@actview/jsx': pkg('../../packages/jsx/src/index.ts'),

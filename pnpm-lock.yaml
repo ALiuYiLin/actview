@@ -97,6 +97,9 @@ importers:
 
   playground/actview:
     dependencies:
+      '@actview/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       actview:
         specifier: workspace:*
         version: link:../../packages/actview

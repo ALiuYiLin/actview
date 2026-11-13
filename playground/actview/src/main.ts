@@ -1,4 +1,15 @@
-import { createApp } from "actview";
-import { App } from "./App";
+import { createApp } from 'actview'
+import { devtoolsPlugin } from '@actview/devtools'
+import { App } from './App'
 
-createApp(App).mount("#app");
+const app = createApp(App)
+
+if (import.meta.env.MODE !== 'production') {
+  app.use(devtoolsPlugin, {
+    appName: 'ActView Playground',
+    bridge: true,
+    performance: true,
+  })
+}
+
+app.mount('#app')

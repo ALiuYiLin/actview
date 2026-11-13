@@ -11,7 +11,8 @@
     "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "actview": "workspace:*"
+    "actview": "workspace:*",
+    "@actview/devtools": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~6.0.2",
