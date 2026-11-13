@@ -1,6 +1,6 @@
 # @actview/devtools
 
-ActView DevTools **backend**（暂无面板 / 浏览器扩展）。
+ActView DevTools **backend + 页面 bridge**。UI 在 [`extensions/devtools`](../../extensions/devtools/README.md)（Chrome 扩展 v0.1）。
 
 负责：
 
@@ -8,7 +8,9 @@ ActView DevTools **backend**（暂无面板 / 浏览器扩展）。
 - 维护 app / component 树；
 - 记录 mount / update / unmount / track / trigger / performance 事件；
 - 提供 `getSnapshot()`、`subscribe()`、`getComponentState()`；
-- 读取 props、类实例 state、computed、`@Model` 状态。
+- 读取 props、类实例 state、computed、`@Model` 状态；
+- 页面 ↔ Chrome 扩展 bridge（postMessage / chrome.runtime）；
+- 高亮 DOM、元素选择。
 
 ## 使用
 
@@ -44,10 +46,11 @@ const state = backend.getComponentState(componentId)
 | `backend.subscribe(fn)` | 订阅快照，返回取消函数 |
 | `backend.getComponentState(id)` | props / state / computed / Model 状态 |
 | `backend.detachApp(appId)` | 移除某个 app 的采集数据 |
+| `startDevtoolsBridge(backend)` | 页面侧 bridge（插件自动调用） |
+| `stopDevtoolsBridge()` | 停止 bridge |
 
 ## 状态
 
-- 已实现 backend；
-- 暂无 UI、面板、浏览器扩展；
-- `onTrack` / `onTrigger` 已接入 render effect 与 `@Computed`；
-- 目前只采集数据，不提供状态编辑 / 时间旅行。
+- backend + bridge 已实现；
+- Chrome 扩展 v0.1 已实现（Components / Events / Performance + 高亮 / 元素选择）；
+- 尚无搜索、依赖图、状态编辑、时间旅行、源码定位。

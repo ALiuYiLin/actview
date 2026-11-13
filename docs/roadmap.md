@@ -10,7 +10,7 @@
 - 组件级 re-render、微任务调度、`nextTick`（已从 `actview` 导出）；
 - keyed children diff + LIS；
 - Teleport / Transition / TransitionGroup / KeepAlive / Suspense / lazy / ErrorBoundary / Dynamic；
-- 生命周期 hooks、错误传播、DevTools hook / `@actview/devtools` backend（树 / 状态 / 事件 / 性能；无 UI）、provide/inject；
+- 生命周期 hooks、错误传播、DevTools hook / `@actview/devtools` backend + 扩展 v0.1（Components / Events / Performance；基础高亮 / 元素选择）、provide/inject；
 - App 插件契约：`app.use` / `app.onUnmount` / `app.config`（devtools / performance / warnHandler）；
 - `@actview/router` v1：RouterView/RouterLink、嵌套路由/params/query、guards、lazy、三种 history；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
@@ -42,7 +42,7 @@
 - 无 SSR / hydrate / `renderToString` / streaming；
 - 无 HMR、Vite 开发插件、错误 overlay；
 - 无官方测试工具包（当前测试是仓库内部测试）；
-- 无 CLI / 脚手架 / 文档站 / DevTools UI；
+- 无 CLI / 脚手架 / 文档站；DevTools 扩展仅基础 Components / Events / Performance；
 - 仅 DOM 渲染器，没有 `createRenderer` 自定义平台抽象；
 - 装饰器为 legacy（`experimentalDecorators`），未迁移 Stage 3；
 - `patchComponent` / `patchElement` 仍内聚在 `runtime/patch/index.ts`（`patchProps` 已独立）。
@@ -73,8 +73,8 @@
 14. **错误恢复**
     - ErrorBoundary 重试/重置；async setup 取消/超时；errorCaptured 完整传播。
 15. **DevTools**
-    - backend 已完成（树 / props/state/computed/Model / track/trigger / 性能 / 订阅）；
-    - 待做：内嵌面板 / 浏览器扩展、状态编辑、时间旅行、源码定位。
+    - backend + Chrome 扩展 v0.1：组件树、props/state/computed/Model、track/trigger、性能、DOM 高亮、元素选择；
+    - 待做：搜索、依赖图、状态编辑、时间旅行、源码定位、多 frame、扩展打包。
 
 ## 5. P2：DOM / 渲染器硬化
 

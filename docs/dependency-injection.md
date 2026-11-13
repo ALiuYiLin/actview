@@ -246,7 +246,7 @@ class Page extends ActViewComponent {
 - Model `@Provide` 跨组件提供值，后代 `@Inject` 读取；
 - `@Setup('after')` 相对组件 setup 的执行顺序。
 
-全仓：`pnpm test` **432 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
+全仓：`pnpm test` **433 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ### 第一版限制
 

@@ -1,6 +1,6 @@
 # App 插件系统
 
-> 第一版核心契约与 `@actview/devtools` backend 已实现；面板 / 浏览器扩展尚未实现。
+> 第一版核心契约、`@actview/devtools` backend 和 Chrome DevTools 扩展 v0.1 已实现。
 > 本文记录契约、安装规则与目标形态。
 
 ## 1. 插件契约
@@ -66,7 +66,7 @@ app.onUnmount(() => {
 
 ## 4. 官方插件规划
 
-### P0 `@actview/devtools`（backend 已实现）
+### P0 `@actview/devtools`（backend + 扩展 v0.1 已实现）
 
 已实现：
 
@@ -75,13 +75,16 @@ app.onUnmount(() => {
 - mount / update / unmount / track / trigger / performance 事件；
 - `getSnapshot()` / `subscribe()` / `getComponentState()`；
 - props / state / computed / Model 状态读取；
+- 页面 ↔ 扩展 bridge（postMessage + chrome.runtime）；
+- Chrome DevTools 扩展 v0.1：Components / Events / Performance、DOM 高亮、元素选择；
 - `app.onUnmount` 清理。
 
 尚未实现：
 
-- 内嵌面板 / 浏览器扩展；
 - 状态编辑、时间旅行、源码定位；
-- 依赖图可视化。
+- 依赖图可视化；
+- 搜索 / 多 frame；
+- 扩展打包发布。
 
 ```tsx
 if (import.meta.env.DEV) {

@@ -31,6 +31,8 @@ packages/
   shared/           内部工具
 playground/
   actview/          私有示例应用（不发布）
+extensions/
+  devtools/         Chrome DevTools 扩展（静态文件，无构建步骤）
 ```
 
 - `pnpm-workspace.yaml` 包含 `packages/*` 与 `playground/*`；

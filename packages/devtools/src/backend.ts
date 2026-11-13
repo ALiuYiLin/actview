@@ -121,6 +121,23 @@ export class DevtoolsBackend {
     }
   }
 
+  /** 组件根 DOM（高亮 / 跳转用） */
+  getComponentElement(id: number): Element | null {
+    return this.components.get(id)?.el ?? null
+  }
+
+  /** 根据页面元素反查最深的组件 */
+  findComponentByElement(element: Element): number | null {
+    let current: Element | null = element
+    while (current) {
+      for (const record of this.components.values()) {
+        if (record.el === current) return record.id
+      }
+      current = current.parentElement
+    }
+    return null
+  }
+
   clear(): void {
     this.apps.clear()
     this.components.clear()

@@ -8,6 +8,8 @@ export {
   getDevtoolsBackend,
   resetDevtoolsBackend,
 } from './plugin'
+export { startDevtoolsBridge, stopDevtoolsBridge } from './bridge'
+export type { DevtoolsBridgeOptions } from './bridge'
 export type { DevtoolsPluginOptions } from './plugin'
 export type {
   DevtoolsAppRecord,
