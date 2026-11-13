@@ -6,7 +6,7 @@
   //
   //   paths 仍指向 workspace 源码：`tsc -b` 在 build 模式下会把「引用项目里的
   //   源码 import」重定向到该项目的声明产物（source-of-project-reference
-  //   redirect），因此不会把 runtime-core / reactivity / shared 的源码按本包
+  //   redirect），因此不会把 reactivity / shared 的源码按本包
   //   配置重复检查；同时编辑器（语言服务）仍能跳到源码，无需先生成 dist-types。
   //
   //   注意：ES2016 + erasableSyntaxOnly:false 的特例保留在构建配置里 —— 它对齐

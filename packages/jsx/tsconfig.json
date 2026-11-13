@@ -3,8 +3,8 @@
   // @actview/jsx — 构建配置（composite project）
   //
   //   src → dist-types/*.d.ts（gitignore）；type-tests 在 tsconfig.test.json。
-  //   依赖 @actview/runtime-core：paths 指向源码，`tsc -b` build 模式会重定向到
-  //   runtime-core 的声明产物（project reference）。
+  //   依赖 @actview/core：paths 指向源码，`tsc -b` build 模式会重定向到
+  //   core 的声明产物（project reference）。
   // ============================================================
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {

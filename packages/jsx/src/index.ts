@@ -3,7 +3,7 @@
 //
 // 本包只负责「写 TSX 时用户看到的那一层」：
 //   - 全局 JSX 命名空间（Element / ElementType / IntrinsicElements）
-//   - 公开元素 / 组件契约（从 runtime-core 再导出）
+//   - 公开元素 / 组件契约（从 @actview/core 再导出）
 //   - DOM / SVG 属性类型
 //   - JSX automatic runtime（jsx / jsxs / jsxDEV / Fragment）
 //

@@ -1,7 +1,7 @@
 // ============================================================
 // 组件实例 / setup / props / render 根节点（M1 起，M3 补 async setup）
 //
-// 组件 = 带 `__actview_component` 标记的 setup 函数（见 runtime-core），
+// 组件 = @Component 类（见 decorator/component）；setup 由 mountComponent 编排。
 // setup 只执行一次，返回 render 函数；render 每次更新执行，返回值经
 // renderComponentRoot 归一化为 VNode 树交给渲染器。
 // M3：setup 可以返回 Promise（async setup）——先挂 `() => null` 占位，

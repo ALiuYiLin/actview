@@ -2,12 +2,12 @@
 // 全局 JSX 命名空间（公开作者层 / authoring）
 //
 // 只放「写 TSX 时编辑器提示与类型检查」需要的内容：
-//   - JSX.Element → runtime-core 的公开 Element 契约（不含 VNode 内部字段）
+//   - JSX.Element → @actview/core 的公开 Element 契约（不含 VNode 内部字段）
 //   - JSX.ElementType → 原生标签 / Fragment / 源码组件函数 / 编译产物 tag 视图
 //   - JSX.IntrinsicElements → 各标签属性类型（来自 ./jsx/attrs）
 //   - JSX.LibraryManagedAttributes → props 的 Ref 解包形态 + HTML 通用属性放行
 //
-// 渲染器内部类型不进入本命名空间（VNode 只在 runtime-core/internal）。
+// 渲染器内部类型不进入本命名空间（VNode 只在 core/internal）。
 // 该文件只有类型声明（编译后为空模块），由 jsx-runtime / 包入口副作用引入。
 // ============================================================
 

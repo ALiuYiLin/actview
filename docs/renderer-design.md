@@ -27,10 +27,10 @@ createApp(App).mount('#app')
 
 | 积木 | 位置 | 用途 |
 |---|---|---|
-| `VNode` / `createVNode` / `Fragment` | `packages/runtime-core/src/vnode.ts` | 渲染器消费的树节点；`el` / `component` 槽位由渲染器写 |
-| `ClassComponentCtor` / `isComponent` | `packages/runtime-core/src/component.ts` | 挂载 = `new Ctor(props)` → 安装 @Prop/@Ref → @Setup → render |
+| `VNode` / `createVNode` / `Fragment` | `packages/packages/core/src/runtime/vnode.ts` | 渲染器消费的树节点；`el` / `component` 槽位由渲染器写 |
+| `ClassComponentCtor` / `isComponent` | `packages/packages/core/src/runtime/component.ts` | 挂载 = `new Ctor(props)` → 安装 @Prop/@Ref → @Setup → render |
 | `RenderFunction = () => Element \| null` | 同上 | 组件更新的边界 |
-| `createElement` / jsx runtime | `packages/runtime-core/src/factory.ts`、`packages/jsx/src/jsx-runtime.ts` | VNode 来源 |
+| `createElement` / jsx runtime | `packages/packages/core/src/runtime/factory.ts`、`packages/jsx/src/jsx-runtime.ts` | VNode 来源 |
 | `ReactiveEffect(fn, { scheduler })`、`effect`、`pauseTracking`、`EffectScope`、`shallowReactive` | `packages/reactivity/src/{effect,effectScope,reactive}.ts` | 渲染 effect、依赖收集、调度、卸载清理 |
 
 M1 需要补充：文本 VNode（`Text` symbol）、渲染器实例类型、scheduler、生命周期、props 初始化/更新、事件/属性 patch、ref。
@@ -40,7 +40,7 @@ M1 需要补充：文本 VNode（`Text` symbol）、渲染器实例类型、sche
 ## 3. 模块划分
 
 ```
-packages/runtime-core/src/
+packages/packages/core/src/runtime/
   element.ts / vnode.ts / component.ts / factory.ts     # 跨平台类型 + 最小工厂（已有，M1 增加 Text 符号）
 packages/core/src/
   app.ts          createApp / AppContext / mount / unmount
@@ -321,7 +321,7 @@ M1 只实现同步 setup；`setupComponent` 里留好分支位置。
 
 **M1 落地信息**
 
-- 代码：`packages/core/src/{app,renderer,component,instance,scheduler,lifecycle,domProps,refs,index}.ts`；`packages/runtime-core/src/vnode.ts` 新增 `Text` / `createTextVNode`。
+- 代码：`packages/core/src/{app,renderer,component,instance,scheduler,lifecycle,domProps,refs,index}.ts`；`packages/packages/core/src/runtime/vnode.ts` 新增 `Text` / `createTextVNode`。
 - 测试：`packages/core/__tests__/renderer.spec.ts`（15 用例；`pnpm test` 全仓 411 passed / 4 skipped）。
 - 实现备注：
   - 本版 `ReactiveEffect` 构造函数只接收 `fn`，render effect 用 `effect.scheduler = () => queueJob(job)`，且必须在 `instance.scope.run()` 内创建（构造时按 activeEffectScope 登记，否则 `scope.stop()` 停不掉 render effect）。

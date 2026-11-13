@@ -5,7 +5,7 @@
 // JSX 表达式编译为 jsx(type, props, key) / jsxs(...) / jsxDEV(...)。
 //
 // 约定：
-//   - 这里只依赖 runtime-core 的**公开**工厂（createElement → Element），
+//   - 这里只依赖 @actview/core 的**公开**工厂（createElement → Element），
 //     不 touch VNode 内部类型；
 //   - 返回值类型是公开 Element（运行时对象由渲染器内部持有结构）；
 //   - key 从 props 提升为元素 key（与自动运行时约定一致）；

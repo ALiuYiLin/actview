@@ -56,9 +56,9 @@
 
 ### 1.1 当前组件模型
 
-- 运行时组件 = 带 `__actview_component` 标记的 **setup 函数**，`defineComponent` 只写标记、原样返回函数：`packages/runtime-core/src/component.ts:39-91`。
-- 渲染器在 `mountComponent` 里创建实例 → `setupComponent(instance)` 执行一次 setup → `instance.render` 是 render 函数 → `setupRenderEffect` 用 render effect 驱动 patch：`packages/core/src/renderer.ts:783-912`、`packages/core/src/component.ts:155-212`。
-- 组件识别唯一入口 `isComponent` 只看函数对象上的标记：`packages/runtime-core/src/component.ts:86-91`；`createApp` 也用它校验根组件：`packages/core/src/app.ts:62-66`。
+- 运行时组件 = 带 `__actview_component` 标记的 **setup 函数**，`defineComponent` 只写标记、原样返回函数：`packages/packages/core/src/runtime/component.ts:39-91`。
+- 渲染器在 `mountComponent` 里创建实例 → `setupComponent(instance)` 执行一次 setup → `instance.render` 是 render 函数 → `setupRenderEffect` 用 render effect 驱动 patch：`packages/core/src/runtime/patch/index.ts:783-912`、`packages/core/src/runtime/component.ts:155-212`。
+- 组件识别唯一入口 `isComponent` 只看函数对象上的标记：`packages/packages/core/src/runtime/component.ts:86-91`；`createApp` 也用它校验根组件：`packages/core/src/app.ts:62-66`。
 
 ### 1.2 当前 L1 wrap 的启发式
 
@@ -75,7 +75,7 @@
 
 ### 1.3 现有类型层
 
-- `ElementType = string | symbol | ComponentFunction | ComponentTag`：`packages/runtime-core/src/element.ts:32-37`；
+- `ElementType = string | symbol | ComponentFunction | ComponentTag`：`packages/packages/core/src/runtime/element.ts:32-37`；
 - `ComponentTag = Component & ((props) => any)`（JSX 标签视图要求 call signature）：`element.ts:52-63`；
 - `ComponentProps` 通过函数参数 infer：`element.ts:65-74`。
 - 这意味着**类构造函数当前无法作为 JSX 标签**（class 类型没有 call signature），必须扩展类型联合。
@@ -178,7 +178,7 @@ export class Counter extends ActViewComponent<CounterProps> {
 **可行，改动集中在类型联合 + 运行时识别。**
 
 ```ts
-// runtime-core/src/element.ts（示意）
+// packages/core/src/runtime/element.ts（示意）
 export interface ClassComponent<P = Record<string, any>> {
   new (props: P): { render(): Element | null }
 }
@@ -241,8 +241,8 @@ export function isComponent(t: unknown): t is ComponentLike {
 
 | 位置 | 改动 |
 |---|---|
-| `runtime-core/src/element.ts` | 增加 `ClassComponent` 类型、联合、`ComponentProps` 分支 |
-| `runtime-core/src/component.ts` | 增加 `isClassComponent` / `ComponentLike`；`ComponentTag` 保持函数视图 |
+| `packages/core/src/runtime/element.ts` | 增加 `ClassComponent` 类型、联合、`ComponentProps` 分支 |
+| `packages/core/src/runtime/component.ts` | 增加 `isClassComponent` / `ComponentLike`；`ComponentTag` 保持函数视图 |
 | `core/src/app.ts` | `createApp` 接受 class 构造器（`assertRootComponent` 扩展） |
 | `core/src/component.ts` | 新增 `createClassComponentInstance` / 元数据消费 / `ctx` 字段 |
 | `core/src/instance.ts` | `ComponentInternalInstance` 增加 `ctx?: object`（或 `classInstance`），`type` 联合类型 |
@@ -443,7 +443,7 @@ interface ComponentMeta {
 
 ### 3.6 公开实例、refs 与组件 ref
 
-- 函数组件公开实例是 `ComponentPublicInstance` proxy（`$`/`$props`/`$el`/`$parent`/`$root`/`$forceUpdate`/`$nextTick`）：`packages/core/src/component.ts:117-141`；
+- 函数组件公开实例是 `ComponentPublicInstance` proxy（`$`/`$props`/`$el`/`$parent`/`$root`/`$forceUpdate`/`$nextTick`）：`packages/core/src/runtime/component.ts:117-141`；
 - 类组件建议把 **class 实例本身**作为公开实例，并给它安装 `$` 系列访问器：
   ```ts
   Object.defineProperties(ctx, {
@@ -650,10 +650,10 @@ async `@Setup` 时，`@Provide` / `@Watch` 在 Promise resolve 之后安装（`i
 
 | 区域 | 改动 |
 |---|---|
-| `packages/runtime-core/src/component.ts` | 删除 `defineComponent`/`ComponentFunction`/`ComponentTag` 函数视图；保留标记常量；新增 class 类型 |
-| `packages/runtime-core/src/element.ts` | `ElementType` 增 class；删 `ComponentFunction`；`ComponentProps` 改 class 推断 |
-| `packages/core/src/component.ts` | 新增 class 实例化 / 元数据消费 / `ctx` |
-| `packages/core/src/renderer.ts` | class 分支；KeepAlive/Suspense/DevTools 按 class 适配 |
+| `packages/packages/core/src/runtime/component.ts` | 删除 `defineComponent`/`ComponentFunction`/`ComponentTag` 函数视图；保留标记常量；新增 class 类型 |
+| `packages/packages/core/src/runtime/element.ts` | `ElementType` 增 class；删 `ComponentFunction`；`ComponentProps` 改 class 推断 |
+| `packages/core/src/runtime/component.ts` | 新增 class 实例化 / 元数据消费 / `ctx` |
+| `packages/core/src/runtime/patch/index.ts` | class 分支；KeepAlive/Suspense/DevTools 按 class 适配 |
 | `packages/core/src/{keepAlive,suspense,errorBoundary}.ts` | 改为 class 组件 |
 | `packages/core/src/index.ts` | 删除 `defineComponent` 导出；导出装饰器与 `ActViewComponent` |
 | `packages/compiler/src/{wrap.ts,index.ts,vite.ts}` | 删除 wrap；保留可选静态分析/装饰器 transform |
@@ -817,11 +817,11 @@ export function runClassComponent(instance: ComponentInternalInstance): void {
 
 ## 附：本文依据的代码位置
 
-- 现有组件标记/判定：`packages/runtime-core/src/component.ts:39-91`
+- 现有组件标记/判定：`packages/packages/core/src/runtime/component.ts:39-91`
 - L1 wrap 启发式：`packages/compiler/src/wrap.ts:20-27, 41-46, 138-186, 242-310, 312-349`
 - Vite 插件 `enforce:'pre'`：`packages/compiler/src/vite.ts:40-41`、`vite.config.ts:8-16`
-- 渲染器组件挂载：`packages/core/src/renderer.ts:783-912`
-- setup / public proxy / props：`packages/core/src/component.ts:54-212`
-- 实例字段：`packages/core/src/instance.ts:75-118`
-- JSX 类型：`packages/runtime-core/src/element.ts:32-74`、`packages/jsx/src/jsx.ts:65-81`
+- 渲染器组件挂载：`packages/core/src/runtime/patch/index.ts:783-912`
+- setup / public proxy / props：`packages/core/src/runtime/component.ts:54-212`
+- 实例字段：`packages/core/src/runtime/instance.ts:75-118`
+- JSX 类型：`packages/packages/core/src/runtime/element.ts:32-74`、`packages/jsx/src/jsx.ts:65-81`
 - TS 配置：`tsconfig.base.json:24-52`

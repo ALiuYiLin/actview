@@ -2,8 +2,8 @@
 // DOM / SVG 元素属性类型（公开作者层）
 //
 // 这里只描述「用户写 JSX 时编辑器提示与类型检查」需要的公开属性：
-//   - 不包含 VNode / 组件运行时类型（那些在 runtime-core/internal）；
-//   - children 使用 runtime-core 的公开 ElementChildren；
+//   - 不包含 VNode / 组件运行时类型（那些在 core/internal）；
+//   - children 使用 @actview/core 的公开 ElementChildren；
 //   - Ref / MaybeRef 只作为属性取值形态，不代表运行时内部结构。
 // ============================================================
 
