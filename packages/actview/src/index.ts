@@ -13,7 +13,7 @@
 //   - @actview/core/internal（VNode / ComponentInternalInstance 等）
 // ============================================================
 
-export { createApp } from '@actview/core'
+export { createApp, nextTick } from '@actview/core'
 export type { App } from '@actview/core'
 
 export {
@@ -40,11 +40,13 @@ export {
 } from '@actview/core'
 
 export {
+  Dynamic,
   ErrorBoundary,
   KeepAlive,
   Suspense,
   Teleport,
   Transition,
+  TransitionGroup,
   lazy,
 } from '@actview/core'
 
@@ -56,5 +58,6 @@ export type {
   ElementChild,
   ElementChildren,
   ElementType,
+  LazyOptions,
   ModelToken,
 } from '@actview/core'

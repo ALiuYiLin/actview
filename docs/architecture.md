@@ -68,7 +68,8 @@ packages/core/src/
     reactive.ts               @Prop/@Ref/@Reactive/@Computed/@Watch/@Provide/@Inject
     lifecycle.ts              @Setup + 生命周期装饰器
   components/
-    KeepAlive.ts / Suspense.ts / ErrorBoundary.ts / Teleport.ts / Transition.ts
+    KeepAlive.ts / Suspense.ts / AsyncComponent.ts / ErrorBoundary.ts
+    Teleport.ts / Transition.ts / TransitionGroup.ts（含 Dynamic）
 ```
 
 ## 3. 组件模型

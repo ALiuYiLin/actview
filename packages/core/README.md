@@ -10,7 +10,7 @@ src/
   runtime/      createApp / mountClassComponent / installReactiveApi / installLifecycle / patch
   lifecycle/    currentInstance + onXxx + invokeHooks
   decorator/    @Component / @Model / @Prop / @Ref / @Reactive / @Computed / @Watch / @Provide / @Inject / @UseModel
-  components/   KeepAlive / Suspense / ErrorBoundary / Teleport / Transition
+  components/   KeepAlive / Suspense / ErrorBoundary / Teleport / Transition / TransitionGroup / Dynamic
 ```
 
 ## 对外 API
@@ -20,7 +20,7 @@ src/
 - `createApp` / `nextTick`；
 - `ActViewComponent` 与全部装饰器；
 - `Model` / `UseModel`（组件内数据层）；
-- `KeepAlive` / `Suspense` / `lazy` / `ErrorBoundary` / `Teleport` / `Transition`；
+- `KeepAlive` / `Suspense` / `lazy`（loading/error/retry/timeout）/ `ErrorBoundary` / `Teleport` / `Transition` / `TransitionGroup` / `Dynamic`；
 - 公开类型：`Element` / `ClassComponent` / `BuiltinComponent` / `ComponentProps`。
 
 `@actview/core/internal` 仅供内部/测试使用（VNode / ClassComponentCtor / ComponentInternalInstance）。

@@ -123,8 +123,11 @@ new Ctor(props)
 
 - **Teleport**：`type.__builtin = 'teleport'`；children patch 到 `resolveTeleportTarget(props.to)`；父容器占位注释 + 目标容器 targetAnchor；支持 `to` 切换与卸载清理；
 - **Transition**：`__builtin = 'transition'`；单子节点；enter/leave 类名 + 延迟卸载；
+- **TransitionGroup**：把每个子节点包一层 Transition（保留 key），外层默认 `div`（可 `tag`）；enter/leave 复用 Transition，move 动画暂未实现；
 - **KeepAlive**：组件实例 / DOM 缓存，`include/exclude`、`max` LRU、`activated/deactivated`；renderer 的 `__keepAlive` 分支负责 storage 移动 / 激活；
 - **Suspense / lazy**：Suspense 用模块级栈 + `suspenseCtx`；async `@Setup` 通过 `getCurrentSuspense()` register/resolve；children 常驻，pending 时 `display:none` + fallback；
+  `lazy(loader, options)` 支持 `loading` / `error` / `timeout` / `retry` / `retryDelay` / `onError`；在 Suspense 内仍会 register/resolve；
+- **Dynamic**：`<Dynamic is={Comp} {...props} />` 按 `is` 渲染组件/标签；
 - **ErrorBoundary**：`@Setup` 中注册 `onErrorCaptured`，错误写入 `@Ref error` 后渲染 fallback。
 
 ## 9. 错误处理

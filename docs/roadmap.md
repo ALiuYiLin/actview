@@ -7,9 +7,9 @@
 
 - 类组件 + 装饰器组件模型（`@Component` / `@Prop` / `@Ref` / `@Reactive` / `@Computed` / `@Watch` / `@Provide` / `@Inject`）；
 - 组件内数据层 `@Model` + `@UseModel(Token)`（per-component scope，支持 async `@Setup`、`@Prop`、`@Provide`、`@Setup('pre'|'after')`）；
-- 组件级 re-render、微任务调度、`nextTick`；
+- 组件级 re-render、微任务调度、`nextTick`（已从 `actview` 导出）；
 - keyed children diff + LIS；
-- Teleport / Transition / KeepAlive / Suspense / lazy / ErrorBoundary；
+- Teleport / Transition / TransitionGroup / KeepAlive / Suspense / lazy / ErrorBoundary / Dynamic；
 - 生命周期 hooks、错误传播、DevTools hook、provide/inject；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
 - 构建、类型检查、单元测试、playground。
@@ -32,9 +32,7 @@
 - 组件 ref：使用显式 `ref={(el) => ...}` callback，父组件持有类实例；**不做 `defineExpose`**；
 - 无组件 emits / `$attrs` / `$emit`；
 - `@Prop` 无 required / default / validator / 类型运行时告警；
-- 异步组件只有 `lazy`，无 loading/error/retry/timeout 组合；
-- 无 TransitionGroup / 动态组件辅助 API；
-- `nextTick` 在 `@actview/core` 导出，但用户聚合入口 `actview` 未导出；
+- 无 TransitionGroup 的 move 动画（enter/leave 已有）；
 - 无 app 插件系统（`app.use` / `app.component` / `app.directive` / dev-only config）。
 
 ### 2.3 平台 / 工程限制
@@ -53,10 +51,8 @@
 1. **组件事件**：`emits` 声明、`$emit`、父组件监听、事件类型。
 2. **`$attrs` / 属性透传**：未声明 props 的属性落到根节点；`inheritAttrs`。
 3. **Props 运行时能力**：required / default / validator / 类型告警。
-4. **异步组件增强**：loading / error / retry / timeout；与 Suspense/ErrorBoundary 组合。
-5. **动态组件与 TransitionGroup**。
-6. **公开 API 补齐**：`nextTick` 进入 `actview`；`$attrs` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
-7. **App / 插件系统**：`app.use`、`app.component`、`app.directive`、`app.config.errorHandler` / `warnHandler` / `performance`。
+4. **公开 API 补齐**：`$attrs` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
+5. **App / 插件系统**：`app.use`、`app.component`、`app.directive`、`app.config.errorHandler` / `warnHandler` / `performance`。
 
 ## 4. P1：生产可用性
 
@@ -98,7 +94,7 @@
 如果只先做三件事：
 
 1. **emits + `$attrs` + props 校验**（组件模型闭环）；
-2. **App 插件 API + `nextTick` 等公开 API + 官方测试工具**（可被应用和生态使用）；
+2. **App 插件 API + 官方测试工具**（可被应用和生态使用）；
 3. **SSR/hydration 或 HMR/Vite 插件** 二选一先做（部署能力 vs 开发体验）。
 
 路由、DevTools、CLI、生态包可以在独立包中并行推进，不阻塞 core。
