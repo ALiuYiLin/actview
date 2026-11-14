@@ -32,6 +32,7 @@
     "src/client/styles.d.ts",
     "src/client/markdown",
     "src/client/theme-default/Layout.tsx",
+    "src/client/theme-default/components",
     "src/node/markdownToActview.ts",
     "src/node/actviewPlugin.ts"
   ],
