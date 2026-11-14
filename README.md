@@ -14,6 +14,7 @@ ActView 是一个 **类组件 + 装饰器** 的响应式前端框架：
 packages/
   actview/          用户聚合入口（createApp / 装饰器 / 内置组件）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
+  server/           SSR / hydration（renderToString / createSSRApp / hydrate）
   devtools/         DevTools backend（无 UI 时可单独使用）
   router/           路由（RouterView / RouterLink / guards）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx automatic runtime）
@@ -85,6 +86,8 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 - [docs/dependency-injection.md](docs/dependency-injection.md) — 组件内 Model / @UseModel 设计与限制
 - [docs/model.md](docs/model.md) — @Model 使用指南（scope / Named / 生命周期）
 - [docs/plugins.md](docs/plugins.md) — App 插件契约与官方插件规划
+- [docs/ssr.md](docs/ssr.md) — SSR / hydration 分层、流程与边界
+- [packages/server/README.md](packages/server/README.md) — SSR / hydration 使用说明
 - [packages/router/README.md](packages/router/README.md) — 路由 v1 使用说明
 - [extensions/devtools/README.md](extensions/devtools/README.md) — Chrome DevTools 扩展 v0.1
 - [docs/renderer.md](docs/renderer.md) — 渲染器 / patch / 内置组件
@@ -93,4 +96,4 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 
 ## 状态
 
-第一版类组件与装饰器已落地；HMR / SSR / 静态分析 / 版本发布策略仍在后续范围。
+第一版类组件与装饰器已落地；SSR Phase 1–4 基础链路（renderToString / async SSR / hydration / router SSR）已实现，HMR / 流式 SSR / 完整 hydration 边界仍在后续范围。

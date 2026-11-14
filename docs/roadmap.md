@@ -13,6 +13,7 @@
 - 生命周期 hooks、错误传播、DevTools hook / `@actview/devtools` backend + 扩展 v0.1（Components / Events / Performance；基础高亮 / 元素选择）、provide/inject；
 - App 插件契约：`app.use` / `app.onUnmount` / `app.config`（devtools / performance / warnHandler）；
 - `@actview/router` v1：RouterView/RouterLink、嵌套路由/params/query、guards、lazy、三种 history；
+- `@actview/server`：SSR Phase 1–4 基础链路（renderToString / async SSR / hydration / Router SSR / head-state）；
 - JSX 类型层与 `@actview/jsx` automatic runtime；
 - 构建、类型检查、单元测试、playground。
 
@@ -59,9 +60,8 @@
 ## 4. P1：生产可用性
 
 10. **SSR / Hydration**
-    - `renderToString`、SSR 构建入口、客户端 hydrate；
-    - async setup / Suspense 服务端渲染；
-    - 每请求独立 Model scope，避免跨请求状态污染。
+    - 已完成基础链路：`renderToString` / `createSSRApp`、async setup / lazy / Suspense、ErrorBoundary、基础 hydration、Router SSR、head/state context；
+    - 待做：Teleport / KeepAlive / Suspense hydration 边界标记、mismatch 恢复、streaming SSR、app 级 scope 自动清理、SSR 测试矩阵。
 11. **HMR 与开发体验**
     - Vite 插件：HMR、组件/Model 状态保留、错误 overlay、source map；
     - 开发警告、生产裁剪、组件栈定位。

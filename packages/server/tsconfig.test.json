@@ -14,6 +14,8 @@
       "@actview/jsx/*": ["../jsx/src/*"],
       "@actview/reactivity": ["../reactivity/src/index.ts"],
       "@actview/reactivity/*": ["../reactivity/src/*"],
+      "@actview/router": ["../router/src/index.ts"],
+      "@actview/router/*": ["../router/src/*"],
       "@actview/server": ["./src/index.ts"],
       "@actview/shared": ["../shared/src/index.ts"],
       "@actview/shared/*": ["../shared/src/*"]

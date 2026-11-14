@@ -9,6 +9,7 @@
 packages/
   actview/          用户聚合入口（薄壳，只导出用户 API）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
+  server/           SSR / hydration（renderToString / createSSRApp / hydrate）
   devtools/         DevTools backend（树 / 状态 / 事件 / 性能；无 UI）
   router/           路由（RouterView/RouterLink、guards、history）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx-runtime / jsx-dev-runtime）
@@ -35,6 +36,7 @@ playground/
 ```text
 reactivity → shared
 core → reactivity, shared
+server → core, router（SSR 集成测试）
 devtools → core
 devtools extension → @actview/devtools bridge（postMessage / chrome.runtime）
 router → core, reactivity

@@ -98,6 +98,10 @@ importers:
       '@actview/core':
         specifier: workspace:^
         version: link:../core
+    devDependencies:
+      '@actview/router':
+        specifier: workspace:*
+        version: link:../router
 
   packages/shared: {}
 

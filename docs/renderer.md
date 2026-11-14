@@ -151,7 +151,7 @@ new Ctor(props)
 ## 12. 验证
 
 - `packages/core/__tests__`：renderer 15 + m2 23 + m3 9 + m3b 6 + m3c 4 + class 3 + decorators 4 + guard 3 = 67；
-- 全仓 `pnpm test`：437 passed / 4 skipped；
+- 全仓 `pnpm test`：450 passed / 4 skipped；
 - `pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ## 13. 当前限制

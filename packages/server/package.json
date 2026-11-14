@@ -10,6 +10,9 @@
   "dependencies": {
     "@actview/core": "workspace:^"
   },
+  "devDependencies": {
+    "@actview/router": "workspace:*"
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -b . && tsc -p tsconfig.test.json"

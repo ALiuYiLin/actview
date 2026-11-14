@@ -8,6 +8,10 @@ import {
   Suspense,
 } from '@actview/core'
 import {
+  createSSRContext,
+  type SSRContext,
+} from './context'
+import {
   createVNode,
   isVNode,
   isComponent,
@@ -290,26 +294,66 @@ export interface RenderToStringOptions {
   context?: Record<string, unknown>
 }
 
+interface SSRAppLike {
+  component: any
+  _context: AppContext
+}
+
+async function renderApp(
+  app: SSRAppLike,
+  rootProps: Record<string, any> | null,
+  ssrContext: SSRContext,
+): Promise<string> {
+  const instances: ComponentInternalInstance[] = []
+  const appContext = app._context as AppContext & {
+    __ssrContext?: SSRContext
+  }
+  const previous = appContext.__ssrContext
+  appContext.__ssrContext = ssrContext
+  const vnode = createVNode(app.component, rootProps)
+  try {
+    const html = await renderVNode(vnode, null, appContext, instances)
+    appContext.root = instances[0] ?? null
+    return html
+  } finally {
+    appContext.__ssrContext = previous
+    // SSR 结束：停止组件 scope（watch/computed），避免请求间泄漏。
+    for (const instance of instances) instance.scope.stop()
+  }
+}
+
 /**
  * 将根组件渲染为 HTML 字符串。
  *
  * 注意：每次调用都会创建新的组件实例；SSR 请求应使用新的 SSRApp。
  */
 export async function renderToString(
-  app: {
-    component: any
-    _context: AppContext
-  },
+  app: SSRAppLike,
   rootProps: Record<string, any> | null = null,
 ): Promise<string> {
-  const instances: ComponentInternalInstance[] = []
-  const vnode = createVNode(app.component, rootProps)
-  try {
-    const html = await renderVNode(vnode, null, app._context, instances)
-    app._context.root = instances[0] ?? null
-    return html
-  } finally {
-    // SSR 结束：停止组件 scope（watch/computed），避免请求间泄漏。
-    for (const instance of instances) instance.scope.stop()
+  return renderApp(app, rootProps, createSSRContext())
+}
+
+export interface SSRHTMLResult {
+  html: string
+  head: string
+  state: Record<string, unknown>
+}
+
+/**
+ * 渲染 HTML，并返回 SSR context 收集到的 head / 初始 state。
+ *
+ * 组件可在 @Setup 中 `useSSRContext()` 写入 head / state。
+ */
+export async function renderToHTML(
+  app: SSRAppLike,
+  rootProps: Record<string, any> | null = null,
+): Promise<SSRHTMLResult> {
+  const context = createSSRContext()
+  const html = await renderApp(app, rootProps, context)
+  return {
+    html,
+    head: context.head.join('\n'),
+    state: { ...context.state },
   }
 }

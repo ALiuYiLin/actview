@@ -18,7 +18,7 @@ import {
   UseModel,
   lazy,
 } from '@actview/core'
-import { createSSRApp, renderToString } from '../src/index'
+import { createSSRApp, renderToString, useSSRContext } from '../src/index'
 
 describe('@actview/server：renderToString', () => {
   it('渲染元素 / 文本 / 组件 / props / 属性', async () => {
@@ -242,5 +242,26 @@ describe('@actview/server：renderToString', () => {
 
     const html = await createSSRApp(App).renderToString()
     expect(html).toContain('<span>inner</span>')
+  })
+
+  it('SSR context：收集 head / 初始 state', async () => {
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      @Setup
+      setup(): void {
+        const ctx = useSSRContext()
+        ctx?.head.push('<title>ActView SSR</title>')
+        if (ctx) ctx.state.user = 'Ada'
+      }
+
+      render() {
+        return <main>page</main>
+      }
+    }
+
+    const result = await createSSRApp(App).renderToHTML()
+    expect(result.html).toBe('<main>page</main>')
+    expect(result.head).toContain('<title>ActView SSR</title>')
+    expect(result.state).toEqual({ user: 'Ada' })
   })
 })
