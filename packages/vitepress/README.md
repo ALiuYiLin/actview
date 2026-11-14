@@ -14,6 +14,28 @@ pnpm dev:vitepress
 pnpm build:vitepress
 ```
 
+多页面客户端：
+
+```ts
+import { createDocsApp } from '@actview/vitepress'
+
+createDocsApp({
+  pages: import.meta.glob('../docs/**/*.md'),
+  container: '#app',
+  themeConfig: {
+    nav: [{ text: 'Guide', link: '/' }],
+    sidebar: [{ text: 'Guide', items: [{ text: 'Home', link: '/' }] }],
+  },
+})
+```
+
+`createDocsApp` 负责：
+
+- 按 pathname 加载对应 `.md` 页面模块；
+- 设置 pageData / headers / sidebar / route；
+- popstate 切页；
+- 挂载完整 `Layout`。
+
 示例：
 
 ```text

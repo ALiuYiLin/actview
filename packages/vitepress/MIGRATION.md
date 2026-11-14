@@ -264,10 +264,11 @@ SSR 是第二阶段目标；建议先做纯 SPA 文档站验证主题和 Markdow
 
 ### Phase 2：客户端壳与路由
 
-- ActView app / data / router / head；
-- 最小 Layout；
-- `.md` 动态加载、路由跳转、404；
-- docs 页面可浏览。
+- ✅ `createDocsApp`：页面 glob 加载、pageData / headers / sidebar / route 更新；
+- ✅ popstate 切页；
+- ✅ 最小 Layout + 完整主题 Layout 已接通；
+- ✅ docs 页面可浏览（含侧栏 / footer / outline）；
+- 待补：VitePress 完整 siteConfig / rewrites / 404 / 预取。
 
 验收：本地 dev 打开 docs，导航、侧栏、文档内容可用。
 

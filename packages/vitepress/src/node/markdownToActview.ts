@@ -11,6 +11,7 @@ export interface PageData {
   title: string
   relativePath: string
   frontmatter: Record<string, any>
+  headers: Array<{ level: number; title: string; slug: string; link: string }>
 }
 
 export interface MarkdownToActviewResult {
@@ -44,6 +45,22 @@ function inferTitle(
   const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)
   if (!h1) return ''
   return h1[1].replace(/<[^>]+>/g, '').trim()
+}
+
+function extractHeaders(html: string) {
+  const headers: PageData['headers'] = []
+  const re = /<h([1-4])\s+[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/h\1>/gi
+  let match: RegExpExecArray | null
+  while ((match = re.exec(html))) {
+    const title = match[3].replace(/<[^>]+>/g, '').trim()
+    headers.push({
+      level: Number(match[1]),
+      title,
+      slug: match[2],
+      link: `#${match[2]}`,
+    })
+  }
+  return headers
 }
 
 function findInterpolation(
@@ -116,6 +133,7 @@ export function markdownToActview(
     title: inferTitle(parsed.data, html),
     relativePath,
     frontmatter: parsed.data as Record<string, any>,
+    headers: extractHeaders(html),
   }
 
   const wrappedHtml = `<div class="vp-doc">${html}</div>`

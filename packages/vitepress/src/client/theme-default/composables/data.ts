@@ -32,7 +32,14 @@ export function setPageData(data: any): void {
 }
 
 export function setThemeData(data: any): void {
-  siteData.value = { ...siteData.value, ...data }
+  siteData.value = {
+    ...siteData.value,
+    ...data,
+    themeConfig: {
+      ...(siteData.value.themeConfig ?? {}),
+      ...(data.themeConfig ?? {}),
+    },
+  }
 }
 
 const isDark = ref(false)
