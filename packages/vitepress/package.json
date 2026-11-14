@@ -11,6 +11,7 @@
   "dependencies": {
     "@actview/core": "workspace:^",
     "@actview/plugin-scoped": "^1.1.1",
+    "@actview/reactivity": "workspace:^",
     "actview": "workspace:*",
     "gray-matter": "^4.0.3",
     "markdown-it": "^14.1.0",
