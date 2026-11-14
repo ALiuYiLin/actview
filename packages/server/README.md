@@ -149,10 +149,10 @@ const html = await app.renderToString()
 
 - Hydration 已支持元素 / 文本 / Fragment / 普通组件 / router；
 - mismatch 支持基础替换与多余子节点移除；
-- KeepAlive 基础子树可 hydrate；Teleport / Suspense 的 hydration 边界标记尚未完整实现；
+- KeepAlive / Teleport / Suspense 的基础 hydration 边界已实现（SSR 注释标记 + target 迁移 / wrapper 接管）；
 - streaming 中 ErrorBoundary 若已输出部分内容，无法撤回；
 - 没有 streaming hydration / out-of-order streaming；
 - head 目前是字符串收集，不是自动注入模板；
 - CSS 由宿主构建链处理（例如 Vite / Tailwind），不在 SSR 包内；
 - SSR 结束会触发 app 级 Model hooks 与 `app.onUnmount`；每个 SSRApp 只渲染一次。
-- 生产使用前需要补：完整 hydration mismatch 恢复、Teleport/KeepAlive/Suspense takeover、SSR 测试矩阵。
+- 生产使用前需要补：完整 hydration mismatch 恢复、复杂嵌套 Teleport/多目标 / Suspense fallback 边界、SSR 测试矩阵。

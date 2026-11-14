@@ -60,12 +60,12 @@ HTTP request
 |---|---|---|
 | 1 | `renderToString`、元素 / 文本 / Fragment / props、Model / provide-inject、每请求 App | ✅ |
 | 2 | async setup、lazy、Suspense、ErrorBoundary、KeepAlive / Transition / Teleport 内容 | ✅ |
-| 3 | hydrate、DOM 复用、事件 / refs、基础 mismatch 替换恢复 | ✅ 基础 |
+| 3 | hydrate、DOM 复用、事件 / refs、Teleport / Suspense 边界标记、基础 mismatch 替换恢复 | ✅ 基础 |
 | 4 | Router SSR、route loader 数据预取、head / state、renderDocument（CSS/client entry）、renderToStream、SSR App 清理、测试 | ✅ 基础 |
 
 ## 5. 当前边界
 
-- Hydration 边界标记未实现：Teleport / Suspense 的客户端 takeover 仍不完整；KeepAlive 基础子树可 hydrate；
+- Teleport / Suspense / KeepAlive 基础边界已可 hydrate；复杂嵌套 Teleport、多目标、Suspense fallback 组合仍需补强；
 - mismatch 支持基础替换 + 多余子节点移除，不是完整恢复策略；
 - `renderToStream` 已支持按 VNode 边界流式输出；不支持 streaming hydration / out-of-order；
 - head 是字符串收集，由 `renderDocument` 拼装；不自动注入复杂 head 管理；
@@ -79,4 +79,4 @@ HTTP request
 - `packages/server/__tests__/hydration.spec.tsx`：DOM 复用 / 事件 / unmount；
 - `packages/server/__tests__/ssr-router.spec.tsx`：Router SSR / guard / router hydrate。
 
-当前全仓：`pnpm test` **457 passed / 4 skipped**。
+当前全仓：`pnpm test` **460 passed / 4 skipped**。

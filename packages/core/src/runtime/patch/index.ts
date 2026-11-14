@@ -101,12 +101,49 @@ const fallbackAppContext: AppContext = {
 // ------------------------------------------------------------
 let hydrating = false
 let hydrationCursor: Node | null = null
+/** Teleport 迁移延后到整棵树 hydrate 完成后，避免目标容器内的后续 cleanup 误删内容。 */
+const pendingTeleportMoves: Array<{
+  start: Node
+  stop: Node | null
+  target: Element
+  targetAnchor: Node
+  endMarker: Node | null
+}> = []
 
 function hydrationMismatch(expected: string, actual: Node | null): void {
   if (!__DEV__) return
   console.warn(
     `[actview] hydration mismatch：期望 ${expected}，实际 ${actual?.nodeName ?? 'null'}`,
   )
+}
+
+/** 跳过 Suspense 服务端起始标记；wrapper 本身按普通元素 hydrate。 */
+function skipSuspenseStartMarker(): void {
+  const cursor = hydrationCursor
+  if (
+    cursor != null &&
+    cursor.nodeType === 8 &&
+    (cursor as Comment).nodeValue === 'actview:suspense:start'
+  ) {
+    hydrationCursor = cursor.nextSibling
+    if (cursor.parentNode) cursor.parentNode.removeChild(cursor)
+  }
+}
+
+function removeSuspenseMarkers(node: Node): void {
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType === 8) {
+      const value = (child as Comment).nodeValue
+      if (
+        value === 'actview:suspense:start' ||
+        value === 'actview:suspense:end'
+      ) {
+        child.parentNode?.removeChild(child)
+      }
+    } else if (child.nodeType === 1) {
+      removeSuspenseMarkers(child)
+    }
+  }
 }
 
 
@@ -146,8 +183,25 @@ export function hydrate(vnode: VNode, container: Element): void {
   hydrating = true
   try {
     patch(null, vnode, container, null, null)
+    // Teleport 在整棵树 hydrate 后再迁移，避免目标容器 cleanup 删除迁入节点。
+    for (const move of pendingTeleportMoves.splice(0)) {
+      if (move.targetAnchor.parentNode !== move.target) {
+        move.target.appendChild(move.targetAnchor)
+      }
+      let node = move.start.nextSibling
+      while (node && node !== move.stop) {
+        const next = node.nextSibling
+        move.target.insertBefore(node, move.targetAnchor)
+        node = next
+      }
+      if (move.endMarker?.parentNode) {
+        move.endMarker.parentNode.removeChild(move.endMarker)
+      }
+    }
+    removeSuspenseMarkers(container)
     host._vnode = vnode
   } finally {
+    pendingTeleportMoves.length = 0
     hydrating = false
     hydrationCursor = null
   }
@@ -276,6 +330,7 @@ function mountElement(
   anchor: Node | null,
   parent: ComponentInternalInstance | null,
 ): void {
+  if (hydrating) skipSuspenseStartMarker()
   const existing = hydrating ? hydrationCursor : null
   const tag = String(vnode.type)
   const matched =
@@ -430,6 +485,53 @@ function mountTeleport(
   parent: ComponentInternalInstance | null,
 ): void {
   const target = resolveTeleportTarget(vnode.props?.to)
+  const children = normalizeChildren(vnode.props?.children)
+  vnode.children = children
+
+  // Hydration：复用 SSR 内联内容 + 边界标记，再迁移到 target。
+  if (hydrating) {
+    const cursor = hydrationCursor
+    const hasStart =
+      cursor != null &&
+      cursor.nodeType === 8 &&
+      (cursor as Comment).nodeValue === 'actview:teleport:start'
+    const startMarker = hasStart
+      ? (cursor as Comment)
+      : document.createComment('teleport')
+    if (hasStart) {
+      hydrationCursor = startMarker.nextSibling
+    } else {
+      container.insertBefore(startMarker, cursor)
+      hydrationCursor = startMarker.nextSibling
+    }
+    vnode.el = startMarker
+
+    const targetAnchor = document.createComment('teleport')
+    target.appendChild(targetAnchor)
+    ;(vnode as unknown as TeleportRuntime).__teleportTargetAnchor = targetAnchor
+
+    for (const child of children) {
+      patch(null, child, container, startMarker, parent)
+    }
+
+    const afterChildren = hydrationCursor
+    const endMarker =
+      afterChildren != null &&
+      afterChildren.nodeType === 8 &&
+      (afterChildren as Comment).nodeValue === 'actview:teleport:end'
+        ? (afterChildren as Comment)
+        : null
+    if (endMarker) hydrationCursor = endMarker.nextSibling
+
+    pendingTeleportMoves.push({
+      start: startMarker,
+      stop: endMarker ?? afterChildren,
+      target,
+      targetAnchor,
+      endMarker,
+    })
+    return
+  }
 
   // 父容器占位注释：代表 Teleport 在父树中的位置（自身不产生可见 DOM）
   const parentAnchor = document.createComment('teleport')
@@ -441,8 +543,6 @@ function mountTeleport(
   target.appendChild(targetAnchor)
   ;(vnode as unknown as TeleportRuntime).__teleportTargetAnchor = targetAnchor
 
-  const children = normalizeChildren(vnode.props?.children)
-  vnode.children = children
   for (const child of children) patch(null, child, target, targetAnchor, parent)
 }
 

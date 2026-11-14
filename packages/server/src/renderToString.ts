@@ -235,9 +235,10 @@ async function renderVNode(
       )
     }
 
-    // Suspense：服务端等待子树完成，不输出 fallback / display:none 容器
+    // Suspense：服务端等待子树完成，输出与客户端初始结构一致的 wrapper + 边界标记
     if (type === Suspense) {
-      return renderChildren(vnode, parent, context, instances)
+      const children = await renderChildren(vnode, parent, context, instances)
+      return `<!--actview:suspense:start--><div>${children}</div><!--actview:suspense:end-->`
     }
 
     // KeepAlive：服务端直接渲染当前子树，不创建 DOM storage
@@ -281,10 +282,18 @@ async function renderVNode(
     return `<${tag}${attrs}>${children}</${tag}>`
   }
 
-  // 内置组件：SSR Phase 1 先按透明容器处理
+  // 内置组件：Teleport 保留边界标记，客户端 hydration 据此把内联内容迁移到 target
   const builtin = (type as { __builtin?: string })?.__builtin
-  if (builtin === 'transition' || builtin === 'teleport') {
+  if (builtin === 'transition') {
     return renderChildren(vnode, parent, context, instances)
+  }
+  if (builtin === 'teleport') {
+    return `<!--actview:teleport:start-->${await renderChildren(
+      vnode,
+      parent,
+      context,
+      instances,
+    )}<!--actview:teleport:end-->`
   }
 
   throw new Error(`[actview/server] 不支持的 VNode type：${String(type)}`)

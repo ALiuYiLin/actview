@@ -9,6 +9,9 @@ import {
   KeepAlive,
   Prop,
   Ref,
+  Setup,
+  Suspense,
+  Teleport,
   nextTick,
 } from '@actview/core'
 import { createSSRApp } from '../src/index'
@@ -188,6 +191,109 @@ describe('@actview/server：hydrate', () => {
 
     expect(root.querySelector('span')).toBe(original)
     expect(root.textContent).toBe('keep')
+  })
+
+  it('Suspense + async setup：hydration 后接管服务端内容', async () => {
+    @Component({ name: 'AsyncChild' })
+    class AsyncChild extends ActViewComponent {
+      @Ref
+      text = ''
+
+      @Setup
+      async setup(): Promise<void> {
+        await Promise.resolve()
+        this.text = 'ready'
+      }
+
+      render() {
+        return <b class="async">{this.text}</b>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <Suspense fallback={<i class="fallback">loading</i>}>
+            <AsyncChild />
+          </Suspense>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    const root = mountContainer(html)
+    const client = createSSRApp(App)
+    client.hydrate(root)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    await nextTick()
+
+    expect(root.textContent).toBe('ready')
+    expect(root.querySelector('.fallback')).toBeNull()
+  })
+
+  it('Teleport SSR 边界标记 + hydration 迁移到 target', async () => {
+    const TeleportView = Teleport as any
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <div>
+            <TeleportView to="#teleport-target">
+              <span class="teleported">tele</span>
+            </TeleportView>
+            <div id="teleport-target" />
+          </div>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    expect(html).toContain('<!--actview:teleport:start-->')
+    expect(html).toContain('<!--actview:teleport:end-->')
+
+    const root = mountContainer(html)
+    const original = root.querySelector('.teleported')!
+
+    const client = createSSRApp(App)
+    client.hydrate(root)
+    await nextTick()
+
+    const target = root.querySelector('#teleport-target')!
+    expect(target.querySelector('.teleported')).toBe(original)
+    expect(root.querySelector('.teleported')).toBe(original)
+    expect(root.textContent).toBe('tele')
+  })
+
+  it('Suspense SSR 边界标记：同步子树 hydrate', async () => {
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <Suspense fallback={<i class="fallback">loading</i>}>
+            <span class="sync">sync</span>
+          </Suspense>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    expect(html).toContain('<!--actview:suspense:start-->')
+    expect(html).toContain('<!--actview:suspense:end-->')
+
+    const root = mountContainer(html)
+    const original = root.querySelector('.sync')!
+
+    const client = createSSRApp(App)
+    client.hydrate(root)
+    await nextTick()
+
+    expect(root.querySelector('.sync')).toBe(original)
+    expect(root.querySelector('.fallback')).toBeNull()
+    expect(root.textContent).toBe('sync')
+    expect(root.innerHTML).not.toContain('actview:suspense')
   })
 })
 

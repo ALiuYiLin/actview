@@ -97,7 +97,9 @@ async function* streamVNode(
     }
 
     if (type === Suspense) {
+      yield '<!--actview:suspense:start--><div>'
       yield* streamChildren(vnode, parent, context, instances)
+      yield '</div><!--actview:suspense:end-->'
       return
     }
 
@@ -169,8 +171,14 @@ async function* streamVNode(
   }
 
   const builtin = (type as { __builtin?: string })?.__builtin
-  if (builtin === 'transition' || builtin === 'teleport') {
+  if (builtin === 'transition') {
     yield* streamChildren(vnode, parent, context, instances)
+    return
+  }
+  if (builtin === 'teleport') {
+    yield '<!--actview:teleport:start-->'
+    yield* streamChildren(vnode, parent, context, instances)
+    yield '<!--actview:teleport:end-->'
     return
   }
 
