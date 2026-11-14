@@ -149,6 +149,14 @@ export class Router implements AppPlugin {
 
     if (id !== this.navigationId) return { ok: false, aborted: true }
 
+    // 数据预取：在切换 currentRoute 前完成，SSR / 客户端导航都会等待。
+    for (const record of target.matched) {
+      for (const loader of record.loader) {
+        await loader(target, from)
+        if (id !== this.navigationId) return { ok: false, aborted: true }
+      }
+    }
+
     const shouldReplace =
       replace ||
       (typeof to === 'object' && to !== null && 'replace' in to && !!to.replace)

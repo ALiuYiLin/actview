@@ -15,6 +15,7 @@ export type {
   NavigationResult,
   RouteComponent,
   RouteLocationNormalized,
+  RouteLoader,
   RouteLocationRaw,
   RouteLocationRawObject,
   RouteParams,

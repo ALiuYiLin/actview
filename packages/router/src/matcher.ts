@@ -110,6 +110,11 @@ export function createMatcher(routes: RouteRecordRaw[]): Matcher {
           ? raw.beforeEnter
           : [raw.beforeEnter]
         : [],
+      loader: raw.loader
+        ? Array.isArray(raw.loader)
+          ? raw.loader
+          : [raw.loader]
+        : [],
       regex,
       keys,
       score,

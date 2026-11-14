@@ -9,6 +9,7 @@ import {
   createSSRApp,
   renderToString,
   renderToHTML,
+  renderDocument,
   useSSRContext,
   hydrate,
 } from '@actview/server'
@@ -17,6 +18,7 @@ import {
 - `createSSRApp(root, props?)`：创建带 `renderToString()` / `renderToHTML()` / `hydrate()` 的 App；
 - `renderToString(app, props?)`：同步 / 异步组件树 → HTML 字符串（不等待客户端生命周期）；
 - `renderToHTML(app, props?)`：返回 `{ html, head, state }`；
+- `renderDocument(options)`：拼装完整 HTML（title / CSS / state / client entry）；
 - `useSSRContext()`：在 `@Setup` 中收集 head / 初始 state；客户端返回 null；
 - `hydrate(app, container, props?)`：在已有 SSR HTML 上 hydration。
 
@@ -36,15 +38,23 @@ app.use(router)
 
 const { html, head, state } = await app.renderToHTML()
 
-res.end(`<!doctype html>
-<html>
-  <head>${head}</head>
-  <body>
-    <div id="app">${html}</div>
-    <script>window.__ACTVIEW_STATE__ = ${JSON.stringify(state)}</script>
-    <script type="module" src="/client.js"></script>
-  </body>
-</html>`)
+res.end(renderDocument({
+  html,
+  head,
+  state,
+  title: 'My App',
+  css: '/app.css',
+  clientEntry: '/client.js',
+}))
+```
+
+`renderDocument` 会拼装 `<!doctype html>`、title、CSS link、初始 state 脚本与 client entry；state 会转义 `</script>` 等危险片段。
+
+路由 `loader` 在 `router.push` / `replace` 时执行，SSR 可先 push 再渲染：
+
+```ts
+await router.push(req.url)
+const { html } = await app.renderToHTML()
 ```
 
 每个请求使用**新的 SSRApp**；不要跨请求复用 App / Model 实例。

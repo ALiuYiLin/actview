@@ -28,6 +28,15 @@ class User extends ActViewComponent<{ id: string }> {
   }
 }
 
+let loadedUser = ''
+
+@Component({ name: 'Loaded' })
+class Loaded extends ActViewComponent {
+  render() {
+    return <span>loaded:{loadedUser}</span>
+  }
+}
+
 @Component({ name: 'App' })
 class App extends ActViewComponent {
   render() {
@@ -101,5 +110,30 @@ describe('@actview/server：SSR + router', () => {
 
     expect(root.querySelector('span')).toBe(original)
     expect(root.textContent).toBe('user:42')
+  })
+
+  it('route loader 在 SSR navigate 时预取数据', async () => {
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: [
+        { path: '/', component: Home },
+        {
+          path: '/loaded',
+          component: Loaded,
+          loader: async () => {
+            await Promise.resolve()
+            loadedUser = 'Ada'
+          },
+        },
+      ],
+    })
+
+    const app = createSSRApp(App)
+    app.use(router)
+    const result = await router.push('/loaded')
+    expect(result.ok).toBe(true)
+
+    const html = await app.renderToString()
+    expect(html).toContain('loaded:Ada')
   })
 })

@@ -72,9 +72,14 @@ class Probe extends ActViewComponent {
   props: true, // params → props
   meta: { auth: true },
   beforeEnter: (to) => ...,
+  loader: async (to) => {
+    await fetchUser(to.params.id)
+  },
   children: [...],
 }
 ```
+
+`loader` 在 guard 之后、切换 `currentRoute` 之前执行；`push/replace` 会等待 Promise。SSR 可以先 `await router.push(url)` 完成数据预取，再 `renderToString()`。
 
 - `component` 可以是 `@Component` 类，也可以是 `() => Promise<{ default: ... }>`（自动走 `lazy`）；
 - `redirect` 支持字符串 / 命名路由对象；
@@ -122,5 +127,5 @@ router.afterEach((to, from) => {})
 - 无 scrollBehavior 的 savedPosition / 滚动恢复（基础 top 行为需显式配置）；
 - 无 route meta 类型增强 / 命名视图；
 - 无组件内 `onBeforeRouteLeave` 等 in-component guards；
-- 无 SSR 路由集成；
+- 无命名视图 / scrollPosition / 流式 SSR；
 - 无 route transition 自动包裹。

@@ -18,7 +18,7 @@ import {
   UseModel,
   lazy,
 } from '@actview/core'
-import { createSSRApp, renderToString, useSSRContext } from '../src/index'
+import { createSSRApp, renderDocument, renderToString, useSSRContext } from '../src/index'
 
 describe('@actview/server：renderToString', () => {
   it('渲染元素 / 文本 / 组件 / props / 属性', async () => {
@@ -263,5 +263,36 @@ describe('@actview/server：renderToString', () => {
     expect(result.html).toBe('<main>page</main>')
     expect(result.head).toContain('<title>ActView SSR</title>')
     expect(result.state).toEqual({ user: 'Ada' })
+  })
+
+  it('renderDocument：head / CSS / state / client entry', async () => {
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      @Setup
+      setup(): void {
+        const ctx = useSSRContext()
+        if (ctx) ctx.state.payload = '</script><x>'
+      }
+
+      render() {
+        return <main>doc</main>
+      }
+    }
+
+    const result = await createSSRApp(App).renderToHTML()
+    const html = renderDocument({
+      ...result,
+      title: 'My <App>',
+      css: '/app.css',
+      clientEntry: '/src/main.ts',
+      lang: 'zh-CN',
+    })
+
+    expect(html).toContain('<!doctype html>')
+    expect(html).toContain('<title>My &lt;App&gt;</title>')
+    expect(html).toContain('<link rel="stylesheet" href="/app.css">')
+    expect(html).toContain('<main>doc</main>')
+    expect(html).toContain('\\u003c/script>')
+    expect(html).toContain('<script type="module" src="/src/main.ts"></script>')
   })
 })

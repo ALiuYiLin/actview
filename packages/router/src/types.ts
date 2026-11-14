@@ -32,6 +32,8 @@ export interface RouteRecordRaw {
   /** true → 把 params 作为 props；对象 / 函数也支持 */
   props?: boolean | Record<string, any> | ((to: RouteLocationNormalized) => Record<string, any>)
   beforeEnter?: NavigationGuard | NavigationGuard[]
+  /** 进入路由时预取数据；可返回 Promise，SSR 会等待 */
+  loader?: RouteLoader | RouteLoader[]
 }
 
 export interface RouteRecord {
@@ -46,6 +48,7 @@ export interface RouteRecord {
   meta: Record<string, any>
   props?: RouteRecordRaw['props']
   beforeEnter: NavigationGuard[]
+  loader: RouteLoader[]
   regex: RegExp
   keys: string[]
   score: number
@@ -72,6 +75,11 @@ export type NavigationGuard = (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
 ) => NavigationGuardResult | Promise<NavigationGuardResult>
+
+export type RouteLoader = (
+  to: RouteLocationNormalized,
+  from: RouteLocationNormalized,
+) => unknown | Promise<unknown>
 
 export interface NavigationResult {
   ok: boolean
