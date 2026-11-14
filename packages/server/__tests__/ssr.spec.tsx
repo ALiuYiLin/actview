@@ -295,4 +295,43 @@ describe('@actview/server：renderToString', () => {
     expect(html).toContain('\\u003c/script>')
     expect(html).toContain('<script type="module" src="/src/main.ts"></script>')
   })
+
+  it('renderToStream：按 VNode 边界输出', async () => {
+    @Component({ name: 'AsyncChild' })
+    class AsyncChild extends ActViewComponent {
+      @Ref
+      text = ''
+
+      @Setup
+      async setup(): Promise<void> {
+        await Promise.resolve()
+        this.text = 'ready'
+      }
+
+      render() {
+        return <b>{this.text}</b>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <main>
+            <h1>Hi</h1>
+            <AsyncChild />
+          </main>
+        )
+      }
+    }
+
+    const app = createSSRApp(App)
+    const chunks: string[] = []
+    for await (const chunk of app.renderToStream()) chunks.push(chunk)
+
+    expect(chunks.length).toBeGreaterThan(2)
+    expect(chunks[0]).toBe('<main>')
+    expect(chunks.join('')).toBe(await app.renderToString())
+    expect(chunks.join('')).toContain('<b>ready</b>')
+  })
 })

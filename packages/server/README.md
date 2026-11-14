@@ -9,6 +9,7 @@ import {
   createSSRApp,
   renderToString,
   renderToHTML,
+  renderToStream,
   renderDocument,
   useSSRContext,
   hydrate,
@@ -18,6 +19,7 @@ import {
 - `createSSRApp(root, props?)`：创建带 `renderToString()` / `renderToHTML()` / `hydrate()` 的 App；
 - `renderToString(app, props?)`：同步 / 异步组件树 → HTML 字符串（不等待客户端生命周期）；
 - `renderToHTML(app, props?)`：返回 `{ html, head, state }`；
+- `renderToStream(app, props?)`：按 VNode 边界流式输出 HTML；
 - `renderDocument(options)`：拼装完整 HTML（title / CSS / state / client entry）；
 - `useSSRContext()`：在 `@Setup` 中收集 head / 初始 state；客户端返回 null；
 - `hydrate(app, container, props?)`：在已有 SSR HTML 上 hydration。
@@ -114,6 +116,18 @@ app.hydrate('#app')
 - `ErrorBoundary`（服务端捕获子树错误并输出 fallback）；
 - `KeepAlive` / `Transition` / `Teleport` 内容直接输出。
 
+## 流式 SSR
+
+```ts
+const app = createSSRApp(App)
+for await (const chunk of app.renderToStream()) {
+  res.write(chunk)
+}
+res.end()
+```
+
+流式输出按 VNode 边界：先写父元素 opening tag，再等待异步子组件并继续写。
+
 ## Router SSR
 
 ```tsx
@@ -135,7 +149,8 @@ const html = await app.renderToString()
 
 - Hydration 已支持元素 / 文本 / Fragment / 普通组件 / router；
 - Teleport / KeepAlive / Suspense 的 hydration 边界标记尚未完整实现；
-- 没有 streaming SSR；
+- streaming 中 ErrorBoundary 若已输出部分内容，无法撤回；
+- 没有 streaming hydration / out-of-order streaming；
 - head 目前是字符串收集，不是自动注入模板；
 - CSS 由宿主构建链处理（例如 Vite / Tailwind），不在 SSR 包内；
 - `app.onUnmount` 在 SSR 请求结束时的插件清理尚未自动调用；

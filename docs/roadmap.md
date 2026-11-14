@@ -60,8 +60,8 @@
 ## 4. P1：生产可用性
 
 10. **SSR / Hydration**
-    - 已完成基础链路：`renderToString` / `createSSRApp`、async setup / lazy / Suspense、ErrorBoundary、基础 hydration、Router SSR、head/state context；
-    - 待做：Teleport / KeepAlive / Suspense hydration 边界标记、mismatch 恢复、streaming SSR、app 级 scope 自动清理、SSR 测试矩阵。
+    - 已完成基础链路：`renderToString` / `renderToHTML` / `renderToStream`、async setup / lazy / Suspense、ErrorBoundary、基础 hydration、Router SSR + route loader、head/state、renderDocument；
+    - 待做：Teleport / KeepAlive / Suspense hydration 边界标记、mismatch 恢复、streaming hydration/out-of-order、app 级 scope 自动清理、SSR 测试矩阵。
 11. **HMR 与开发体验**
     - Vite 插件：HMR、组件/Model 状态保留、错误 overlay、source map；
     - 开发警告、生产裁剪、组件栈定位。

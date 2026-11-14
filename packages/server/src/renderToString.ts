@@ -121,7 +121,7 @@ function styleToString(value: unknown): string {
     .join(';')
 }
 
-function attrsToString(props: Record<string, any> | null): string {
+export function attrsToString(props: Record<string, any> | null): string {
   if (!props) return ''
   let out = ''
   for (const [key, value] of Object.entries(props)) {

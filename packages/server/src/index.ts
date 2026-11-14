@@ -5,6 +5,7 @@
 export { createSSRApp } from './createSSRApp'
 export type { SSRApp } from './createSSRApp'
 export { hydrate, resolveHydrationContainer } from './hydrate'
+export { renderToStream } from './stream'
 export { createSSRContext, useSSRContext } from './context'
 export type { SSRContext } from './context'
 export {
