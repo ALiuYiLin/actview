@@ -1,119 +1,67 @@
-import { inBrowser, onContentUpdated, useRoute } from 'vitepress'
-import type { DefaultTheme, useLayout as expected } from 'vitepress/theme'
 import {
   computed,
-  shallowReadonly,
   shallowRef,
-  watch,
   type ComputedRef,
-  type InjectionKey
-} from 'vue'
-import { getSidebar, getSidebarGroups } from '../support/sidebar'
+} from '@actview/reactivity'
 import { useData } from './data'
-import { getHeaders } from './outline'
-import { useCloseSidebarOnEscape } from './sidebar'
 
-const headers = shallowRef<DefaultTheme.OutlineItem[]>([])
-const sidebar = shallowRef<DefaultTheme.SidebarItem[]>([])
+export function isActive(currentPath: string, link?: string): boolean {
+  if (!link) return false
+  return currentPath === link || currentPath.startsWith(link + '/')
+}
 
-const is960 = shallowRef(false)
+export const headers = shallowRef<any[]>([])
+export const sidebar = shallowRef<any[]>([])
+const is960 = shallowRef(true)
 
-export function useLayout(): ReturnType<typeof expected> {
+export function useLayout() {
   const { frontmatter, theme } = useData()
 
-  const isHome = computed(() => {
-    return !!(frontmatter.value.isHome ?? frontmatter.value.layout === 'home')
-  })
-
-  const hasSidebar = computed(() => {
-    return (
+  const isHome = computed(
+    () => !!(frontmatter.value.isHome ?? frontmatter.value.layout === 'home'),
+  )
+  const hasSidebar = computed(
+    () =>
       frontmatter.value.sidebar !== false &&
       sidebar.value.length > 0 &&
-      !isHome.value
-    )
-  })
-
+      !isHome.value,
+  )
   const isSidebarEnabled = computed(() => hasSidebar.value && is960.value)
-
-  const sidebarGroups = computed(() => {
-    return hasSidebar.value ? getSidebarGroups(sidebar.value) : []
-  })
-
+  const sidebarGroups = computed(() => sidebar.value)
   const hasAside = computed(() => {
     if (isHome.value) return false
     if (frontmatter.value.aside != null) return !!frontmatter.value.aside
     return theme.value.aside !== false
   })
-
   const leftAside = computed(() => {
     if (!hasAside.value) return false
     return frontmatter.value.aside == null
       ? theme.value.aside === 'left'
       : frontmatter.value.aside === 'left'
   })
-
-  const hasLocalNav = computed(() => {
-    return headers.value.length > 0
-  })
+  const hasLocalNav = computed(() => headers.value.length > 0)
 
   return {
     isHome,
-    sidebar: shallowReadonly(sidebar),
+    sidebar,
     sidebarGroups,
     hasSidebar,
     isSidebarEnabled,
     hasAside,
     leftAside,
-    headers: shallowReadonly(headers),
-    hasLocalNav
+    headers,
+    hasLocalNav,
   }
 }
 
-interface RegisterWatchersOptions {
-  closeSidebar: () => void
+export function setHeaders(next: any[]): void {
+  headers.value = next
 }
 
-export function registerWatchers({ closeSidebar }: RegisterWatchersOptions) {
-  const { frontmatter, page, theme } = useData()
-
-  watch(
-    () => [page.value.relativePath, theme.value.sidebar] as const,
-    ([relativePath, sidebarConfig]) => {
-      const newSidebar = sidebarConfig
-        ? getSidebar(sidebarConfig, relativePath)
-        : []
-      if (JSON.stringify(newSidebar) !== JSON.stringify(sidebar.value)) {
-        sidebar.value = newSidebar
-      }
-    },
-    { immediate: true, deep: true, flush: 'sync' }
-  )
-
-  onContentUpdated(() => {
-    headers.value = getHeaders(frontmatter.value.outline ?? theme.value.outline)
-  })
-
-  if (inBrowser) {
-    is960.value = window.innerWidth >= 960
-    window.addEventListener(
-      'resize',
-      () => {
-        is960.value = window.innerWidth >= 960
-      },
-      { passive: true }
-    )
-  }
-
-  const route = useRoute()
-  watch(() => route.path, closeSidebar)
-
-  watch(is960, closeSidebar)
-  useCloseSidebarOnEscape(closeSidebar)
+export function setSidebar(next: any[]): void {
+  sidebar.value = next
 }
 
-export interface LayoutInfo {
+export type LayoutInfo = {
   heroImageSlotExists: ComputedRef<boolean>
 }
-
-export const layoutInfoInjectionKey: InjectionKey<LayoutInfo> =
-  Symbol('layout-info')

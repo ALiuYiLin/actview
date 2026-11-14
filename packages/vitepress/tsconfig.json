@@ -34,6 +34,11 @@
     "src/client/theme-default/Layout.tsx",
     "src/client/theme-default/components",
     "src/client/theme-default/composables/data.ts",
+    "src/client/theme-default/composables/layout.ts",
+    "src/client/theme-default/composables/sidebar.ts",
+    "src/client/theme-default/composables/route.ts",
+    "src/client/theme-default/composables/nav.ts",
+    "src/client/theme-default/composables/langs.ts",
     "src/node/markdownToActview.ts",
     "src/node/actviewPlugin.ts"
   ],

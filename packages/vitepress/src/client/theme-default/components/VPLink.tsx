@@ -1,4 +1,3 @@
-import '../extract-css/VPLink.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
 
 const EXTERNAL_URL_RE = /^https?:\/\//i
@@ -10,7 +9,9 @@ export interface VPLinkProps {
   external?: boolean
   target?: string
   rel?: string
+  onclick?: () => void
   children?: any
+  [key: string]: any
 }
 
 export class VPLink extends ActViewComponent<VPLinkProps> {
@@ -40,6 +41,7 @@ export class VPLink extends ActViewComponent<VPLinkProps> {
         href={props.href}
         target={props.target ?? (isExternal ? '_blank' : undefined)}
         rel={props.rel ?? (isExternal ? 'noreferrer' : undefined)}
+        onClick={() => props.onclick?.()}
       >
         {props.children ?? null}
       </Dynamic>
@@ -54,6 +56,7 @@ for (const key of [
   'external',
   'target',
   'rel',
+  'onclick',
 ] as const) {
   Prop(VPLink.prototype, key)
 }

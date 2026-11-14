@@ -1,5 +1,5 @@
 // ============================================================
-// @actview/vitepress — client entry (Phase 1 vertical slice)
+// @actview/vitepress — client entry
 // ============================================================
 
 export { htmlToVNode } from './markdown/htmlToVNode'
@@ -7,4 +7,5 @@ export type {
   HtmlToVNodeOptions,
   MarkdownComponentMap,
 } from './markdown/htmlToVNode'
-export { Layout, Layout as DocsLayout } from './theme-default/Layout'
+export { Layout } from './theme-default/Layout'
+export { setPageData, setThemeData } from './theme-default/composables/data'

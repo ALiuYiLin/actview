@@ -1,121 +1,36 @@
-import type { DefaultTheme } from 'vitepress/theme'
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-  watchEffect,
-  watchPostEffect,
-  type ComputedRef
-} from 'vue'
-import { isActive } from '../../shared'
-import { hasActiveLink as containsActiveLink } from '../support/sidebar'
-import { useData } from './data'
+import { computed, readonly, ref } from '@actview/reactivity'
+import { isActive } from './layout'
+import { pageData } from './data'
 
 const isOpen = ref(false)
 
-/**
- * a11y: cache the element that opened the Sidebar (the menu button) then
- * focus that button again when Menu is closed with Escape key.
- */
-export function useCloseSidebarOnEscape(close: () => void) {
-  let triggerElement: HTMLButtonElement | undefined
-
-  watchEffect(() => {
-    triggerElement = isOpen.value
-      ? (document.activeElement as HTMLButtonElement)
-      : undefined
-  })
-
-  onMounted(() => {
-    window.addEventListener('keyup', onEscape)
-  })
-
-  onUnmounted(() => {
-    window.removeEventListener('keyup', onEscape)
-  })
-
-  function onEscape(e: KeyboardEvent) {
-    if (e.key === 'Escape' && isOpen.value) {
-      close()
-      triggerElement?.focus()
-    }
-  }
-}
-
 export function useSidebarControl() {
-  function open() {
-    isOpen.value = true
-  }
-
-  function close() {
-    isOpen.value = false
-  }
-
-  function toggle() {
-    isOpen.value ? close() : open()
-  }
-
   return {
-    isOpen,
-    open,
-    close,
-    toggle
+    isOpen: readonly(isOpen),
+    open: () => (isOpen.value = true),
+    close: () => (isOpen.value = false),
+    toggle: () => (isOpen.value = !isOpen.value),
   }
 }
 
-export function useSidebarItemControl(
-  item: ComputedRef<DefaultTheme.SidebarItem>
-) {
-  const { page, hash } = useData()
-
-  const collapsed = ref(false)
-
-  const collapsible = computed(() => {
-    return item.value.collapsed != null
+export function useCloseSidebarOnEscape(close: () => void) {
+  if (typeof window === 'undefined') return
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'Escape' && isOpen.value) close()
   })
+}
 
-  const isLink = computed(() => {
-    return !!item.value.link
-  })
-
-  const isActiveLink = ref(false)
-  const updateIsActiveLink = () => {
-    isActiveLink.value = isActive(page.value.relativePath, item.value.link)
-  }
-
-  watch([page, item, hash], updateIsActiveLink)
-  onMounted(updateIsActiveLink)
-
-  const hasActiveLink = computed(() => {
-    if (isActiveLink.value) {
-      return true
-    }
-
-    return item.value.items
-      ? containsActiveLink(page.value.relativePath, item.value.items)
-      : false
-  })
-
-  const hasChildren = computed(() => {
-    return !!(item.value.items && item.value.items.length)
-  })
-
-  watchEffect(() => {
-    collapsed.value = !!(collapsible.value && item.value.collapsed)
-  })
-
-  watchPostEffect(() => {
-    ;(isActiveLink.value || hasActiveLink.value) && (collapsed.value = false)
-  })
-
-  function toggle() {
-    if (collapsible.value) {
-      collapsed.value = !collapsed.value
-    }
-  }
-
+export function useSidebarItemControl(item: any) {
+  const collapsed = ref(!!item?.collapsed)
+  const collapsible = computed(() => item?.collapsed != null)
+  const isLink = computed(() => !!item?.link)
+  const isActiveLink = computed(() =>
+    isActive(pageData.value.relativePath, item?.link),
+  )
+  const hasActiveLink = computed(() => isActiveLink.value)
+  const hasChildren = computed(
+    () => !!(item?.items && item.items.length),
+  )
   return {
     collapsed,
     collapsible,
@@ -123,6 +38,10 @@ export function useSidebarItemControl(
     isActiveLink,
     hasActiveLink,
     hasChildren,
-    toggle
+    toggle() {
+      if (collapsible.value) collapsed.value = !collapsed.value
+    },
   }
 }
+
+export {}

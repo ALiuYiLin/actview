@@ -10,6 +10,7 @@ export const siteData = shallowRef<any>({
   dir: 'ltr',
   title: 'ActView Docs',
   description: '',
+  appearance: true,
   themeConfig: {
     outline: [2, 3],
     aside: true,
@@ -37,6 +38,13 @@ export function setThemeData(data: any): void {
 const isDark = ref(false)
 const hash = ref('')
 
+export function setAppearance(next: 'dark' | 'light' | 'auto' | boolean): void {
+  isDark.value = next === 'dark' || (next === 'auto' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', isDark.value)
+  }
+}
+
 export function useData() {
   const site = computed(() => siteData.value)
   const page = computed(() => pageData.value)
@@ -54,6 +62,7 @@ export function useData() {
     title: computed(() => site.value.title),
     description: computed(() => site.value.description),
     isDark,
+    setAppearance,
     hash,
   }
 }

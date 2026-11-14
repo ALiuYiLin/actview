@@ -3,6 +3,7 @@ import { ActViewComponent, Component, Prop } from 'actview'
 
 export interface VPNavBarSearchButtonProps {
   text?: string
+  class?: string
   onclick?: () => void
 }
 
@@ -14,7 +15,7 @@ export class VPNavBarSearchButton extends ActViewComponent<VPNavBarSearchButtonP
     return (
       <button
         type="button"
-        class="VPNavBarSearchButton"
+        class={['VPNavBarSearchButton', this.$props.class].filter(Boolean).join(' ')}
         onClick={() => this.$props.onclick?.()}
       >
         <span class="vpi-search" aria-hidden="true" />
@@ -30,5 +31,6 @@ export class VPNavBarSearchButton extends ActViewComponent<VPNavBarSearchButtonP
 }
 
 Prop(VPNavBarSearchButton.prototype, 'text')
+Prop(VPNavBarSearchButton.prototype, 'class')
 Prop(VPNavBarSearchButton.prototype, 'onclick')
 Component({ name: 'VPNavBarSearchButton' })(VPNavBarSearchButton)
