@@ -3,7 +3,7 @@
 // ============================================================
 
 export { ActViewComponent, Component } from './component'
-export { Model, UseModel } from './model'
+export { Model, Named, Scope, UseModel } from './model'
 export {
   Computed,
   Inject,
@@ -36,6 +36,8 @@ export type {
   ComponentOptions,
   InjectMeta,
   LifecycleName,
+  ModelRef,
+  ModelScope,
   ModelToken,
   PropOptions,
   ProvideMeta,

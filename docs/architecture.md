@@ -73,7 +73,7 @@ packages/core/src/
     index.ts                  统一出口
     meta.ts                   元数据存储 / 类型 / 合并
     component.ts              @Component + ActViewComponent
-    model.ts                  @Model + @UseModel（组件内数据层）
+    model.ts                  @Model + @Scope + @Named + @UseModel（组件内数据层）
     reactive.ts               @Prop/@Ref/@Reactive/@Computed/@Watch/@Provide/@Inject
     lifecycle.ts              @Setup + 生命周期装饰器
   components/

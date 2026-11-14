@@ -61,8 +61,17 @@ export interface InjectMeta {
   default?: unknown
 }
 
-/** @UseModel 元数据：字段名 → Model 类 token */
+/** @UseModel 元数据：字段名 → Model 类 token / qualifier */
 export type ModelToken = ModelConstructor
+
+/** Model 作用域：默认 per-component */
+export type ModelScope = 'component' | 'inherited' | 'app'
+
+/** @UseModel 的注入描述 */
+export interface ModelRef {
+  token: ModelToken
+  name?: string
+}
 
 /** 类组件元数据 */
 export interface ComponentMeta {
@@ -74,11 +83,15 @@ export interface ComponentMeta {
   watch: WatchMeta[]
   provides: ProvideMeta[]
   injects: InjectMeta[]
-  models: Map<string, ModelToken>
+  models: Map<string, ModelRef>
   hooks: Partial<Record<LifecycleName, string[]>>
   setup?: string
   /** @Setup('pre' | 'after')：仅对 @Model 有意义，相对 owner 组件 @Setup */
   setupMode?: 'pre' | 'after'
+  /** @Model 作用域（默认 component） */
+  scope?: ModelScope
+  /** @Named qualifier（Model） */
+  modelName?: string
   render?: string
 }
 
@@ -151,6 +164,8 @@ export function mergeMeta(
     hooks,
     setup: own.setup ?? parent.setup,
     setupMode: own.setupMode ?? parent.setupMode,
+    scope: own.scope ?? parent.scope,
+    modelName: own.modelName ?? parent.modelName,
     render: own.render ?? parent.render,
   }
 }

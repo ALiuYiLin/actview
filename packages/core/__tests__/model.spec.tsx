@@ -307,8 +307,8 @@ describe('@actview/core：@Model / @UseModel', () => {
     @Model
     class CycleB {}
 
-    getComponentMeta(CycleA).models.set('b', CycleB)
-    getComponentMeta(CycleB).models.set('a', CycleA)
+    getComponentMeta(CycleA).models.set('b', { token: CycleB })
+    getComponentMeta(CycleB).models.set('a', { token: CycleA })
 
     const owner = { props: {}, injects: {}, scope: {} } as any
     const scope = new ComponentScope(owner)

@@ -13,6 +13,7 @@ import {
   metaOf,
   ownMeta,
   type ComponentMeta,
+  type ModelScope,
   type ModelToken,
 } from './meta'
 
@@ -61,15 +62,42 @@ export function Model<T extends Function>(target: T): T {
 }
 
 /**
- * @UseModel(Token) 属性装饰器：从当前组件 scope 解析 Model 单实例。
+ * @UseModel(Token, options?) 属性装饰器：从当前组件 scope 解析 Model 单实例。
  *
  * 显式 token 是必需的：TS 类型在运行时被擦除，esbuild 不生成 design:type。
+ * options.name 用于同一 scope 内同 token 的多实例（qualifier）。
  */
-export function UseModel(token: ModelToken): PropertyDecorator {
+export function UseModel(
+  token: ModelToken,
+  options: { name?: string } = {},
+): PropertyDecorator {
   if (typeof token !== 'function') {
     throw new Error(`[actview] @UseModel 需要一个 Model 类 token（当前为 ${typeof token}）`)
   }
   return (target: object, propertyKey: string | symbol): void => {
-    metaOf(target).models.set(String(propertyKey), token)
+    metaOf(target).models.set(String(propertyKey), {
+      token,
+      name: options.name,
+    })
+  }
+}
+
+/** @Scope('component' | 'inherited' | 'app')：Model 实例生命周期边界 */
+export function Scope(scope: ModelScope): ClassDecorator {
+  if (scope !== 'component' && scope !== 'inherited' && scope !== 'app') {
+    throw new Error(`[actview] 未知的 @Scope："${String(scope)}"`)
+  }
+  return (target) => {
+    ownMeta(target).scope = scope
+  }
+}
+
+/** @Named(name)：同一 scope / token 下区分多实例；@UseModel 的 name 可覆盖 */
+export function Named(name: string): ClassDecorator {
+  if (!name) {
+    throw new Error('[actview] @Named 需要一个非空名称')
+  }
+  return (target) => {
+    ownMeta(target).modelName = name
   }
 }

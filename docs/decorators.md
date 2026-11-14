@@ -97,13 +97,18 @@ class Counter extends ActViewComponent {
 ```
 
 - 显式 token：`@UseModel(CounterData)`（TS 类型擦除 + esbuild 无 `design:type`）；
-- 每个组件实例一个 `ComponentScope`，同一 token 单实例；多个 Model 依赖同一 Model 时共享；
-- Model 支持 `@Ref/@Reactive/@Computed/@Watch/@Inject/@UseModel/@Prop/@Provide` + 全部生命周期装饰器；
+- 默认 `ComponentScope` 是 **component**：每个组件实例一份；同一 token + name 单实例；
+- `@Scope('inherited')`：最近祖先已有则复用，没有则当前组件创建；
+- `@Scope('app')`：每个 AppContext 一份；
+- `@Named('x')` / `@UseModel(Token, { name })`：同一 scope / token 多实例；
+- Model 支持 `@Ref/@Reactive/@Computed/@Watch/@Inject/@UseModel/@Prop/@Provide` + 生命周期装饰器；
 - Model `@Prop` 是组件同名 `@Prop` 的**只读投影**；组件必须声明；Model 不需要时可以不写；
 - Model `@Setup` 默认在 owner 组件 `@Setup` 之前；`@Setup('after')` 在其后；
-- 挂载类 hooks 先于 owner，卸载类 hooks 后于 owner；
+- **生命周期归创建者**：inherited 消费者不重跑 setup / hooks，app scope 跟 app 生命周期；
+- 挂载类 hooks 先于 owner，卸载类 hooks 后于 owner（仅 component / inherited 的创建者）；
 - Model `@Provide` 写入 owner 注入表，后代可 `@Inject`；跨组件共享值/对象；
-- `@Setup` 支持 async（pre/after 阶段都会等待 Promise）；
+- `@Setup` 支持 async（component / inherited 的 pre/after 阶段会等待 Promise）；
+- app scope 暂不支持 `@Prop` / `@Provide` / async `@Setup`；
 - 完整设计见 [dependency-injection.md](./dependency-injection.md)。
 
 ## 4. 生命周期装饰器

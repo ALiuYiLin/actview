@@ -364,30 +364,37 @@ function isHostNode(value: unknown): boolean {
 
 function readModels(instance: ComponentLike): DevtoolsModelState[] {
   const scope = instance.modelScope as
-    | { entries?: Map<Function, { data: Record<string, any>; meta: any }> }
+    | {
+        entries?: Map<
+          Function,
+          Map<string, { data: Record<string, any>; meta: any }>
+        >
+      }
     | undefined
   const entries = scope?.entries
   if (!entries) return []
 
   const models: DevtoolsModelState[] = []
-  for (const [token, entry] of entries) {
-    const state: Record<string, unknown> = {}
-    const data = entry.data as Record<string, unknown>
-    for (const key of Object.keys(data)) {
-      if (key.startsWith('$')) continue
-      const value = readSafe(data, key)
-      if (typeof value === 'function' || isHostNode(value)) continue
-      state[key] = value
+  for (const [token, byName] of entries) {
+    for (const entry of byName.values()) {
+      const state: Record<string, unknown> = {}
+      const data = entry.data as Record<string, unknown>
+      for (const key of Object.keys(data)) {
+        if (key.startsWith('$')) continue
+        const value = readSafe(data, key)
+        if (typeof value === 'function' || isHostNode(value)) continue
+        state[key] = value
+      }
+      const computed: Record<string, unknown> = {}
+      for (const key of entry.meta?.computed?.keys?.() ?? []) {
+        computed[key] = readSafe(data, key)
+      }
+      models.push({
+        token: token.name || 'Anonymous',
+        state,
+        computed,
+      })
     }
-    const computed: Record<string, unknown> = {}
-    for (const key of entry.meta?.computed?.keys?.() ?? []) {
-      computed[key] = readSafe(data, key)
-    }
-    models.push({
-      token: token.name || 'Anonymous',
-      state,
-      computed,
-    })
   }
   return models
 }

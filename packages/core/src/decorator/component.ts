@@ -39,6 +39,12 @@ export function Component(options: ComponentOptions = {}) {
           'pre/after 只用于 @Model，组件 @Setup 是基准点',
       )
     }
+    if (own.scope || own.modelName) {
+      throw new Error(
+        `[actview] @Component "${target.name || 'Anonymous'}" 不能使用 @Scope/@Named；` +
+          '@Scope/@Named 只用于 @Model',
+      )
+    }
     own.name = options.name ?? own.name
     own.render = 'render'
     const merged = mergeMeta(parentMeta, own)

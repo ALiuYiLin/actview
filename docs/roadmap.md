@@ -21,7 +21,8 @@
 ### 2.1 Model / DI 第一版限制
 
 - `@UseModel` 必须显式 token：`@UseModel(CounterData)`，不支持裸 `@UseModel counterData`；
-- 每个 Model **只能 per-component**，没有 `@Scope('app')` / `inherited` / `@Named`；
+- 支持 component / inherited / app scope 与 `@Named`；app scope 暂不支持 `@Prop` / `@Provide` / async `@Setup`；
+- inherited 的生命周期归创建者，消费者不重复 setup/hooks；
 - Model 构造函数必须无参；
 - Model `@Prop` 是 owner 组件同名 `@Prop` 的只读投影；组件必须声明；
 - `pre` Model 不能依赖 `after` Model（阶段冲突报错）；

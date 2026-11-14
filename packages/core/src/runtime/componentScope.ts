@@ -1,23 +1,28 @@
 // ============================================================
 // @actview/core — ComponentScope
 //
-// 每个组件实例一个 scope：@UseModel(Token) 在同一 scope 内解析为单实例；
-// @Setup('pre'|'after') 相对 owner 组件 @Setup：
-//   pre  → 组件 setup 前（默认）
-//   after→ 组件 setup 后
-// Model @Prop 是 owner 组件同名 @Prop 的只读投影。
+// 每个组件实例一个 scope：
+//   component  → 当前组件一份
+//   inherited  → 最近祖先已有则复用；没有则当前组件创建
+//   app        → AppContext 级一份（见 resolveAppModel）
+//
+// 生命周期只属于创建实例的 owner；inherited 消费者不重复 setup/hooks。
 // ============================================================
 
-import { pauseTracking, resetTracking } from '@actview/reactivity'
+import { EffectScope, pauseTracking, resetTracking } from '@actview/reactivity'
 import { getComponentMeta } from '../decorator'
 import type {
   ComponentMeta,
   LifecycleName,
+  ModelScope,
   ModelToken,
 } from '../decorator'
 import { setCurrentInstance } from '../lifecycle'
 import { isModel } from '../types/component'
-import type { ComponentInternalInstance } from './instance'
+import type {
+  AppContext,
+  ComponentInternalInstance,
+} from './instance'
 import {
   installComputed,
   installDeclaredFields,
@@ -25,7 +30,7 @@ import {
   installWatches,
 } from './installReactiveApi'
 
-/** 先于 owner 执行的阶段（初始化 / 挂载 / 更新 / 激活） */
+/** 先于 owner 执行的阶段 */
 const MODEL_FIRST_PHASES: LifecycleName[] = [
   'beforeMount',
   'mounted',
@@ -34,7 +39,7 @@ const MODEL_FIRST_PHASES: LifecycleName[] = [
   'activated',
 ]
 
-/** 后于 owner 执行的阶段（失活 / 卸载） */
+/** 后于 owner 执行的阶段 */
 const OWNER_FIRST_PHASES: LifecycleName[] = [
   'deactivated',
   'beforeUnmount',
@@ -43,21 +48,23 @@ const OWNER_FIRST_PHASES: LifecycleName[] = [
 
 interface ModelEntry {
   token: ModelToken
+  name: string
   data: Record<string, any>
   meta: ComponentMeta
   phase: 'pre' | 'after'
-  deps: Set<ModelToken>
+  deps: Set<ModelEntry>
   setupDone: boolean
   runtimeDone: boolean
+  /** inherited 复用：不执行 setup / hooks，不进入当前组件的 order */
+  borrowed: boolean
 }
 
 export class ComponentScope {
   readonly owner: ComponentInternalInstance
 
-  private readonly instances = new Map<ModelToken, object>()
-  private readonly entries = new Map<ModelToken, ModelEntry>()
+  private readonly instances = new Map<ModelToken, Map<string, object>>()
+  private readonly entries = new Map<ModelToken, Map<string, ModelEntry>>()
   private readonly resolving: ModelEntry[] = []
-  /** 依赖完成顺序：dependencies 先于 dependents */
   private readonly order: ModelEntry[] = []
   private readonly dataHooks: Partial<Record<LifecycleName, Array<() => void>>> =
     {}
@@ -66,69 +73,50 @@ export class ComponentScope {
     this.owner = owner
   }
 
-  /**
-   * 解析 Model：构造 + 递归依赖 + 安装字段/computed + 收集生命周期。
-   * @Setup 不在这里执行，由 runPhase('pre'|'after') 按组件基准执行。
-   */
-  resolve<T extends object>(token: ModelToken): T {
+  /** 解析 Model；name 为 @UseModel 的 qualifier / @Named */
+  resolve<T extends object>(token: ModelToken, name?: string): T {
     if (!isModel(token)) {
       throw new Error(
         `[actview] @UseModel token 不是 @Model 类：${String(token)}`,
       )
     }
 
-    const cached = this.instances.get(token)
-    if (cached) return cached as T
-
-    const cyclic = this.resolving.find((entry) => entry.token === token)
-    if (cyclic) {
-      const chain = [...this.resolving.map((e) => e.token), token]
-        .map((ctor) => ctor.name || 'Anonymous')
-        .join(' -> ')
-      throw new Error(`[actview] Model 循环依赖：${chain}`)
-    }
-
-    const Ctor = token as unknown as new () => Record<string, any>
-    const data = new Ctor()
     const meta = getComponentMeta(token)
-    const entry: ModelEntry = {
-      token,
-      data,
-      meta,
-      phase: resolvePhase(meta),
-      deps: new Set(),
-      setupDone: false,
-      runtimeDone: false,
+    const qualifier = name ?? meta.modelName ?? ''
+    const scope = meta.scope ?? 'component'
+
+    const cached = this.getEntry(token, qualifier)
+    if (cached) {
+      this.linkParent(cached)
+      return cached.data as T
     }
 
-    const parent = this.resolving[this.resolving.length - 1]
-    parent?.deps.add(token)
-
-    this.resolving.push(entry)
-    try {
-      installUseModels(this, data, meta)
-      // Model @Prop 是 owner 组件 prop 的只读投影。
-      this.installModelProps(entry)
-      // @Prop 由上面的投影处理；这里只安装 ref/reactive/inject。
-      installDeclaredFields(data, this.owner, meta, { bindProps: false })
-      installComputed(data, meta, this.owner)
-      this.collectModelHooks(data, meta)
-
-      this.entries.set(token, entry)
-      this.order.push(entry)
-      this.instances.set(token, data)
-      return data as T
-    } finally {
-      this.resolving.pop()
+    if (scope === 'inherited') {
+      const inherited = this.findInherited(token, qualifier)
+      if (inherited) {
+        const entry = this.borrow(token, qualifier, inherited.data, meta)
+        this.linkParent(entry)
+        return entry.data as T
+      }
     }
+
+    if (scope === 'app') {
+      return this.resolveAppModel(token, qualifier, meta) as T
+    }
+
+    return this.createLocal(token, qualifier, meta) as T
   }
 
-  /** 校验阶段约束：pre Model 不能依赖 after Model（否则 setup 顺序不可能同时成立） */
+  /** 在祖先组件 scope 中查找同 token / name 的实例 */
+  findInstance(token: ModelToken, name: string): object | undefined {
+    return this.instances.get(token)?.get(name)
+  }
+
+  /** 校验阶段约束（只检查本地创建的 Model） */
   validatePhases(): void {
     for (const entry of this.order) {
-      for (const depToken of entry.deps) {
-        const dep = this.entries.get(depToken)
-        if (!dep) continue
+      for (const dep of entry.deps) {
+        if (dep.borrowed) continue
         if (entry.phase === 'pre' && dep.phase === 'after') {
           throw new Error(
             `[actview] Model 阶段冲突：${entry.token.name || 'Anonymous'} ` +
@@ -139,10 +127,6 @@ export class ComponentScope {
     }
   }
 
-  /**
-   * 执行某阶段所有 Model 的 @Setup 并安装 @Provide/@Watch。
-   * 返回 Promise 表示该阶段包含异步 setup；否则同步完成返回 null。
-   */
   runPhase(phase: 'pre' | 'after'): Promise<void> | null {
     const list = this.order.filter((entry) => entry.phase === phase)
     let chain: Promise<void> | null = null
@@ -158,11 +142,6 @@ export class ComponentScope {
     return chain
   }
 
-  /**
-   * 在 owner 组件生命周期 hooks 注册完成后调用：
-   * - 初始化 / 挂载类阶段：Model hooks 在 owner 之前；
-   * - 失活 / 卸载类阶段：owner hooks 在 Model 之前（逆序）。
-   */
   applyLifecycleOrder(): void {
     for (const phase of MODEL_FIRST_PHASES) {
       const hooks = this.dataHooks[phase]
@@ -182,12 +161,125 @@ export class ComponentScope {
     }
   }
 
-  /** Model @Prop：只读投影 owner 组件的同名 @Prop；组件必须声明。 */
+  private createLocal(
+    token: ModelToken,
+    name: string,
+    meta: ComponentMeta,
+  ): object {
+    const cyclic = this.resolving.find(
+      (entry) => entry.token === token && entry.name === name,
+    )
+    if (cyclic) {
+      const chain = [...this.resolving.map((e) => `${e.token.name}:${e.name}`), `${token.name}:${name}`]
+        .join(' -> ')
+      throw new Error(`[actview] Model 循环依赖：${chain}`)
+    }
+
+    const Ctor = token as unknown as new () => Record<string, any>
+    const data = new Ctor()
+    const entry: ModelEntry = {
+      token,
+      name,
+      data,
+      meta,
+      phase: resolvePhase(meta),
+      deps: new Set(),
+      setupDone: false,
+      runtimeDone: false,
+      borrowed: false,
+    }
+
+    this.resolving.push(entry)
+    try {
+      installUseModels(this, data, meta)
+      this.installModelProps(entry)
+      installDeclaredFields(data, this.owner, meta, { bindProps: false })
+      installComputed(data, meta, this.owner)
+      this.collectModelHooks(data, meta)
+
+      this.setEntry(entry)
+      this.order.push(entry)
+      return data
+    } finally {
+      this.resolving.pop()
+    }
+  }
+
+  private borrow(
+    token: ModelToken,
+    name: string,
+    data: Record<string, any>,
+    meta: ComponentMeta,
+  ): ModelEntry {
+    const entry: ModelEntry = {
+      token,
+      name,
+      data,
+      meta,
+      phase: resolvePhase(meta),
+      deps: new Set(),
+      setupDone: true,
+      runtimeDone: true,
+      borrowed: true,
+    }
+    this.setEntry(entry)
+    return entry
+  }
+
+  private findInherited(
+    token: ModelToken,
+    name: string,
+  ): { data: Record<string, any> } | undefined {
+    let parent = this.owner.parent
+    while (parent) {
+      const data = parent.modelScope?.findInstance(token, name)
+      if (data) return { data: data as Record<string, any> }
+      parent = parent.parent
+    }
+    return undefined
+  }
+
+  private linkParent(entry: ModelEntry): void {
+    const parent = this.resolving[this.resolving.length - 1]
+    parent?.deps.add(entry)
+  }
+
+  private getEntry(
+    token: ModelToken,
+    name: string,
+  ): ModelEntry | undefined {
+    return this.entries.get(token)?.get(name)
+  }
+
+  private setEntry(entry: ModelEntry): void {
+    let byName = this.entries.get(entry.token)
+    if (!byName) {
+      byName = new Map()
+      this.entries.set(entry.token, byName)
+    }
+    byName.set(entry.name, entry)
+
+    let instances = this.instances.get(entry.token)
+    if (!instances) {
+      instances = new Map()
+      this.instances.set(entry.token, instances)
+    }
+    instances.set(entry.name, entry.data)
+    this.linkParent(entry)
+  }
+
+  /** app scope 解析（实现见 componentScope 底部） */
+  private resolveAppModel(
+    token: ModelToken,
+    name: string,
+    meta: ComponentMeta,
+  ): object {
+    return resolveAppModel(this.owner.appContext, token, name, meta)
+  }
+
   private installModelProps(entry: ModelEntry): void {
     if (entry.meta.props.size === 0) return
-    const ownerMeta = getComponentMeta(
-      this.owner.type as unknown as Function,
-    )
+    const ownerMeta = getComponentMeta(this.owner.type as unknown as Function)
     const ownerCtx = this.owner.ctx as Record<string, any> | undefined
     for (const key of entry.meta.props.keys()) {
       if (!ownerMeta.props.has(key)) {
@@ -213,8 +305,7 @@ export class ComponentScope {
   }
 
   private executeEntry(entry: ModelEntry): void | Promise<void> {
-    if (entry.runtimeDone) return
-    if (entry.setupDone) return
+    if (entry.runtimeDone || entry.setupDone) return
     entry.setupDone = true
 
     return this.withOwner(() => {
@@ -231,7 +322,6 @@ export class ComponentScope {
 
   private installRuntime(entry: ModelEntry): void {
     if (entry.runtimeDone) return
-    // Model @Provide：在当前 owner 注入表上 copy-on-write，后代可 inject。
     installProvides(entry.data, entry.meta)
     installWatches(entry.data, entry.meta)
     entry.runtimeDone = true
@@ -248,7 +338,6 @@ export class ComponentScope {
     }
   }
 
-  /** 收集 Model 的生命周期方法，等 owner 组件 hooks 注册后按顺序合并 */
   private collectModelHooks(
     data: Record<string, any>,
     meta: ComponentMeta,
@@ -273,8 +362,8 @@ export function installUseModels(
   target: Record<string, any>,
   meta: ComponentMeta,
 ): void {
-  for (const [key, token] of meta.models) {
-    const model = scope.resolve(token)
+  for (const [key, ref] of meta.models) {
+    const model = scope.resolve(ref.token, ref.name)
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: true,
@@ -294,4 +383,200 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
     (typeof value === 'object' || typeof value === 'function') &&
     typeof (value as { then?: unknown }).then === 'function'
   )
+}
+
+// ============================================================
+// app scope
+// ============================================================
+
+interface AppModelEntry {
+  token: ModelToken
+  name: string
+  data: Record<string, any>
+  meta: ComponentMeta
+}
+
+interface AppModelStore {
+  scope: EffectScope
+  owner: ComponentInternalInstance
+  entries: Map<ModelToken, Map<string, AppModelEntry>>
+}
+
+interface AppModelContext extends AppContext {
+  __modelStore?: AppModelStore
+  __modelHooks?: {
+    mounted: Array<() => void>
+    beforeUnmount: Array<() => void>
+    unmounted: Array<() => void>
+  }
+  __mounted?: boolean
+}
+
+function resolveAppModel(
+  appContext: AppContext,
+  token: ModelToken,
+  name: string,
+  meta: ComponentMeta,
+): object {
+  if (meta.props.size > 0) {
+    throw new Error(
+      `[actview] @Scope('app') Model "${token.name}" 暂不支持 @Prop（没有组件 owner）`,
+    )
+  }
+  if (meta.provides.length > 0) {
+    throw new Error(
+      `[actview] @Scope('app') Model "${token.name}" 暂不支持 @Provide（app 级注入请用 app.provide）`,
+    )
+  }
+  const unsupportedHooks = [
+    'beforeMount',
+    'beforeUpdate',
+    'updated',
+    'activated',
+    'deactivated',
+  ].filter((phase) => meta.hooks[phase as LifecycleName]?.length)
+  if (unsupportedHooks.length > 0) {
+    throw new Error(
+      `[actview] @Scope('app') Model "${token.name}" 暂不支持生命周期：` +
+        unsupportedHooks.join(', ') +
+        '（仅支持 @Setup / @Mounted / @BeforeUnmount / @Unmounted）',
+    )
+  }
+
+  const context = appContext as AppModelContext
+  let store = context.__modelStore
+  if (!store) {
+    const scope = new EffectScope(true)
+    const owner = createAppModelOwner(appContext, scope)
+    store = { scope, owner, entries: new Map() }
+    context.__modelStore = store
+    context.__modelHooks ??= { mounted: [], beforeUnmount: [], unmounted: [] }
+  }
+
+  const existing = store.entries.get(token)?.get(name)
+  if (existing) return existing.data
+
+  const Ctor = token as unknown as new () => Record<string, any>
+  const data = new Ctor()
+  const entry: AppModelEntry = { token, name, data, meta }
+  let byName = store.entries.get(token)
+  if (!byName) {
+    byName = new Map()
+    store.entries.set(token, byName)
+  }
+  byName.set(name, entry)
+
+  store.scope.run(() => {
+    const prev = setCurrentInstance(store.owner)
+    pauseTracking()
+    try {
+      installUseModelsForApp(appContext, data, meta)
+      installDeclaredFields(data, store.owner, meta, { bindProps: false })
+      installComputed(data, meta, store.owner)
+      const setupName = meta.setup
+      const result = setupName ? data[setupName]?.() : undefined
+      if (isThenable(result)) {
+        throw new Error(
+          `[actview] @Scope('app') Model "${token.name}" 暂不支持 async @Setup`,
+        )
+      }
+      // app scope 只处理 app 级生命周期
+      for (const method of meta.hooks.mounted ?? []) {
+        context.__modelHooks!.mounted.push(() => data[method]?.())
+      }
+      for (const method of meta.hooks.beforeUnmount ?? []) {
+        context.__modelHooks!.beforeUnmount.push(() => data[method]?.())
+      }
+      for (const method of meta.hooks.unmounted ?? []) {
+        context.__modelHooks!.unmounted.push(() => data[method]?.())
+      }
+      installProvides(data, meta)
+      installWatches(data, meta)
+    } finally {
+      resetTracking()
+      setCurrentInstance(prev)
+    }
+  })
+
+  if (context.__mounted) {
+    for (const fn of context.__modelHooks?.mounted.splice(0) ?? []) fn()
+  }
+
+  return data
+}
+
+function installUseModelsForApp(
+  appContext: AppContext,
+  target: Record<string, any>,
+  meta: ComponentMeta,
+): void {
+  for (const [key, ref] of meta.models) {
+    const model = resolveAppModel(
+      appContext,
+      ref.token,
+      ref.name ?? getComponentMeta(ref.token).modelName ?? '',
+      getComponentMeta(ref.token),
+    )
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: model,
+    })
+  }
+}
+
+function createAppModelOwner(
+  appContext: AppContext,
+  scope: EffectScope,
+): ComponentInternalInstance {
+  const owner = {
+    uid: 0,
+    type: class AppModelOwner {},
+    parent: null,
+    appContext,
+    vnode: null,
+    props: {},
+    render: () => null,
+    subTree: null,
+    effect: null,
+    job: { run: () => {} },
+    scope,
+    renderCount: 0,
+    isMounted: false,
+    container: null,
+    injects: appContext.provides,
+    proxy: null,
+    update: () => {},
+    beforeMount: [],
+    mounted: [],
+    beforeUpdate: [],
+    updated: [],
+    beforeUnmount: [],
+    unmounted: [],
+    activated: [],
+    deactivated: [],
+    errorCaptured: [],
+  } as unknown as ComponentInternalInstance
+  return owner
+}
+
+/** 供 app.ts 在 mount/unmount 时调用 app-scope Model 钩子 */
+export function invokeAppModelHooks(
+  appContext: AppContext,
+  phase: 'mount' | 'beforeUnmount' | 'unmount',
+): void {
+  const context = appContext as AppModelContext
+  context.__mounted = phase === 'mount' ? true : context.__mounted
+  const hooks = context.__modelHooks
+  if (!hooks) return
+  if (phase === 'mount') {
+    for (const fn of hooks.mounted.splice(0)) fn()
+  } else if (phase === 'beforeUnmount') {
+    for (const fn of hooks.beforeUnmount.splice(0)) fn()
+  } else {
+    for (const fn of hooks.unmounted.splice(0)) fn()
+    context.__modelStore?.scope.stop()
+    context.__modelStore = undefined
+  }
 }

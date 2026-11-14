@@ -22,6 +22,7 @@ import type {
 } from './instance'
 import { render } from './patch'
 import { notifyDevtoolsApp } from './devtools'
+import { invokeAppModelHooks } from './componentScope'
 
 let appUid = 0
 
@@ -155,12 +156,14 @@ export function createApp(
         | null) ?? null
       context.root = instance
       notifyDevtoolsApp(context, 'mount', instance)
+      invokeAppModelHooks(context, 'mount')
       return instance?.proxy ?? null
     },
     unmount() {
       const container = app._container as MountedContainer | null
       if (!container) return
 
+      invokeAppModelHooks(context, 'beforeUnmount')
       try {
         render(null, container)
       } finally {
@@ -168,6 +171,7 @@ export function createApp(
         app._container = null
         notifyDevtoolsApp(context, 'unmount', context.root)
         context.root = null
+        invokeAppModelHooks(context, 'unmount')
         // 插件清理只执行一次；清理异常不能阻断其它插件。
         for (const hook of unmountHooks.splice(0)) {
           try {

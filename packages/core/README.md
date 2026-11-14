@@ -9,7 +9,7 @@ src/
   types/        Element / ClassComponent / BuiltinComponent / ComponentProps / VNode 类型
   runtime/      createApp / mountClassComponent / installReactiveApi / installLifecycle / patch
   lifecycle/    currentInstance + onXxx + invokeHooks
-  decorator/    @Component / @Model / @Prop / @Ref / @Reactive / @Computed / @Watch / @Provide / @Inject / @UseModel
+  decorator/    @Component / @Model / @Scope / @Named / @UseModel / @Prop / @Ref / @Reactive / @Computed / @Watch / @Provide / @Inject
   components/   KeepAlive / Suspense / ErrorBoundary / Teleport / Transition / TransitionGroup / Dynamic
 ```
 
@@ -19,7 +19,7 @@ src/
 
 - `createApp` / `nextTick` / `app.use` / `app.onUnmount`；
 - `ActViewComponent` 与全部装饰器；
-- `Model` / `UseModel`（组件内数据层）；
+- `Model` / `UseModel` / `Scope` / `Named`（组件内数据层 + scope）；
 - `KeepAlive` / `Suspense` / `lazy`（loading/error/retry/timeout）/ `ErrorBoundary` / `Teleport` / `Transition` / `TransitionGroup` / `Dynamic`；
 - 公开类型：`Element` / `ClassComponent` / `BuiltinComponent` / `ComponentProps`。
 
