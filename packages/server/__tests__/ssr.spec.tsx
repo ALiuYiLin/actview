@@ -13,8 +13,10 @@ import {
   Prop,
   Provide,
   Ref,
+  Scope,
   Setup,
   Suspense,
+  Unmounted,
   UseModel,
   lazy,
 } from '@actview/core'
@@ -331,7 +333,40 @@ describe('@actview/server：renderToString', () => {
 
     expect(chunks.length).toBeGreaterThan(2)
     expect(chunks[0]).toBe('<main>')
-    expect(chunks.join('')).toBe(await app.renderToString())
+    expect(chunks.join('')).toBe(await createSSRApp(App).renderToString())
     expect(chunks.join('')).toContain('<b>ready</b>')
+  })
+
+  it('SSR 结束清理 app scope 与 onUnmount', async () => {
+    let modelUnmounted = 0
+    let pluginUnmounted = 0
+
+    @Model
+    @Scope('app')
+    class AppData {
+      @Unmounted
+      cleanup(): void {
+        modelUnmounted++
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      @UseModel(AppData)
+      data!: AppData
+
+      render() {
+        return <main>cleanup</main>
+      }
+    }
+
+    const app = createSSRApp(App)
+    app.onUnmount(() => {
+      pluginUnmounted++
+    })
+    await app.renderToString()
+
+    expect(modelUnmounted).toBe(1)
+    expect(pluginUnmounted).toBe(1)
   })
 })

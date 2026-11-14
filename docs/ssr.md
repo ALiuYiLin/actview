@@ -60,17 +60,17 @@ HTTP request
 |---|---|---|
 | 1 | `renderToString`、元素 / 文本 / Fragment / props、Model / provide-inject、每请求 App | ✅ |
 | 2 | async setup、lazy、Suspense、ErrorBoundary、KeepAlive / Transition / Teleport 内容 | ✅ |
-| 3 | hydrate、DOM 复用、事件 / refs、基础 mismatch 警告 | ✅ 基础 |
-| 4 | Router SSR、route loader 数据预取、head / state、renderDocument（CSS/client entry）、renderToStream、测试 | ✅ 基础 |
+| 3 | hydrate、DOM 复用、事件 / refs、基础 mismatch 替换恢复 | ✅ 基础 |
+| 4 | Router SSR、route loader 数据预取、head / state、renderDocument（CSS/client entry）、renderToStream、SSR App 清理、测试 | ✅ 基础 |
 
 ## 5. 当前边界
 
 - Hydration 边界标记未实现：Teleport / KeepAlive / Suspense 的客户端 takeover 仍不完整；
-- mismatch 只警告，不自动恢复；
+- mismatch 支持基础替换 + 多余子节点移除，不是完整恢复策略；
 - `renderToStream` 已支持按 VNode 边界流式输出；不支持 streaming hydration / out-of-order；
 - head 是字符串收集，由 `renderDocument` 拼装；不自动注入复杂 head 管理；
-- CSS 通过 `renderDocument({ css })` 输出 link，由宿主构建链处理。
-- `app.onUnmount` 在 SSR 结束时尚未自动调用；
+- CSS 通过 `renderDocument({ css })` 输出 link，由宿主构建链处理；
+- SSR 结束会触发 app 级 Model hooks 与 `app.onUnmount`；每个 SSRApp 只渲染一次；
 - `useSSRContext` 只在组件 `@Setup` 阶段有效。
 
 ## 6. 测试
@@ -79,4 +79,4 @@ HTTP request
 - `packages/server/__tests__/hydration.spec.tsx`：DOM 复用 / 事件 / unmount；
 - `packages/server/__tests__/ssr-router.spec.tsx`：Router SSR / guard / router hydrate。
 
-当前全仓：`pnpm test` **453 passed / 4 skipped**。
+当前全仓：`pnpm test` **456 passed / 4 skipped**。

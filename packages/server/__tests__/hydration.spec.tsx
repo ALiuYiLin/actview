@@ -2,7 +2,7 @@
 // @actview/server Phase 3：hydration
 // ============================================================
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ActViewComponent,
   Component,
@@ -97,6 +97,65 @@ describe('@actview/server：hydrate', () => {
     expect(root.querySelector('h1')).toBe(originalH1)
     expect(root.querySelector('.child')).toBe(originalSpan)
     expect(root.textContent).toBe('HelloAda')
+  })
+
+  it('基础 mismatch：替换不匹配的根元素', async () => {
+    @Component({ name: 'ServerApp' })
+    class ServerApp extends ActViewComponent {
+      render() {
+        return <span>server</span>
+      }
+    }
+
+    @Component({ name: 'ClientApp' })
+    class ClientApp extends ActViewComponent {
+      render() {
+        return <div>client</div>
+      }
+    }
+
+    const html = await createSSRApp(ServerApp).renderToString()
+    const root = mountContainer(html)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      const client = createSSRApp(ClientApp)
+      client.hydrate(root)
+      await Promise.resolve()
+      expect(root.innerHTML).toBe('<div>client</div>')
+      expect(warn).toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('hydration 绑定 ref 回调', async () => {
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      el: HTMLElement | null = null
+
+      render() {
+        return (
+          <div
+            ref={(el: Element | null) => {
+              this.el = el as HTMLElement | null
+            }}
+          >
+            ref
+          </div>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    const root = mountContainer(html)
+    const original = root.querySelector('div')!
+
+    const client = createSSRApp(App)
+    const instance = client.hydrate(root) as unknown as App
+    await Promise.resolve()
+
+    expect(instance.el).toBe(original)
   })
 })
 

@@ -11,6 +11,7 @@ import {
   createSSRContext,
   type SSRContext,
 } from './context'
+import { disposeSSRApp } from './dispose'
 import {
   createVNode,
   isVNode,
@@ -297,6 +298,7 @@ export interface RenderToStringOptions {
 interface SSRAppLike {
   component: any
   _context: AppContext
+  _unmountHooks?: Array<() => void>
 }
 
 async function renderApp(
@@ -319,6 +321,7 @@ async function renderApp(
     appContext.__ssrContext = previous
     // SSR 结束：停止组件 scope（watch/computed），避免请求间泄漏。
     for (const instance of instances) instance.scope.stop()
+    disposeSSRApp(app)
   }
 }
 

@@ -18,6 +18,7 @@ import {
 } from '@actview/core/server-internal'
 import { createSSRContext } from './context'
 import { attrsToString, escapeHtml } from './renderToString'
+import { disposeSSRApp } from './dispose'
 
 function childrenOf(vnode: VNode): unknown[] {
   const children = vnode.props?.children
@@ -187,6 +188,7 @@ export async function* renderToStream(
   app: {
     component: any
     _context: AppContext
+    _unmountHooks?: Array<() => void>
   },
   rootProps: Record<string, any> | null = null,
 ): AsyncGenerator<string> {
@@ -204,5 +206,6 @@ export async function* renderToStream(
   } finally {
     appContext.__ssrContext = previous
     for (const instance of instances) instance.scope.stop()
+    disposeSSRApp(app)
   }
 }

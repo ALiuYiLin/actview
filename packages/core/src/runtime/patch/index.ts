@@ -236,6 +236,14 @@ function patchText(
       hydrationCursor = existing.nextSibling
       return
     }
+    if (existing) {
+      hydrationMismatch('Text', existing)
+      const el = document.createTextNode(text)
+      n2.el = el
+      existing.parentNode?.replaceChild(el, existing)
+      hydrationCursor = el.nextSibling
+      return
+    }
     hydrationMismatch('Text', existing)
   }
 
@@ -283,6 +291,11 @@ function mountElement(
   } else {
     if (hydrating) hydrationMismatch(`<${tag}>`, existing)
     el = createElement(tag)
+    if (hydrating && existing) {
+      // 基础 mismatch 恢复：用新节点替换服务端不匹配节点，避免留下重复 DOM。
+      existing.parentNode?.replaceChild(el, existing)
+      adopted = true
+    }
   }
   // 先写 el：子节点挂载 / ref 处理都可能回读 vnode.el
   vnode.el = el
@@ -294,7 +307,12 @@ function mountElement(
     const outerCursor = el.nextSibling
     hydrationCursor = el.firstChild
     for (const child of children) patch(null, child, el, null, parent)
-    // 服务端多出的子节点不主动删除；游标回到元素之后。
+    // 服务端多出的子节点：mismatch 恢复时移除，避免重复内容。
+    while (hydrationCursor && hydrationCursor !== outerCursor) {
+      const next = hydrationCursor.nextSibling
+      hydrationCursor.parentNode?.removeChild(hydrationCursor)
+      hydrationCursor = next
+    }
     hydrationCursor = outerCursor
   } else {
     for (const child of children) patch(null, child, el, null, parent)

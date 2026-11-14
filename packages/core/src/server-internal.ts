@@ -19,6 +19,7 @@ export {
   setupComponent,
 } from './runtime/component'
 export { hydrate } from './runtime/patch'
+export { invokeAppModelHooks } from './runtime/componentScope'
 export { isComponent } from './types/component'
 export type { App } from './runtime/app'
 export type {

@@ -46,6 +46,8 @@ export interface App {
   _context: AppContext
   /** 当前挂载的容器；null = 未挂载 */
   _container: Element | null
+  /** 内部：onUnmount 回调（SSR dispose 复用） */
+  _unmountHooks: Array<() => void>
   /** 应用配置（与 _context.config 同一对象） */
   config: AppConfig
   /** 根组件（@Component 类构造器） */
@@ -97,6 +99,7 @@ export function createApp(
   const app: App = {
     _context: context,
     _container: null,
+    _unmountHooks: unmountHooks,
     config: context.config,
     component: rootComponent,
     provide<T>(key: PropertyKey, value: T): App {
