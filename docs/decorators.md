@@ -113,6 +113,7 @@ class App extends ActViewComponent {
 - 未在 `@Prop` 中声明的键进入 `$attrs`；
 - `key` / `ref` / `children` 不进入 attrs；
 - `class` / `style` / `onXxx` 与根节点原有值合并；
+- `scopedId` / `scopeId` 是特殊键：值（可空格分隔）会翻译成 `data-v-*` 布尔属性，不会输出 `scopedid="..."`；
 - 其它同名 attrs 覆盖根节点原值；
 - 根节点是**单个元素 / 单个组件**时自动透传；根是 Fragment / Text / null / Teleport/Transition 等内置组件时不透传，开发期警告；
 - `@Component({ inheritAttrs: false })` 可关闭自动透传，随后可用 `this.$attrs` 手动绑定；

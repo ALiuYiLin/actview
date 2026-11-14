@@ -93,6 +93,13 @@ function isEventKey(key: string): boolean {
   return /^on[A-Z]/.test(key)
 }
 
+/** scopedId / scopeId：值是空格分隔的属性名，SSR 输出布尔属性 */
+function normalizeScopedIds(value: unknown): string[] {
+  if (typeof value === 'string') return value.split(/\s+/).filter(Boolean)
+  if (Array.isArray(value)) return value.flatMap(normalizeScopedIds)
+  return []
+}
+
 function normalizeClass(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'string') return value
@@ -137,6 +144,13 @@ export function attrsToString(props: Record<string, any> | null): string {
       continue
     }
     if (value == null || value === false || typeof value === 'function') continue
+
+    if (key === 'scopedId' || key === 'scopeId') {
+      for (const id of normalizeScopedIds(value)) {
+        if (/^[A-Za-z_:][\w:.-]*$/.test(id)) out += ` ${id}`
+      }
+      continue
+    }
 
     if (key === 'class') {
       const cls = normalizeClass(value)

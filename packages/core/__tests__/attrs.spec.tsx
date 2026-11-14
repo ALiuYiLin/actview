@@ -192,6 +192,41 @@ describe('@actview/core：attrs 透传', () => {
     expect(el.classList.contains('parent')).toBe(true)
   })
 
+  it('scopedId → 根元素 data-v-* 属性，而不是 scopedid', async () => {
+    @Component({ name: 'Child' })
+    class Child extends ActViewComponent {
+      render() {
+        return <div class="root">child</div>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      @Ref
+      scope = 'data-v-abc'
+
+      render() {
+        return <Child scopedId={this.scope} />
+      }
+    }
+
+    const root = mountRoot()
+    const app = createApp(App)
+    const instance = app.mount(root) as unknown as App
+    await nextTick()
+
+    let el = root.querySelector('div')!
+    expect(el.hasAttribute('data-v-abc')).toBe(true)
+    expect(el.getAttribute('data-v-abc')).toBe('')
+    expect(el.hasAttribute('scopedid')).toBe(false)
+
+    instance.scope = 'data-v-next'
+    await nextTick()
+    el = root.querySelector('div')!
+    expect(el.hasAttribute('data-v-abc')).toBe(false)
+    expect(el.hasAttribute('data-v-next')).toBe(true)
+  })
+
   it('Fragment 根节点：不透传并给出开发警告', async () => {
     @Component({ name: 'Child' })
     class Child extends ActViewComponent {

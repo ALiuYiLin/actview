@@ -57,6 +57,23 @@ describe('@actview/server：renderToString', () => {
     expect(html).not.toContain('onClick')
   })
 
+  it('scopedId 输出为 data-v-* 布尔属性', async () => {
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <div scopedId="data-v-abc data-v-def" class="x">
+            scoped
+          </div>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    expect(html).toContain('<div data-v-abc data-v-def class="x">')
+    expect(html).not.toContain('scopedid')
+  })
+
   it('Model / Setup / provide-inject', async () => {
     @Model
     class CounterData {

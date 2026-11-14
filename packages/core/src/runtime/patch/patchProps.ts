@@ -58,6 +58,35 @@ function isEventKey(key: string): boolean {
   return /^on[A-Z]/.test(key)
 }
 
+/** scoped CSS 标记 prop：值是一个或多个属性名（空格分隔） */
+const SCOPED_ID_KEYS = new Set(['scopedId', 'scopeId'])
+
+function normalizeScopedIds(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return value.split(/\s+/).filter(Boolean)
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => normalizeScopedIds(item))
+  }
+  return []
+}
+
+/**
+ * scopedId / scopeId 不是普通 DOM 属性：
+ *   scopedId="data-v-abc" → <div data-v-abc>
+ * 更新时移除旧标记，避免 data-v-old 残留。
+ */
+function patchScopedIds(el: Element, prev: unknown, next: unknown): void {
+  const prevIds = normalizeScopedIds(prev)
+  const nextIds = normalizeScopedIds(next)
+  for (const id of prevIds) {
+    if (!nextIds.includes(id)) el.removeAttribute(id)
+  }
+  for (const id of nextIds) {
+    el.setAttribute(id, '')
+  }
+}
+
 interface ParsedEventKey {
   eventName: string
   capture: boolean
@@ -341,6 +370,11 @@ export function patchProp(
 ): void {
   if (SKIP_KEYS.has(key)) return
   if (prev === next) return
+
+  if (SCOPED_ID_KEYS.has(key)) {
+    patchScopedIds(el, prev, next)
+    return
+  }
 
   if (isEventKey(key)) {
     patchEvent(el, key, prev, next)

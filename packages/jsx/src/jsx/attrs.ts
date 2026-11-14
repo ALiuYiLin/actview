@@ -252,10 +252,12 @@ export interface HTMLAttributes extends AriaAttributes, DOMAttributes {
   ref?: any
   /**
    * scoped 标记 prop（编译期注入）：值为 scoped 属性名
-   * （如 "data-v-abc12345"，可空格分隔多个）。组件元素由 compiler 注入，
-   * 子组件在 props 声明后手动应用到根元素，运行时翻译为真实属性。
+   * （如 "data-v-abc12345"，可空格分隔多个）；运行时 / SSR 翻译为
+   * 对应的布尔属性 `data-v-*`。
    */
   scopedId?: string
+  /** scopedId 的别名（括号拼写/兼容） */
+  scopeId?: string
   id?: string
   class?: ClassValue
   className?: ClassValue
@@ -776,6 +778,7 @@ export interface SVGAttributes extends AriaAttributes, DOMAttributes {
   children?: ElementChildren
   /** scoped 标记 prop（编译期注入），语义见 HTMLAttributes.scopedId */
   scopedId?: string
+  scopeId?: string
   /** SVG 元素同样接受 class（className 别名语义） */
   class?: ClassValue
   id?: string
