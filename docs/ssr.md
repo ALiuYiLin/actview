@@ -65,7 +65,7 @@ HTTP request
 
 ## 5. 当前边界
 
-- Hydration 边界标记未实现：Teleport / KeepAlive / Suspense 的客户端 takeover 仍不完整；
+- Hydration 边界标记未实现：Teleport / Suspense 的客户端 takeover 仍不完整；KeepAlive 基础子树可 hydrate；
 - mismatch 支持基础替换 + 多余子节点移除，不是完整恢复策略；
 - `renderToStream` 已支持按 VNode 边界流式输出；不支持 streaming hydration / out-of-order；
 - head 是字符串收集，由 `renderDocument` 拼装；不自动注入复杂 head 管理；
@@ -79,4 +79,4 @@ HTTP request
 - `packages/server/__tests__/hydration.spec.tsx`：DOM 复用 / 事件 / unmount；
 - `packages/server/__tests__/ssr-router.spec.tsx`：Router SSR / guard / router hydrate。
 
-当前全仓：`pnpm test` **456 passed / 4 skipped**。
+当前全仓：`pnpm test` **457 passed / 4 skipped**。

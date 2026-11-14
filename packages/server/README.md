@@ -149,7 +149,7 @@ const html = await app.renderToString()
 
 - Hydration 已支持元素 / 文本 / Fragment / 普通组件 / router；
 - mismatch 支持基础替换与多余子节点移除；
-- Teleport / KeepAlive / Suspense 的 hydration 边界标记尚未完整实现；
+- KeepAlive 基础子树可 hydrate；Teleport / Suspense 的 hydration 边界标记尚未完整实现；
 - streaming 中 ErrorBoundary 若已输出部分内容，无法撤回；
 - 没有 streaming hydration / out-of-order streaming；
 - head 目前是字符串收集，不是自动注入模板；

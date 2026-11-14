@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ActViewComponent,
   Component,
+  KeepAlive,
   Prop,
   Ref,
   nextTick,
@@ -156,6 +157,37 @@ describe('@actview/server：hydrate', () => {
     await Promise.resolve()
 
     expect(instance.el).toBe(original)
+  })
+
+  it('KeepAlive 子树可以 hydrate', async () => {
+    @Component({ name: 'Inner' })
+    class Inner extends ActViewComponent {
+      render() {
+        return <span>keep</span>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return (
+          <KeepAlive>
+            <Inner />
+          </KeepAlive>
+        )
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    const root = mountContainer(html)
+    const original = root.querySelector('span')!
+
+    const client = createSSRApp(App)
+    client.hydrate(root)
+    await nextTick()
+
+    expect(root.querySelector('span')).toBe(original)
+    expect(root.textContent).toBe('keep')
   })
 })
 
