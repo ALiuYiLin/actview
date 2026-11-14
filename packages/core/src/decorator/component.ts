@@ -46,6 +46,9 @@ export function Component(options: ComponentOptions = {}) {
       )
     }
     own.name = options.name ?? own.name
+    if (options.inheritAttrs !== undefined) {
+      own.inheritAttrs = options.inheritAttrs
+    }
     own.render = 'render'
     const merged = mergeMeta(parentMeta, own)
 
@@ -89,6 +92,7 @@ export abstract class ActViewComponent<P = Record<string, any>> {
   }
 
   declare readonly $props: P
+  declare readonly $attrs: Record<string, any>
   declare readonly $el: Element | null
   declare readonly $: unknown
   declare readonly $parent: unknown

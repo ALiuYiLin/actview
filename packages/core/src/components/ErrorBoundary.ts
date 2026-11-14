@@ -14,7 +14,7 @@
 import { Component, Ref, Setup, ActViewComponent } from '../decorator'
 import { getCurrentInstance, onErrorCaptured } from '../lifecycle'
 
-@Component({ name: 'ErrorBoundary' })
+@Component({ name: 'ErrorBoundary', inheritAttrs: false })
 export class ErrorBoundary extends ActViewComponent<Record<string, any>> {
   @Ref
   error: unknown = null

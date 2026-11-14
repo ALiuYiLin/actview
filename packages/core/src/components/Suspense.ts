@@ -47,7 +47,7 @@ export function getCurrentSuspense(): SuspenseContext | null {
   return instance?.suspenseCtx ?? null
 }
 
-@Component({ name: 'Suspense' })
+@Component({ name: 'Suspense', inheritAttrs: false })
 export class Suspense extends ActViewComponent<Record<string, any>> {
   @Ref
   pending = false

@@ -85,7 +85,7 @@ function normalizeChild(children: unknown): any {
   return null
 }
 
-@Component({ name: 'KeepAlive' })
+@Component({ name: 'KeepAlive', inheritAttrs: false })
 export class KeepAlive extends ActViewComponent<KeepAliveProps> {
   /** 失活实例缓存：key → 组件 vnode（LRU：命中/新增移到末尾） */
   private cache = new Map<unknown, VNode>()

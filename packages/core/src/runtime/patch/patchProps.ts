@@ -123,6 +123,19 @@ function normalizeEventHandler(
   return null
 }
 
+/** 事件 handler 归一化为数组（支持 attrs 合并产生的 handler 数组） */
+function normalizeEventHandlers(
+  value: unknown,
+): Array<{ fn: EventListener; options: EventHandlerObject }> {
+  if (Array.isArray(value)) {
+    const out: Array<{ fn: EventListener; options: EventHandlerObject }> = []
+    for (const item of value) out.push(...normalizeEventHandlers(item))
+    return out
+  }
+  const one = normalizeEventHandler(value)
+  return one ? [one] : []
+}
+
 /** 事件：先按旧 handler 的 capture 解绑，再按新 options 绑定 */
 function patchEvent(
   el: Element,
@@ -133,8 +146,7 @@ function patchEvent(
   const parsed = parseEventKey(key)
   if (!parsed) return
 
-  const prevHandler = normalizeEventHandler(prev)
-  if (prevHandler) {
+  for (const prevHandler of normalizeEventHandlers(prev)) {
     // removeEventListener 只匹配 capture（once / passive 不参与匹配）
     el.removeEventListener(
       parsed.eventName,
@@ -143,8 +155,7 @@ function patchEvent(
     )
   }
 
-  const nextHandler = normalizeEventHandler(next)
-  if (nextHandler) {
+  for (const nextHandler of normalizeEventHandlers(next)) {
     el.addEventListener(parsed.eventName, nextHandler.fn, {
       capture: parsed.capture || !!nextHandler.options.capture,
       once: parsed.once || !!nextHandler.options.once,
@@ -195,43 +206,67 @@ function patchClass(el: Element, next: unknown): void {
   }
 }
 
-/** style：字符串直接覆盖 cssText；对象逐项写并清理旧对象里多余/为 null 的 key */
+/** 归一化 style：支持 string / object / 数组（attrs 合并会产生数组） */
+function normalizeStyleValue(value: unknown): {
+  cssText: string
+  decls: Record<string, unknown>
+} {
+  const result: { cssText: string; decls: Record<string, unknown> } = {
+    cssText: '',
+    decls: {},
+  }
+
+  const visit = (item: unknown): void => {
+    if (item == null || item === '') return
+    if (typeof item === 'string') {
+      result.cssText = result.cssText ? `${result.cssText};${item}` : item
+      return
+    }
+    if (Array.isArray(item)) {
+      for (const child of item) visit(child)
+      return
+    }
+    if (typeof item === 'object') {
+      Object.assign(result.decls, item as Record<string, unknown>)
+    }
+  }
+
+  visit(value)
+  return result
+}
+
+/** style：字符串写 cssText；对象逐项写并清理旧对象里多余/为 null 的 key */
 function patchStyle(el: Element, prev: unknown, next: unknown): void {
   const style = (el as HTMLElement).style
   if (!style) return
 
-  if (next == null || next === '') {
+  const prevStyle = normalizeStyleValue(prev)
+  const nextStyle = normalizeStyleValue(next)
+  const hasNext =
+    nextStyle.cssText !== '' || Object.keys(nextStyle.decls).length > 0
+
+  if (!hasNext) {
     style.cssText = ''
     return
   }
 
-  if (typeof next === 'string') {
-    style.cssText = next
-    return
+  if (nextStyle.cssText) {
+    style.cssText = nextStyle.cssText
+  } else if (prevStyle.cssText) {
+    // 旧值是字符串、新值是对象：先清空，避免旧 cssText 残留叠加
+    style.cssText = ''
   }
 
-  if (typeof next === 'object') {
-    if (prev && typeof prev === 'object') {
-      const prevObj = prev as Record<string, unknown>
-      const nextObj = next as Record<string, unknown>
-      for (const key in prevObj) {
-        // 新对象里不存在，或显式置 null/undefined → 清除旧 DOM 值
-        if (!(key in nextObj) || nextObj[key] == null) {
-          removeStyle(style, key)
-        }
+  if (!nextStyle.cssText) {
+    for (const key of Object.keys(prevStyle.decls)) {
+      if (!(key in nextStyle.decls) || nextStyle.decls[key] == null) {
+        removeStyle(style, key)
       }
-    } else {
-      // 旧值是字符串 / null：先清空，避免旧 cssText 残留叠加
-      style.cssText = ''
     }
-    for (const key in next as Record<string, unknown>) {
-      setStyle(style, key, (next as Record<string, unknown>)[key])
-    }
-    return
   }
-
-  // 其它类型按字符串 cssText 处理
-  style.cssText = String(next)
+  for (const key of Object.keys(nextStyle.decls)) {
+    setStyle(style, key, nextStyle.decls[key])
+  }
 }
 
 /** 写单个 style 值：kebab-case / --var 走 setProperty，其余写 property */

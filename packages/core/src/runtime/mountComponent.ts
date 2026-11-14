@@ -139,6 +139,7 @@ function installClassPublicInstance(
 
   defineValue('$', instance)
   defineGetter('$props', () => instance.props)
+  defineGetter('$attrs', () => instance.attrs)
   defineGetter('$el', () => (instance.vnode.el as Element | null) ?? null)
   defineGetter('$parent', () => instance.parent?.proxy ?? null)
   defineGetter('$root', () => {

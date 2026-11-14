@@ -40,6 +40,12 @@ export class TransitionGroup extends ActViewComponent<Record<string, any>> {
   @Prop
   style: any = null
 
+  @Prop
+  onEnter: ((el: Element) => void) | null = null
+
+  @Prop
+  onLeave: ((el: Element) => void) | null = null
+
   render() {
     const children = flattenChildren(this.$props.children)
     const wrapped = children.map((child, index) => {
@@ -50,8 +56,8 @@ export class TransitionGroup extends ActViewComponent<Record<string, any>> {
         {
           name: this.name,
           duration: this.duration,
-          onEnter: this.$props.onEnter,
-          onLeave: this.$props.onLeave,
+          onEnter: this.onEnter,
+          onLeave: this.onLeave,
           children: child,
         },
         key,
@@ -66,7 +72,7 @@ export class TransitionGroup extends ActViewComponent<Record<string, any>> {
   }
 }
 
-@Component({ name: 'Dynamic' })
+@Component({ name: 'Dynamic', inheritAttrs: false })
 export class Dynamic extends ActViewComponent<Record<string, any>> {
   @Prop
   is!: any

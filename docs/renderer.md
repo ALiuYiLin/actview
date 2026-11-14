@@ -113,11 +113,19 @@ new Ctor(props)
 
 - DOM property 判定（value / checked / disabled / muted / selected 等；SVG 属性走 attribute）；
 - `class`（string / 数组 / 对象）；
-- `style`（string / 对象 / custom property / 清理旧 key）；
-- 事件 `onXxx`（Capture/Once/Passive 后缀、`{ handler, options }`、解绑）；
+- `style`（string / 对象 / 数组 / custom property / 清理旧 key）；
+- 事件 `onXxx`（Capture/Once/Passive 后缀、`{ handler, options }`、handler 数组、解绑）；
 - `innerHTML` / `textContent`；
 - 布尔属性 / 属性移除；
 - `ref`（元素 ref → DOM，组件 ref → 公开实例）。
+
+### 7.4 attrs 根节点透传
+
+- `initProps` 把未声明为 `@Prop` 的键收集到 `instance.attrs`（排除 key/ref/children）；
+- `renderComponentRoot` 在 `inheritAttrs !== false` 且根是单个元素 / 组件时，克隆根 VNode 并合并 attrs；
+- class / style / onXxx 合并，其余 attrs 覆盖根节点原值；根是 Fragment / Text / null / builtin 时不透传并警告；
+- `$attrs` 暴露未声明 props；`@Component({ inheritAttrs: false })` 关闭自动透传；
+- 当前 `props` 仍保留全部原始 props（兼容内置组件），attrs 是未声明子集。
 
 ## 8. 内置组件
 
@@ -151,7 +159,7 @@ new Ctor(props)
 ## 12. 验证
 
 - `packages/core/__tests__`：renderer 15 + m2 23 + m3 9 + m3b 6 + m3c 4 + class 3 + decorators 4 + guard 3 = 67；
-- 全仓 `pnpm test`：468 passed / 4 skipped；
+- 全仓 `pnpm test`：473 passed / 4 skipped；
 - `pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ## 13. 当前限制

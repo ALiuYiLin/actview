@@ -21,12 +21,15 @@ import { EffectScope, shallowReactive } from '@actview/reactivity'
 import type { RenderFunction } from '../internal'
 import {
   Fragment,
+  Text,
   createTextVNode,
   createVNode,
+  isComponent,
   isVNode,
   type VNode,
 } from '../internal'
 import { hasChanged, hasOwn } from '@actview/shared'
+import { getComponentMeta } from '../decorator'
 import { nextTick } from './scheduler'
 import { mountClassComponent } from './mountComponent'
 import type {
@@ -59,6 +62,8 @@ export function createComponentInstance(
     vnode,
     // 占位：真正 props 在 setupComponent → initProps 中创建
     props: {},
+    attrs: {},
+    inheritAttrs: true,
     // setup 执行后才有 render（setupComponent 写入）
     render: null as unknown as RenderFunction,
     subTree: null,
@@ -119,6 +124,9 @@ export function createComponentPublicInstance(
     get $props(): Record<string, any> {
       return instance.props
     },
+    get $attrs(): Record<string, any> {
+      return instance.attrs
+    },
     get $el(): Element | null {
       return (instance.vnode.el as Element | null) ?? null
     },
@@ -154,7 +162,10 @@ export function initProps(
 ): void {
   const raw: Record<string, any> = props ? { ...props } : {}
   delete raw.key
+  instance.inheritAttrs =
+    getComponentMeta(instance.type).inheritAttrs !== false
   instance.props = shallowReactive(raw)
+  instance.attrs = shallowReactive(collectAttrs(instance, raw))
 }
 
 /**
@@ -187,6 +198,39 @@ export function updateProps(
       delete props[key]
     }
   }
+
+  syncAttrs(instance, collectAttrs(instance, next))
+}
+
+/** 收集未声明 props 的 attrs；children/key/ref 不参与 DOM 透传 */
+function collectAttrs(
+  instance: ComponentInternalInstance,
+  raw: Record<string, any>,
+): Record<string, any> {
+  const declared = getComponentMeta(instance.type).props
+  const attrs: Record<string, any> = {}
+  for (const key of Object.keys(raw)) {
+    if (key === 'key' || key === 'ref' || key === 'children') continue
+    if (declared.has(key)) continue
+    attrs[key] = raw[key]
+  }
+  return attrs
+}
+
+/** 原地同步 attrs（保持浅响应式对象的引用稳定） */
+function syncAttrs(
+  instance: ComponentInternalInstance,
+  next: Record<string, any>,
+): void {
+  const attrs = instance.attrs
+  for (const key of Object.keys(attrs)) {
+    if (!hasOwn(next, key)) delete attrs[key]
+  }
+  for (const key of Object.keys(next)) {
+    if (hasChanged(next[key], attrs[key])) {
+      attrs[key] = next[key]
+    }
+  }
 }
 
 /**
@@ -205,23 +249,82 @@ export function renderComponentRoot(
   const render = instance.render as unknown as () => unknown
   const result = render()
 
+  let root: VNode | null
   if (result === null || result === undefined || typeof result === 'boolean') {
-    return null
-  }
-  if (typeof result === 'string' || typeof result === 'number') {
-    return createTextVNode(String(result))
-  }
-  if (Array.isArray(result)) {
-    return createVNode(Fragment, { children: result })
-  }
-  if (isVNode(result)) {
-    return result
+    root = null
+  } else if (typeof result === 'string' || typeof result === 'number') {
+    root = createTextVNode(String(result))
+  } else if (Array.isArray(result)) {
+    root = createVNode(Fragment, { children: result })
+  } else if (isVNode(result)) {
+    root = result
+  } else {
+    throw new Error(
+      `[actview] 组件 "${getComponentName(instance)}" 的 render 返回值非法：` +
+        `期望 VNode / 数组 / string / number / null，当前为 ${describeValue(result)}`,
+    )
   }
 
-  throw new Error(
-    `[actview] 组件 "${getComponentName(instance)}" 的 render 返回值非法：` +
-      `期望 VNode / 数组 / string / number / null，当前为 ${describeValue(result)}`,
-  )
+  return applyAttrs(instance, root)
+}
+
+/** attrs 自动落到单根元素 / 单根组件；Fragment/Text/builtin/null 不自动继承 */
+function applyAttrs(
+  instance: ComponentInternalInstance,
+  root: VNode | null,
+): VNode | null {
+  const keys = Object.keys(instance.attrs)
+  if (!instance.inheritAttrs || keys.length === 0) return root
+
+  if (root && canInheritAttrs(root)) {
+    return {
+      ...root,
+      props: mergeProps(root.props ?? {}, instance.attrs),
+    }
+  }
+
+  if (__DEV__) {
+    const kind =
+      root == null
+        ? 'null'
+        : root.type === Fragment
+          ? 'Fragment'
+          : root.type === Text
+            ? 'Text'
+            : 'Teleport/Transition 等非元素根节点'
+    console.warn(
+      `[actview] 组件 "${getComponentName(instance)}" 的 attrs (${keys.join(
+        ', ',
+      )}) 无法自动继承：根节点是 ${kind}。` +
+        '可使用 inheritAttrs: false + $attrs 手动处理。',
+    )
+  }
+  return root
+}
+
+function canInheritAttrs(vnode: VNode): boolean {
+  return typeof vnode.type === 'string' || isComponent(vnode.type)
+}
+
+/** 合并根节点 props 与 attrs；class/style 合并，onXxx 变为数组，其余 attrs 覆盖 */
+function mergeProps(
+  base: Record<string, any>,
+  attrs: Record<string, any>,
+): Record<string, any> {
+  const out: Record<string, any> = { ...base }
+  for (const key of Object.keys(attrs)) {
+    const incoming = attrs[key]
+    if (key === 'class') {
+      out.class = out.class == null ? incoming : [out.class, incoming]
+    } else if (key === 'style') {
+      out.style = out.style == null ? incoming : [out.style, incoming]
+    } else if (/^on[A-Z]/.test(key)) {
+      out[key] = out[key] == null ? incoming : [out[key], incoming]
+    } else {
+      out[key] = incoming
+    }
+  }
+  return out
 }
 
 /**

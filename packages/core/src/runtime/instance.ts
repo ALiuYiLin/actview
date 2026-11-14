@@ -56,6 +56,8 @@ export interface ComponentPublicInstance {
   /** 内部实例（调试 / 逃生口） */
   readonly $: ComponentInternalInstance
   readonly $props: Record<string, any>
+  /** 未声明 props 的 attrs（class/style/onXxx 等） */
+  readonly $attrs: Record<string, any>
   /** 组件子树根 DOM（组件渲染 null 时为 null） */
   readonly $el: Element | null
   readonly $parent: ComponentPublicInstance | null
@@ -105,6 +107,10 @@ export interface ComponentInternalInstance {
   ctx?: object
   /** props（shallowReactive：父写 props 触发子 render effect） */
   props: Record<string, any>
+  /** 未声明 props 的 attrs（shallowReactive；用于根节点透传 / $attrs） */
+  attrs: Record<string, any>
+  /** 是否自动把 attrs 落到根节点 */
+  inheritAttrs: boolean
   /** setup 返回的 render 函数 */
   render: RenderFunction
   /** 当前子树（diff 的旧树） */

@@ -88,6 +88,8 @@ export interface ComponentMeta {
   setup?: string
   /** @Setup('pre' | 'after')：仅对 @Model 有意义，相对 owner 组件 @Setup */
   setupMode?: 'pre' | 'after'
+  /** 是否把未声明 props 的 attrs 自动落到根节点（默认 true） */
+  inheritAttrs?: boolean
   /** @Model 作用域（默认 component） */
   scope?: ModelScope
   /** @Named qualifier（Model） */
@@ -98,6 +100,8 @@ export interface ComponentMeta {
 /** @Component 选项 */
 export interface ComponentOptions {
   name?: string
+  /** false 时关闭未声明 props 的根节点透传；默认 true */
+  inheritAttrs?: boolean
 }
 
 /** 创建空元数据 */
@@ -164,6 +168,7 @@ export function mergeMeta(
     hooks,
     setup: own.setup ?? parent.setup,
     setupMode: own.setupMode ?? parent.setupMode,
+    inheritAttrs: own.inheritAttrs ?? parent.inheritAttrs,
     scope: own.scope ?? parent.scope,
     modelName: own.modelName ?? parent.modelName,
     render: own.render ?? parent.render,

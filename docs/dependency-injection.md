@@ -252,7 +252,7 @@ class Page extends ActViewComponent {
 - `packages/core/__tests__/model.spec.tsx`（13 项）：基础 Model / async setup / @Prop / @Provide / 生命周期 / 循环依赖；
 - `packages/core/__tests__/model-scope.spec.tsx`（4 项）：inherited 共享且生命周期归创建者、Named 多实例、app scope 单例 + app 生命周期、app scope `@Inject`。
 
-全仓：`pnpm test` **468 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
+全仓：`pnpm test` **473 passed / 4 skipped**；`pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ### 当前限制
 

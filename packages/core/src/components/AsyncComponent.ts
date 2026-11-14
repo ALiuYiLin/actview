@@ -79,7 +79,7 @@ export function lazy(
     return loading
   }
 
-  @Component({ name: 'Lazy' })
+  @Component({ name: 'Lazy', inheritAttrs: false })
   class Lazy extends ActViewComponent<Record<string, any>> {
     @Ref
     status: 'loading' | 'success' | 'error' = 'loading'

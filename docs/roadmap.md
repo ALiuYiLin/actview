@@ -34,7 +34,8 @@
 
 - 组合约定：**不做 slots**——组件通过 props 传组件构造器、render function 或 `children` 组合；
 - 组件 ref：使用显式 `ref={(el) => ...}` callback，父组件持有类实例；**不做 `defineExpose`**；
-- 无组件 emits / `$attrs` / `$emit`；
+- attrs 根节点透传（`inheritAttrs` / `$attrs`，class/style/onXxx 合并）；
+- 无组件 emits / `$emit`；
 - `@Prop` 无 required / default / validator / 类型运行时告警；
 - 无 TransitionGroup 的 move 动画（enter/leave 已有）；
 - `app.component` / `app.directive` 尚未实现（`app.use` / `app.config` 已有；见 [plugins.md](./plugins.md)）。
@@ -52,10 +53,9 @@
 ## 3. P0：框架核心 API 完整性
 
 1. **组件事件**：`emits` 声明、`$emit`、父组件监听、事件类型。
-2. **`$attrs` / 属性透传**：未声明 props 的属性落到根节点；`inheritAttrs`。
-3. **Props 运行时能力**：required / default / validator / 类型告警。
-4. **公开 API 补齐**：`$attrs` / `$emit` / `$refs` 语义完整；明确内部 API 边界。
-5. **全局注册表**：`app.component` + `Dynamic` 字符串解析；`app.directive` 等 JSX 指令语法确定后再做。
+2. **Props 运行时能力**：required / default / validator / 类型告警。
+3. **公开 API 补齐**：`$emit` / `$refs` 语义完整；明确内部 API 边界。
+4. **全局注册表**：`app.component` + `Dynamic` 字符串解析；`app.directive` 等 JSX 指令语法确定后再做。
 
 ## 4. P1：生产可用性
 
@@ -96,7 +96,7 @@
 
 如果只先做三件事：
 
-1. **emits + `$attrs` + props 校验**（组件模型闭环）；
+1. **emits + props 校验**（组件模型闭环）；
 2. **官方测试工具 + 全局组件注册表**（可被应用和生态使用）；
 3. **SSR/hydration 或 HMR/Vite 插件** 二选一先做（部署能力 vs 开发体验）。
 

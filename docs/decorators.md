@@ -81,6 +81,54 @@ onBig() {}
 @Watch(() => this.count > 3) onBig() {}
 ```
 
+### attrs 透传
+
+ActView 采用 Vue 风格的根节点 attrs 透传：
+
+```tsx
+@Component({ name: 'Child' })
+class Child extends ActViewComponent {
+  render() {
+    return <div class="root" style={{ color: 'red' }}>child</div>
+  }
+}
+
+@Component({ name: 'App' })
+class App extends ActViewComponent {
+  render() {
+    return (
+      <Child
+        class="from-parent"
+        id="child-id"
+        style={{ background: 'blue' }}
+        onClick={() => {}}
+      />
+    )
+  }
+}
+```
+
+规则：
+
+- 未在 `@Prop` 中声明的键进入 `$attrs`；
+- `key` / `ref` / `children` 不进入 attrs；
+- `class` / `style` / `onXxx` 与根节点原有值合并；
+- 其它同名 attrs 覆盖根节点原值；
+- 根节点是**单个元素 / 单个组件**时自动透传；根是 Fragment / Text / null / Teleport/Transition 等内置组件时不透传，开发期警告；
+- `@Component({ inheritAttrs: false })` 可关闭自动透传，随后可用 `this.$attrs` 手动绑定；
+- 根是组件时，attrs 作为 props 继续传给子组件，由子组件继续处理。
+
+```tsx
+@Component({ name: 'Manual', inheritAttrs: false })
+class Manual extends ActViewComponent {
+  render() {
+    return <div {...this.$attrs}>manual</div>
+  }
+}
+```
+
+> 当前实现保留 `$props` 包含全部原始 props（兼容 Suspense / Teleport / TransitionGroup 等内置组件），`$attrs` 是其中“未声明 props”的子集；不是 Vue 那种从 props 中剥离的严格分离。
+
 ## 3. 组件内数据层（@Model / @UseModel）
 
 ```tsx
