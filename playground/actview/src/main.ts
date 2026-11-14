@@ -1,5 +1,6 @@
 import { createApp } from 'actview'
 import { devtoolsPlugin } from '@actview/devtools'
+import './styles.css'
 import { App } from './App'
 
 const app = createApp(App)

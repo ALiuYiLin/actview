@@ -36,3 +36,32 @@ if (import.meta.env.MODE !== 'production') {
 - Performance：mount / update 耗时；
 - Pick element：选择按钮反查 Counter；
 - 高亮 / clear highlight。
+
+## Tailwind CSS
+
+Playground 使用 **Tailwind CSS v4 + `@tailwindcss/vite`**：
+
+```ts
+// vite.config.ts
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [tailwindcss()],
+})
+```
+
+```css
+/* src/styles.css */
+@import "tailwindcss";
+```
+
+`src/main.ts` 引入 `./styles.css`；样式类直接写在 ActView JSX 的 `class` 上：
+
+```tsx
+<button class="rounded-xl bg-indigo-600 px-6 py-3 text-white">
+  +1
+</button>
+```
+
+`@tailwindcss/vite` 是 Vite 层插件，不依赖 React/Vue 等具体框架；它只处理 Vite 的 CSS 管线并扫描源码中的 class。ActView 保持原生 JSX/DOM 属性语义，所以不需要额外框架适配。
+

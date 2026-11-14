@@ -1,9 +1,11 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
 
 const pkg = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 
 export default defineConfig(({ mode }) => ({
+  plugins: [tailwindcss()],
   // playground 源码统一使用 @actview/jsx automatic runtime
   esbuild: {
     jsx: 'automatic',

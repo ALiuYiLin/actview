@@ -11,10 +11,12 @@
     "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "actview": "workspace:*",
-    "@actview/devtools": "workspace:*"
+    "@actview/devtools": "workspace:*",
+    "actview": "workspace:*"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "tailwindcss": "^4.3.5",
     "typescript": "~6.0.2",
     "vite": "^6.4.3"
   }
