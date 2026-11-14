@@ -15,7 +15,7 @@
       "@actview/reactivity/*": ["../../packages/reactivity/src/*"],
       "@actview/shared": ["../../packages/shared/src/index.ts"],
       "@actview/shared/*": ["../../packages/shared/src/*"],
-      "@actview/vitepress": ["../../packages/vitepress/src/actview/index.ts"],
+      "@actview/vitepress": ["../../packages/vitepress/src/client/index.ts"],
       "actview": ["../../packages/actview/src/index.ts"]
     }
   },

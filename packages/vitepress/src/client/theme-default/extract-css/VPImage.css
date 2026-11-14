@@ -1,0 +1,6 @@
+html:not(.dark) .VPImage.dark {
+  display: none;
+}
+.dark .VPImage.light {
+  display: none;
+}

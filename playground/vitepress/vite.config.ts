@@ -1,11 +1,15 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+import actviewScopedCss from '@actview/plugin-scoped'
 import { actviewMarkdown } from '@actview/vitepress/plugin'
 
 const pkg = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 
-export default defineConfig({
-  plugins: [actviewMarkdown()],
+export default defineConfig(({ mode }) => ({
+  plugins: [...actviewScopedCss(), actviewMarkdown()],
+  define: {
+    __DEV__: JSON.stringify(mode !== 'production'),
+  },
   esbuild: {
     jsx: 'automatic',
     jsxImportSource: '@actview/jsx',
@@ -15,7 +19,7 @@ export default defineConfig({
       'actview': pkg('../../packages/actview/src/index.ts'),
       '@actview/core/internal': pkg('../../packages/core/src/internal.ts'),
       '@actview/core': pkg('../../packages/core/src/index.ts'),
-      '@actview/vitepress': pkg('../../packages/vitepress/src/actview/index.ts'),
+      '@actview/vitepress': pkg('../../packages/vitepress/src/client/index.ts'),
       '@actview/jsx/jsx-runtime': pkg('../../packages/jsx/src/jsx-runtime.ts'),
       '@actview/jsx/jsx-dev-runtime': pkg('../../packages/jsx/src/jsx-dev-runtime.ts'),
       '@actview/jsx': pkg('../../packages/jsx/src/index.ts'),
@@ -28,4 +32,4 @@ export default defineConfig({
     strictPort: true,
     open: true,
   },
-})
+}))

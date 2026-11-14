@@ -13,7 +13,7 @@
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "dist-types",
-    "rootDir": "src/actview",
+    "rootDir": "src",
     "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
     "paths": {
       "@actview/core": ["../core/src/index.ts"],
@@ -27,7 +27,14 @@
       "actview": ["../actview/src/index.ts"]
     }
   },
-  "include": ["src/actview"],
+  "include": [
+    "src/client/index.ts",
+    "src/client/styles.d.ts",
+    "src/client/markdown",
+    "src/client/theme-default/Layout.tsx",
+    "src/node/markdownToActview.ts",
+    "src/node/actviewPlugin.ts"
+  ],
   "references": [
     { "path": "../shared" },
     { "path": "../reactivity" },

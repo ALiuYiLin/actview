@@ -1,0 +1,79 @@
+.VPLocalNav {
+  position: sticky;
+  top: 0;
+  /*rtl:ignore*/
+  left: 0;
+  z-index: var(--vp-z-index-local-nav);
+  border-bottom: 1px solid var(--vp-c-gutter);
+  padding-top: var(--vp-layout-top-height, 0px);
+  width: 100%;
+  background-color: var(--vp-local-nav-bg-color);
+}
+
+.VPLocalNav.fixed {
+  position: fixed;
+}
+
+@media (min-width: 960px) {
+  .VPLocalNav {
+    top: var(--vp-nav-height);
+  }
+
+  .VPLocalNav.has-sidebar {
+    padding-left: var(--vp-sidebar-width);
+  }
+
+  .VPLocalNav.empty {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .VPLocalNav {
+    display: none;
+  }
+}
+
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  line-height: 24px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  transition: color 0.5s;
+}
+
+.menu:hover {
+  color: var(--vp-c-text-1);
+  transition: color 0.25s;
+}
+
+@media (min-width: 960px) {
+  .menu {
+    display: none;
+  }
+}
+
+.menu-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.menu,
+:deep(.VPLocalNavOutlineDropdown > button) {
+  padding: 12px 24px 11px;
+}
+
+@media (min-width: 768px) {
+  .menu,
+  :deep(.VPLocalNavOutlineDropdown > button) {
+    padding: 12px 32px 11px;
+  }
+}

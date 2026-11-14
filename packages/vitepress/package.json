@@ -5,11 +5,12 @@
   "type": "module",
   "description": "ActView documentation site toolkit (VitePress-derived, Phase 1 MVP)",
   "exports": {
-    ".": "./src/actview/index.ts",
-    "./plugin": "./src/actview/plugin.ts"
+    ".": "./src/client/index.ts",
+    "./plugin": "./src/node/actviewPlugin.ts"
   },
   "dependencies": {
     "@actview/core": "workspace:^",
+    "@actview/plugin-scoped": "^1.1.1",
     "actview": "workspace:*",
     "gray-matter": "^4.0.3",
     "markdown-it": "^14.1.0",

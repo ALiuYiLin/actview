@@ -16,10 +16,18 @@
       "@actview/reactivity/*": ["../reactivity/src/*"],
       "@actview/shared": ["../shared/src/index.ts"],
       "@actview/shared/*": ["../shared/src/*"],
-      "@actview/vitepress": ["./src/actview/index.ts"],
+      "@actview/vitepress": ["./src/client/index.ts"],
       "actview": ["../actview/src/index.ts"]
     }
   },
-  "include": ["src/actview", "__tests__"],
+  "include": [
+    "src/client/index.ts",
+    "src/client/styles.d.ts",
+    "src/client/markdown",
+    "src/client/theme-default/Layout.tsx",
+    "src/node/markdownToActview.ts",
+    "src/node/actviewPlugin.ts",
+    "__tests__"
+  ],
   "references": [{ "path": "." }]
 }

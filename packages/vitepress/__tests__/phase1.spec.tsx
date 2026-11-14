@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ActViewComponent, Component, createApp } from 'actview'
 import type { Element } from '@actview/core'
-import { htmlToVNode } from '../src/actview/htmlToVNode'
-import { markdownToActview } from '../src/actview/markdownToActview'
+import { htmlToVNode } from '../src/client/markdown/htmlToVNode'
+import { markdownToActview } from '../src/node/markdownToActview'
 
 describe('htmlToVNode', () => {
   it('转换标准 HTML 为 VNode', () => {

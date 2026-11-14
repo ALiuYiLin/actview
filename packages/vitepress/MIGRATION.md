@@ -243,15 +243,16 @@ SSR 是第二阶段目标；建议先做纯 SPA 文档站验证主题和 Markdow
 
 - ✅ 导入 `src`、上游 LICENSE；
 - ✅ 新建 `@actview/vitepress` 包配置；
-- ✅ 新 ActView 实现放在 `src/actview`，上游 Vue 源码保留作迁移参考；
-- ✅ 新代码接入 workspace typecheck / build，上游 Vue 文件暂不参与 typecheck。
+- ✅ ActView 实现直接落在 `src/client` / `src/node` / `src/shared`，不再使用独立的 `src/actview` 目录；
+- ✅ 已下线的 `Layout.vue` 改为 `src/client/theme-default/Layout.tsx`；
+- ✅ 引入 `theme-default/extract-css` 的完整剥离 CSS，并接入 `@actview/plugin-scoped`（`@10coding/vite-plugin-scoped-css` 当前 registry 不可用）。
 
 ### Phase 1：Markdown → ActView 页面（MVP，已完成）
 
 - ✅ `markdownToActview`（markdown-it + anchor + gray-matter 的最小 VitePress 子集）；
 - ✅ `htmlToVNode`（方案 A）；
 - ✅ `.md` Vite 插件；
-- ✅ 最小 `DocsLayout` + `vp-doc` 样式；
+- ✅ 最小 `Layout` + `vp-doc` 样式；
 - ✅ `playground/vitepress` 可运行示例；
 - ✅ 单测：frontmatter / heading id / code block / raw HTML / custom component / 指令诊断 / VNode mount。
 

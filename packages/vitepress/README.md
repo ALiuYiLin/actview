@@ -27,9 +27,11 @@ playground/vitepress/
 
 ```ts
 import { actviewMarkdown } from '@actview/vitepress/plugin'
+import actviewScopedCss from '@actview/plugin-scoped'
 
 export default defineConfig({
-  plugins: [actviewMarkdown()],
+  plugins: [...actviewScopedCss(), actviewMarkdown()],
+  define: { __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production') },
   esbuild: { jsx: 'automatic', jsxImportSource: '@actview/jsx' },
 })
 ```
@@ -38,10 +40,10 @@ export default defineConfig({
 
 ```ts
 import { createApp } from 'actview'
-import { DocsLayout } from '@actview/vitepress'
+import { Layout } from '@actview/vitepress'
 import Page from '../docs/index.md'
 
-createApp(DocsLayout, { page: Page }).mount('#app')
+createApp(Layout, { page: Page }).mount('#app')
 ```
 
 插件把 `.md` 转成：
@@ -71,15 +73,21 @@ class Page extends ActViewComponent {
 ## 目录
 
 ```text
-src/                  上游 src 原样导入（迁移参考）
-src/actview/          Phase 1 ActView 实现
-  htmlToVNode.ts
+src/                  上游 VitePress 源码 + ActView 迁移
+src/client/           ActView client 入口 / Markdown VNode / 主题 TSX
+  index.ts
+  markdown/htmlToVNode.ts
+  theme-default/Layout.tsx
+  theme-default/extract-css/
+src/node/             Markdown 编译与 Vite 插件
   markdownToActview.ts
-  plugin.ts
-  components/DocsLayout.tsx
+  actviewPlugin.ts
 LICENSE.vitepress     上游 MIT 许可证
 MIGRATION.md          架构与分阶段迁移方案
 ```
+
+> Scoped CSS 使用 `@actview/plugin-scoped`（与 `@10coding/vite-plugin-scoped-css` 同源方案）。
+> 当前 npm registry 查不到 `@10coding/vite-plugin-scoped-css`，所以暂用 ActView 官方实现。
 
 ## 下一步
 

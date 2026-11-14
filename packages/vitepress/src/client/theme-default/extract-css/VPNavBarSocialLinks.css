@@ -1,0 +1,10 @@
+.VPNavBarSocialLinks {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .VPNavBarSocialLinks {
+    display: flex;
+    align-items: center;
+  }
+}
