@@ -93,6 +93,12 @@ importers:
         specifier: workspace:^
         version: link:../reactivity
 
+  packages/server:
+    dependencies:
+      '@actview/core':
+        specifier: workspace:^
+        version: link:../core
+
   packages/shared: {}
 
   playground/actview:
