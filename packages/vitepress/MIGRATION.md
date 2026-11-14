@@ -239,20 +239,25 @@ SSR 是第二阶段目标；建议先做纯 SPA 文档站验证主题和 Markdow
 
 ## 7. 分阶段计划
 
-### Phase 0：基线与脚手架（已开始）
+### Phase 0：基线与脚手架（已完成）
 
 - ✅ 导入 `src`、上游 LICENSE；
-- 新建 `@actview/vitepress` 包配置；
-- 拆分 `src/vue-legacy`（迁移参考）与 ActView 新目录；
-- 保留上游版本说明，不接 workspace typecheck。
+- ✅ 新建 `@actview/vitepress` 包配置；
+- ✅ 新 ActView 实现放在 `src/actview`，上游 Vue 源码保留作迁移参考；
+- ✅ 新代码接入 workspace typecheck / build，上游 Vue 文件暂不参与 typecheck。
 
-### Phase 1：Markdown → ActView 页面（MVP）
+### Phase 1：Markdown → ActView 页面（MVP，已完成）
 
-- 复制 `shared` + `node/markdown`；
-- 新写 `markdownToActview`；
-- 实现 `htmlToVNode`（方案 A）；
-- 一个最小 Page 组件 + `vp-doc` 样式；
-- 单测：frontmatter / headers / links / code block / raw HTML / custom component。
+- ✅ `markdownToActview`（markdown-it + anchor + gray-matter 的最小 VitePress 子集）；
+- ✅ `htmlToVNode`（方案 A）；
+- ✅ `.md` Vite 插件；
+- ✅ 最小 `DocsLayout` + `vp-doc` 样式；
+- ✅ `playground/vitepress` 可运行示例；
+- ✅ 单测：frontmatter / heading id / code block / raw HTML / custom component / 指令诊断 / VNode mount。
+
+验收：`pnpm dev:vitepress` 可打开 Markdown 页面；`pnpm build:vitepress` 通过。
+
+> 注意：Phase 1 没有接入 VitePress 的完整 markdown 插件（shiki / containers / sfc blocks / dead links）；这些在后续阶段补齐。
 
 验收：给定一个 `.md` 能生成可挂载的 ActView 页面。
 

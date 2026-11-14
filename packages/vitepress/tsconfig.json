@@ -1,0 +1,38 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@actview/jsx",
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src/actview",
+    "tsBuildInfoFile": "dist-types/tsconfig.tsbuildinfo",
+    "paths": {
+      "@actview/core": ["../core/src/index.ts"],
+      "@actview/core/*": ["../core/src/*"],
+      "@actview/jsx": ["../jsx/src/index.ts"],
+      "@actview/jsx/*": ["../jsx/src/*"],
+      "@actview/reactivity": ["../reactivity/src/index.ts"],
+      "@actview/reactivity/*": ["../reactivity/src/*"],
+      "@actview/shared": ["../shared/src/index.ts"],
+      "@actview/shared/*": ["../shared/src/*"],
+      "actview": ["../actview/src/index.ts"]
+    }
+  },
+  "include": ["src/actview"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../reactivity" },
+    { "path": "../core" },
+    { "path": "../jsx" },
+    { "path": "../actview" }
+  ]
+}

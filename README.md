@@ -15,6 +15,7 @@ packages/
   actview/          用户聚合入口（createApp / 装饰器 / 内置组件）
   core/             类型 + DOM 渲染器 + 装饰器 + 内置组件
   server/           SSR / hydration（renderToString / createSSRApp / hydrate）
+  vitepress/        ActView 文档站工具（VitePress 迁移中）
   devtools/         DevTools backend（无 UI 时可单独使用）
   router/           路由（RouterView / RouterLink / guards）
   jsx/              JSX 作者层（全局 JSX 类型 / jsx automatic runtime）
@@ -24,6 +25,7 @@ extensions/
   devtools/         Chrome DevTools 扩展（基础 Components / Events / Performance）
 playground/
   actview/          私有示例应用（playground，不发布）
+  vitepress/        文档站 Phase 1 MVP 示例
 ```
 
 ## 快速开始
@@ -31,6 +33,7 @@ playground/
 ```bash
 pnpm install
 pnpm dev            # 启动 playground/actview
+pnpm dev:vitepress  # 启动 playground/vitepress（Phase 1 MVP）
 pnpm build          # 构建 playground 应用
 pnpm test           # reactivity + core 测试
 pnpm typecheck      # 全部包 + playground 类型检查

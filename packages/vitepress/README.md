@@ -3,23 +3,84 @@
 基于 VitePress 源码改造的 ActView 文档站工具。
 
 - 上游基线：`vitepress@2.0.0-alpha.17`（MIT）
-- 当前状态：源码基线已导入，尚未接入 workspace / 构建
+- 当前状态：**Phase 1 MVP 已跑通**（Markdown → ActView Page → VNode）
 - 迁移方案：[MIGRATION.md](./MIGRATION.md)
+
+## Phase 1 使用
+
+```bash
+pnpm dev:vitepress
+# http://127.0.0.1:3100
+pnpm build:vitepress
+```
+
+示例：
+
+```text
+playground/vitepress/
+  docs/index.md
+  src/main.ts
+  vite.config.ts
+```
+
+`vite.config.ts`：
+
+```ts
+import { actviewMarkdown } from '@actview/vitepress/plugin'
+
+export default defineConfig({
+  plugins: [actviewMarkdown()],
+  esbuild: { jsx: 'automatic', jsxImportSource: '@actview/jsx' },
+})
+```
+
+`main.ts`：
+
+```ts
+import { createApp } from 'actview'
+import { DocsLayout } from '@actview/vitepress'
+import Page from '../docs/index.md'
+
+createApp(DocsLayout, { page: Page }).mount('#app')
+```
+
+插件把 `.md` 转成：
+
+```ts
+class Page extends ActViewComponent {
+  render() {
+    return htmlToVNode(PAGE_HTML)
+  }
+}
+```
+
+## Phase 1 支持
+
+- 标准 Markdown 标题 / 段落 / 列表 / 链接 / 引用；
+- 代码块（无语法高亮，后续接 shiki）；
+- frontmatter；
+- 原始 HTML；
+- `htmlToVNode(html, { components })` 自定义标签映射。
+
+明确不支持（会报错）：
+
+- `v-if` / `v-for` / `v-html` 等 Vue 指令；
+- `{{ }}` 插值；
+- `<script setup>`。
 
 ## 目录
 
 ```text
 src/                  上游 src 原样导入（迁移参考）
+src/actview/          Phase 1 ActView 实现
+  htmlToVNode.ts
+  markdownToActview.ts
+  plugin.ts
+  components/DocsLayout.tsx
 LICENSE.vitepress     上游 MIT 许可证
 MIGRATION.md          架构与分阶段迁移方案
 ```
 
 ## 下一步
 
-Phase 1 纵向切片：
-
-```text
-guide.md → markdownToActview → ActView Page → htmlToVNode → 最小 Layout
-```
-
-在此切片验证前，不批量改写 `src/client/theme-default` 下的 Vue 组件。
+Phase 2：ActView app / data / router / head + 最小主题壳。

@@ -79,4 +79,4 @@ HTTP request
 - `packages/server/__tests__/hydration.spec.tsx`：DOM 复用 / 事件 / unmount；
 - `packages/server/__tests__/ssr-router.spec.tsx`：Router SSR / guard / router hydrate。
 
-当前全仓：`pnpm test` **460 passed / 4 skipped**。
+当前全仓：`pnpm test` **468 passed / 4 skipped**。
