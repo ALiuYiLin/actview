@@ -115,7 +115,7 @@ new Ctor(props)
 - `class`（string / 数组 / 对象）；
 - `style`（string / 对象 / 数组 / custom property / 清理旧 key）；
 - 事件 `onXxx`（Capture/Once/Passive 后缀、`{ handler, options }`、handler 数组、解绑）；
-- `scopedId` / `scopeId`：特殊键，值（空格分隔）翻译为 `data-v-*` 布尔属性（DOM / SSR 一致），不会生成 `scopedid` 属性；
+- `scopedId` / `scopeId`：特殊键，值（空格分隔）翻译为 `data-v-*` 布尔属性（DOM / SSR 一致），不会生成 `scopedid` 属性；根节点自身 scopedId 与父组件透传值合并去重；
 - `innerHTML` / `textContent`；
 - 布尔属性 / 属性移除；
 - `ref`（元素 ref → DOM，组件 ref → 公开实例）。
@@ -160,7 +160,7 @@ new Ctor(props)
 ## 12. 验证
 
 - `packages/core/__tests__`：renderer 15 + m2 23 + m3 9 + m3b 6 + m3c 4 + class 3 + decorators 4 + guard 3 = 67；
-- 全仓 `pnpm test`：475 passed / 4 skipped；
+- 全仓 `pnpm test`：478 passed / 4 skipped；
 - `pnpm typecheck` / `pnpm build` / `pnpm build:packages` 全绿。
 
 ## 13. 当前限制

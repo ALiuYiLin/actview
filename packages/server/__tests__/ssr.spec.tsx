@@ -74,6 +74,26 @@ describe('@actview/server：renderToString', () => {
     expect(html).not.toContain('scopedid')
   })
 
+  it('组件 scopedId 与子组件根 scopedId 同时输出', async () => {
+    @Component({ name: 'Child' })
+    class Child extends ActViewComponent {
+      render() {
+        return <div scopedId="data-v-child">child</div>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return <Child scopedId="data-v-parent" />
+      }
+    }
+
+    const html = await createSSRApp(App).renderToString()
+    expect(html).toContain('data-v-child')
+    expect(html).toContain('data-v-parent')
+  })
+
   it('Model / Setup / provide-inject', async () => {
     @Model
     class CounterData {

@@ -306,13 +306,21 @@ function canInheritAttrs(vnode: VNode): boolean {
   return typeof vnode.type === 'string' || isComponent(vnode.type)
 }
 
-/** 合并根节点 props 与 attrs；class/style 合并，onXxx 变为数组，其余 attrs 覆盖 */
+/** 合并根节点 props 与 attrs；class/style/scopedId 合并，onXxx 变数组，其余 attrs 覆盖 */
 function mergeProps(
   base: Record<string, any>,
   attrs: Record<string, any>,
 ): Record<string, any> {
   const out: Record<string, any> = { ...base }
+  const scopedIds = [
+    ...normalizeScopedIds(base.scopedId),
+    ...normalizeScopedIds(base.scopeId),
+    ...normalizeScopedIds(attrs.scopedId),
+    ...normalizeScopedIds(attrs.scopeId),
+  ]
+
   for (const key of Object.keys(attrs)) {
+    if (key === 'scopedId' || key === 'scopeId') continue
     const incoming = attrs[key]
     if (key === 'class') {
       out.class = out.class == null ? incoming : [out.class, incoming]
@@ -324,7 +332,19 @@ function mergeProps(
       out[key] = incoming
     }
   }
+
+  if (scopedIds.length > 0) {
+    out.scopedId = [...new Set(scopedIds)].join(' ')
+    delete out.scopeId
+  }
   return out
+}
+
+/** scopedId / scopeId 值归一化：string / string[] → 去重前的 id 数组 */
+function normalizeScopedIds(value: unknown): string[] {
+  if (typeof value === 'string') return value.split(/\s+/).filter(Boolean)
+  if (Array.isArray(value)) return value.flatMap(normalizeScopedIds)
+  return []
 }
 
 /**

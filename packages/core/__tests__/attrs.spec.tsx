@@ -227,6 +227,69 @@ describe('@actview/core：attrs 透传', () => {
     expect(el.hasAttribute('data-v-next')).toBe(true)
   })
 
+  it('子组件根 scopedId 与父组件 scopedId 合并，而不是覆盖', async () => {
+    @Component({ name: 'Child' })
+    class Child extends ActViewComponent {
+      render() {
+        return (
+          <div class="root" scopedId="data-v-child">
+            child
+          </div>
+        )
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      @Ref
+      parentScope = 'data-v-parent'
+
+      render() {
+        return <Child scopedId={this.parentScope} />
+      }
+    }
+
+    const root = mountRoot()
+    const app = createApp(App)
+    const instance = app.mount(root) as unknown as App
+    await nextTick()
+
+    let el = root.querySelector('div')!
+    expect(el.hasAttribute('data-v-child')).toBe(true)
+    expect(el.hasAttribute('data-v-parent')).toBe(true)
+
+    instance.parentScope = 'data-v-next'
+    await nextTick()
+    el = root.querySelector('div')!
+    expect(el.hasAttribute('data-v-child')).toBe(true)
+    expect(el.hasAttribute('data-v-parent')).toBe(false)
+    expect(el.hasAttribute('data-v-next')).toBe(true)
+  })
+
+  it('scopeId 别名与 scopedId 可以混合合并', async () => {
+    @Component({ name: 'Child' })
+    class Child extends ActViewComponent {
+      render() {
+        return <div scopeId="data-v-child">child</div>
+      }
+    }
+
+    @Component({ name: 'App' })
+    class App extends ActViewComponent {
+      render() {
+        return <Child scopedId="data-v-parent" />
+      }
+    }
+
+    const root = mountRoot()
+    createApp(App).mount(root)
+    await nextTick()
+
+    const el = root.querySelector('div')!
+    expect(el.hasAttribute('data-v-child')).toBe(true)
+    expect(el.hasAttribute('data-v-parent')).toBe(true)
+  })
+
   it('Fragment 根节点：不透传并给出开发警告', async () => {
     @Component({ name: 'Child' })
     class Child extends ActViewComponent {
