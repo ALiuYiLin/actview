@@ -1,118 +1,168 @@
-import minimist from 'minimist'
-import c from 'picocolors'
-import { createLogger, type Logger } from 'vite'
-import {
-  build,
-  createServer,
-  disposeMdItInstance,
-  resolveConfig,
-  serve
-} from '.'
-import { version } from '../../package.json'
-import { init } from './init/init'
-import { clearCache } from './markdownToVue'
-import { bindShortcuts } from './shortcuts'
+import { existsSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import path from 'node:path'
+import { createServer, type Plugin } from 'vite'
+import jsxScoped from '@10coding/vite-plugin-jsx-scoped'
+import { actviewMarkdown } from './actviewPlugin'
 
-if (process.env.DEBUG) {
-  Error.stackTraceLimit = Infinity
+const VIRTUAL_SITE = 'virtual:actview-site'
+
+export interface ActPressConfig {
+  title?: string
+  description?: string
+  themeConfig?: Record<string, any>
+  srcDir?: string
 }
 
-const argv: any = minimist(process.argv.slice(2))
-
-Object.keys(argv).forEach((key) => {
-  if (argv[key] === 'true') {
-    argv[key] = true
-  } else if (argv[key] === 'false') {
-    argv[key] = false
-  }
-})
-
-const logVersion = (logger: Logger) => {
-  logger.info(`\n  ${c.green(`${c.bold('vitepress')} v${version}`)}\n`, {
-    clear: !logger.hasWarned
-  })
+export interface ActPressOptions {
+  docsRoot: string
+  config: ActPressConfig
 }
 
-const command = argv._[0]
-const root = argv._[command ? 1 : 0]
-if (root) {
-  argv.root = root
-}
-
-let restartPromise: Promise<void> | undefined
-
-if (!command || command === 'dev') {
-  if (argv.force) {
-    delete argv.force
-    argv.optimizeDeps = { force: true }
-  }
-
-  let config = await resolveConfig(root, argv).catch(
-    logErrorAndExit.bind(null, `failed to resolve config. error:`)
-  )
-  const createDevServer = async (isRestart = true) => {
-    const server = await createServer(root, argv, restartServer, config)
-    function restartServer() {
-      if (!restartPromise) {
-        restartPromise = (async () => {
-          try {
-            config = await resolveConfig(root, argv)
-          } catch (err: any) {
-            logError(`failed to resolve config. error:`, err)
-            return
-          }
-          disposeMdItInstance()
-          clearCache()
-          await server.close()
-          await createDevServer()
-        })().finally(() => {
-          restartPromise = undefined
-        })
-      }
-      return restartPromise
+async function loadSiteConfig(docsRoot: string): Promise<ActPressConfig> {
+  const configPath = path.join(docsRoot, '.vitepress', 'config.ts')
+  try {
+    const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
+    return (mod.default ?? mod) as ActPressConfig
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') {
+      return {}
     }
-    await server.listen(undefined, isRestart)
-    logVersion(server.config.logger)
-    server.printUrls()
-    bindShortcuts(server, restartServer)
+    throw err
   }
-  createDevServer(false).catch(
-    logErrorAndExit.bind(null, `failed to start server. error:`)
-  )
-} else if (command === 'init') {
-  createLogger().info('', { clear: true })
-  init(argv.root)
-} else {
-  if (command === 'build') {
-    build(root, {
-      ...argv,
-      onAfterConfigResolve(siteConfig) {
-        logVersion(siteConfig.logger)
+}
+
+function siteDataPlugin(config: ActPressConfig): Plugin {
+  return {
+    name: 'actview:site-data',
+    enforce: 'pre',
+    resolveId(id) {
+      if (id === VIRTUAL_SITE) return `\0${VIRTUAL_SITE}`
+      return null
+    },
+    load(id) {
+      if (id === `\0${VIRTUAL_SITE}`) {
+        return `export const siteConfig = ${JSON.stringify(config)}`
       }
-    }).catch(logErrorAndExit.bind(null, `build error:`))
-  } else if (command === 'serve' || command === 'preview') {
-    serve(argv).catch(
-      logErrorAndExit.bind(null, `failed to start server. error:`)
-    )
-  } else {
-    logErrorAndExit(`unknown command "${command}".`)
+      return null
+    },
   }
 }
 
-function logErrorAndExit(message: string, err?: any): never {
-  logError(message, err)
-  process.exit(1)
+function htmlFallbackPlugin(entryPath: string): Plugin {
+  return {
+    name: 'actview:html',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url ?? '/'
+        const accept = req.headers.accept ?? ''
+        if (
+          !accept.includes('text/html') ||
+          url.startsWith('/@') ||
+          url.startsWith('/node_modules/') ||
+          url.includes('.')
+        ) {
+          next()
+          return
+        }
+        const html = `<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ActView Docs</title>
+</head>
+<body>
+<div id="app"></div>
+<script type="module" src="/@fs/${entryPath.replace(/\\/g, '/')}"></script>
+</body>
+</html>`
+        res.setHeader('Content-Type', 'text/html')
+        res.end(await server.transformIndexHtml(url, html))
+      })
+    },
+  }
 }
 
-function logError(message: string, err?: any) {
-  const logger = createLogger()
-  logger.error(
-    [
-      c.red(message),
-      err && 'message' in err && err.message,
-      err && 'stack' in err && err.stack
-    ]
-      .filter(Boolean)
-      .join('\n')
-  )
+export async function createActPressOptions(docsRoot: string): Promise<ActPressOptions> {
+  const config = await loadSiteConfig(docsRoot)
+  return { docsRoot, config }
+}
+
+export async function dev(options: ActPressOptions): Promise<void> {
+  const docsRoot = path.resolve(options.docsRoot)
+  const packageRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)))
+  const repoRoot = path.resolve(packageRoot, '../..')
+  const sourceEntry = path.join(packageRoot, 'src/client/entry.ts')
+  const entryTs = fileURLToPath(new URL('../client/entry.ts', import.meta.url))
+  const entryJs = fileURLToPath(new URL('../client/entry.js', import.meta.url))
+  const entryPath = existsSync(sourceEntry)
+    ? sourceEntry
+    : existsSync(entryTs)
+      ? entryTs
+      : entryJs
+  const server = await createServer({
+    root: docsRoot,
+    configFile: false,
+    define: {
+      __DEV__: 'true',
+    },
+    esbuild: {
+      jsx: 'automatic',
+      jsxImportSource: '@actview/jsx',
+    },
+    resolve: {
+      alias: {
+        '@actview/vitepress': path.join(packageRoot, 'src/client/index.ts'),
+        'actview': path.join(repoRoot, 'packages/actview/src/index.ts'),
+        '@actview/core': path.join(repoRoot, 'packages/core/src/index.ts'),
+        '@actview/jsx/jsx-runtime': path.join(repoRoot, 'packages/jsx/src/jsx-runtime.ts'),
+        '@actview/jsx/jsx-dev-runtime': path.join(repoRoot, 'packages/jsx/src/jsx-dev-runtime.ts'),
+        '@actview/jsx': path.join(repoRoot, 'packages/jsx/src/index.ts'),
+        '@actview/reactivity': path.join(repoRoot, 'packages/reactivity/src/index.ts'),
+        '@actview/shared': path.join(repoRoot, 'packages/shared/src/index.ts'),
+      },
+    },
+    plugins: [
+      siteDataPlugin(options.config),
+      jsxScoped(),
+      actviewMarkdown(),
+      htmlFallbackPlugin(entryPath),
+    ],
+    server: {
+      fs: {
+        allow: [docsRoot, path.resolve(docsRoot, '../..')],
+      },
+      open: true,
+    },
+  })
+  await server.listen()
+  server.printUrls()
+}
+
+export function parseCliArgs(argv: string[]): {
+  command: string
+  docsRoot: string
+} {
+  const command = argv[0] && !argv[0].startsWith('-') ? argv[0] : 'dev'
+  const docsRoot = argv[1] ?? process.cwd()
+  return { command, docsRoot }
+}
+
+export async function runCli(argv: string[] = process.argv.slice(2)): Promise<void> {
+  const { command, docsRoot } = parseCliArgs(argv)
+  if (command === 'dev') {
+    const options = await createActPressOptions(docsRoot)
+    await dev(options)
+    return
+  }
+  console.error(`[actview] 暂不支持命令：${command}（当前支持 dev）`)
+  process.exitCode = 1
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  void runCli()
 }

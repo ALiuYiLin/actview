@@ -6,35 +6,40 @@
 - 当前状态：**Phase 1 MVP 已跑通**（Markdown → ActView Page → VNode）
 - 迁移方案：[MIGRATION.md](./MIGRATION.md)
 
-## Phase 1 使用
+## CLI 使用
+
+`playground/vitepress` 是一个标准文档根目录，由默认主题 CLI 启动：
+
+```text
+playground/vitepress/
+  .vitepress/config.ts
+  index.md
+  guide.md
+```
 
 ```bash
 pnpm dev:vitepress
-# http://127.0.0.1:3100
-pnpm build:vitepress
+# http://localhost:5173
 ```
 
-多页面客户端：
+CLI：
 
-```ts
-import { createDocsApp } from '@actview/vitepress'
-
-createDocsApp({
-  pages: import.meta.glob('../docs/**/*.md'),
-  container: '#app',
-  themeConfig: {
-    nav: [{ text: 'Guide', link: '/' }],
-    sidebar: [{ text: 'Guide', items: [{ text: 'Home', link: '/' }] }],
-  },
-})
+```bash
+actview-press dev <docs-root>
 ```
 
-`createDocsApp` 负责：
+当前 CLI 导出：
 
-- 按 pathname 加载对应 `.md` 页面模块；
-- 设置 pageData / headers / sidebar / route；
-- popstate 切页；
-- 挂载完整 `Layout`。
+```json
+{
+  "bin": {
+    "actview-press": "./bin/actview-press.js"
+  }
+}
+```
+
+`playground/vitepress` 不需要写 `main.ts`、`vite.config.ts` 或手动调用
+`createDocsApp`；页面、默认主题、Markdown 插件、scoped CSS 都由 CLI 装配。
 
 示例：
 

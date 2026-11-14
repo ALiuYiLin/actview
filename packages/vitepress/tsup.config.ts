@@ -1,7 +1,12 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/client/index.ts', 'src/node/actviewPlugin.ts'],
+  entry: [
+    'src/client/index.ts',
+    'src/client/entry.ts',
+    'src/node/actviewPlugin.ts',
+    'src/node/cli.ts',
+  ],
   format: ['esm'],
   dts: {
     compilerOptions: {
@@ -12,5 +17,11 @@ export default defineConfig({
   },
   clean: true,
   outDir: 'dist',
-  external: ['actview', '@actview/core', 'vite', /\.css(\?.*)?$/],
+  external: [
+    'actview',
+    '@actview/core',
+    'vite',
+    'virtual:actview-site',
+    /\.css(\?.*)?$/,
+  ],
 })

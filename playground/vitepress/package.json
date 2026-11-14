@@ -4,18 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b tsconfig.json && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -b tsconfig.json"
-  },
-  "dependencies": {
-    "@actview/vitepress": "workspace:*",
-    "actview": "workspace:*"
-  },
-  "devDependencies": {
-    "@10coding/vite-plugin-jsx-scoped": "^0.6.0",
-    "typescript": "~6.0.2",
-    "vite": "^6.4.3"
+    "dev": "pnpm -w dev:vitepress",
+    "build": "pnpm -w build:vitepress"
   }
 }

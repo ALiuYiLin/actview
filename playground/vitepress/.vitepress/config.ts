@@ -1,15 +1,6 @@
-import { createDocsApp } from '@actview/vitepress'
-import './style.css'
-
-const pages = import.meta.glob('../docs/**/*.md') as Record<
-  string,
-  () => Promise<any>
->
-
-createDocsApp({
-  pages,
-  container: '#app',
-  siteData: { title: 'ActView Docs' },
+export default {
+  title: 'ActView Docs',
+  description: 'ActView documentation site',
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/' },
@@ -32,4 +23,4 @@ createDocsApp({
     },
     docFooter: { prev: 'Previous page', next: 'Next page' },
   },
-})
+}

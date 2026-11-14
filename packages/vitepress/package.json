@@ -6,9 +6,15 @@
   "description": "ActView documentation site toolkit (VitePress-derived, Phase 1 MVP)",
   "exports": {
     ".": "./src/client/index.ts",
-    "./plugin": "./src/node/actviewPlugin.ts"
+    "./client": "./src/client/index.ts",
+    "./plugin": "./src/node/actviewPlugin.ts",
+    "./cli": "./src/node/cli.ts"
+  },
+  "bin": {
+    "actview-press": "./bin/actview-press.js"
   },
   "dependencies": {
+    "@10coding/vite-plugin-jsx-scoped": "^0.6.0",
     "@actview/core": "workspace:^",
     "@actview/reactivity": "workspace:^",
     "actview": "workspace:*",
