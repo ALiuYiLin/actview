@@ -2869,14 +2869,14 @@ function setRef(ref2, value) {
   }
   console.warn("[actview] 无效的 ref：期望函数或 Ref 对象。", ref2);
 }
-var __defProp$4 = Object.defineProperty;
-var __getOwnPropDesc$4 = Object.getOwnPropertyDescriptor;
-var __decorateClass$4 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$4(target, key) : target;
+var __defProp$d = Object.defineProperty;
+var __getOwnPropDesc$d = Object.getOwnPropertyDescriptor;
+var __decorateClass$d = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$d(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$4(target, key, result);
+  if (kind && result) __defProp$d(target, key, result);
   return result;
 };
 const suspenseStack = [];
@@ -2924,13 +2924,13 @@ let Suspense = class extends ActViewComponent {
     return createVNode(Fragment, { children: nodes });
   }
 };
-__decorateClass$4([
+__decorateClass$d([
   Ref
 ], Suspense.prototype, "pending", 2);
-__decorateClass$4([
+__decorateClass$d([
   Setup
 ], Suspense.prototype, "setup", 1);
-Suspense = __decorateClass$4([
+Suspense = __decorateClass$d([
   Component({ name: "Suspense" })
 ], Suspense);
 function resolveTeleportTarget(to) {
@@ -3863,14 +3863,14 @@ function resolveContainer(rootContainer) {
   }
   return rootContainer;
 }
-var __defProp$3 = Object.defineProperty;
-var __getOwnPropDesc$3 = Object.getOwnPropertyDescriptor;
-var __decorateClass$3 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$3(target, key) : target;
+var __defProp$c = Object.defineProperty;
+var __getOwnPropDesc$c = Object.getOwnPropertyDescriptor;
+var __decorateClass$c = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$c(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$3(target, key, result);
+  if (kind && result) __defProp$c(target, key, result);
   return result;
 };
 let ErrorBoundary = class extends ActViewComponent {
@@ -3897,23 +3897,23 @@ let ErrorBoundary = class extends ActViewComponent {
     return props.children;
   }
 };
-__decorateClass$3([
+__decorateClass$c([
   Ref
 ], ErrorBoundary.prototype, "error", 2);
-__decorateClass$3([
+__decorateClass$c([
   Setup
 ], ErrorBoundary.prototype, "setup", 1);
-ErrorBoundary = __decorateClass$3([
+ErrorBoundary = __decorateClass$c([
   Component({ name: "ErrorBoundary" })
 ], ErrorBoundary);
-var __defProp$2 = Object.defineProperty;
-var __getOwnPropDesc$2 = Object.getOwnPropertyDescriptor;
-var __decorateClass$2 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$2(target, key) : target;
+var __defProp$b = Object.defineProperty;
+var __getOwnPropDesc$b = Object.getOwnPropertyDescriptor;
+var __decorateClass$b = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$b(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$2(target, key, result);
+  if (kind && result) __defProp$b(target, key, result);
   return result;
 };
 function flattenChildren(children) {
@@ -3955,22 +3955,22 @@ let TransitionGroup = class extends ActViewComponent {
     });
   }
 };
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], TransitionGroup.prototype, "tag", 2);
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], TransitionGroup.prototype, "name", 2);
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], TransitionGroup.prototype, "duration", 2);
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], TransitionGroup.prototype, "class", 2);
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], TransitionGroup.prototype, "style", 2);
-TransitionGroup = __decorateClass$2([
+TransitionGroup = __decorateClass$b([
   Component({ name: "TransitionGroup" })
 ], TransitionGroup);
 let Dynamic = class extends ActViewComponent {
@@ -3980,20 +3980,20 @@ let Dynamic = class extends ActViewComponent {
     return createVNode(is, props, key ?? null);
   }
 };
-__decorateClass$2([
+__decorateClass$b([
   Prop
 ], Dynamic.prototype, "is", 2);
-Dynamic = __decorateClass$2([
+Dynamic = __decorateClass$b([
   Component({ name: "Dynamic" })
 ], Dynamic);
-var __defProp$1 = Object.defineProperty;
-var __getOwnPropDesc$1 = Object.getOwnPropertyDescriptor;
-var __decorateClass$1 = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$1(target, key) : target;
+var __defProp$a = Object.defineProperty;
+var __getOwnPropDesc$a = Object.getOwnPropertyDescriptor;
+var __decorateClass$a = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$a(target, key) : target;
   for (var i = decorators.length - 1, decorator; i >= 0; i--)
     if (decorator = decorators[i])
       result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp$1(target, key, result);
+  if (kind && result) __defProp$a(target, key, result);
   return result;
 };
 function matches(pattern, name) {
@@ -4127,13 +4127,13 @@ let KeepAlive = class extends ActViewComponent {
     return child;
   }
 };
-__decorateClass$1([
+__decorateClass$a([
   Setup
 ], KeepAlive.prototype, "setup", 1);
-__decorateClass$1([
+__decorateClass$a([
   BeforeUnmount
 ], KeepAlive.prototype, "cleanup", 1);
-KeepAlive = __decorateClass$1([
+KeepAlive = __decorateClass$a([
   Component({ name: "KeepAlive" })
 ], KeepAlive);
 function normalizeConfig(config) {
@@ -4148,6 +4148,568 @@ function jsxImpl(type, config, maybeKey) {
 }
 const jsx = jsxImpl;
 const jsxs = jsxImpl;
+function formatValue(value) {
+  if (value === void 0) return "undefined";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+var __defProp$9 = Object.defineProperty;
+var __getOwnPropDesc$9 = Object.getOwnPropertyDescriptor;
+var __decorateClass$9 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$9(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$9(target, key, result);
+  return result;
+};
+let ComponentDetails = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "component", null);
+    __publicField(this, "state", null);
+  }
+  render() {
+    var _a2;
+    const component = this.component;
+    if (!component) {
+      return /* @__PURE__ */ jsx("div", { class: "details empty", children: "Select a component from the tree." });
+    }
+    const data = this.state;
+    return /* @__PURE__ */ jsxs("div", { class: "details", children: [
+      /* @__PURE__ */ jsx("h2", { children: component.name || "Anonymous" }),
+      /* @__PURE__ */ jsxs("div", { class: "meta", children: [
+        "id ",
+        component.id,
+        " · app ",
+        component.appId,
+        " · renders",
+        " ",
+        component.renderCount,
+        " · ",
+        component.elTag || "no host",
+        component.elId ? `#${component.elId}` : ""
+      ] }),
+      !data ? /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Loading state…" }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+        this.renderValueSection("Props", data.props),
+        this.renderValueSection("State", data.state),
+        this.renderValueSection("Computed", data.computed),
+        /* @__PURE__ */ jsxs("div", { class: "section-title", children: [
+          "Models (",
+          ((_a2 = data.models) == null ? void 0 : _a2.length) ?? 0,
+          ")"
+        ] }),
+        !data.models || data.models.length === 0 ? /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "No @Model in this component." }) : data.models.map((model) => /* @__PURE__ */ jsxs("div", { class: "model", children: [
+          /* @__PURE__ */ jsx("div", { class: "model-head", children: model.token }),
+          /* @__PURE__ */ jsx("pre", { class: "value", children: formatValue({
+            state: model.state,
+            computed: model.computed
+          }) })
+        ] }, model.token))
+      ] })
+    ] });
+  }
+  renderValueSection(title, value) {
+    return /* @__PURE__ */ jsxs(Fragment, { children: [
+      /* @__PURE__ */ jsx("div", { class: "section-title", children: title }),
+      /* @__PURE__ */ jsx("pre", { class: "value", children: formatValue(value) })
+    ] });
+  }
+};
+__decorateClass$9([
+  Prop
+], ComponentDetails.prototype, "component", 2);
+__decorateClass$9([
+  Prop
+], ComponentDetails.prototype, "state", 2);
+ComponentDetails = __decorateClass$9([
+  Component({ name: "ComponentDetails" })
+], ComponentDetails);
+var __defProp$8 = Object.defineProperty;
+var __getOwnPropDesc$8 = Object.getOwnPropertyDescriptor;
+var __decorateClass$8 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$8(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$8(target, key, result);
+  return result;
+};
+let ComponentsTab = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "component", null);
+    __publicField(this, "state", null);
+  }
+  render() {
+    return /* @__PURE__ */ jsx("section", { class: "tab-panel", children: /* @__PURE__ */ jsx(ComponentDetails, { component: this.component, state: this.state }) });
+  }
+};
+__decorateClass$8([
+  Prop
+], ComponentsTab.prototype, "component", 2);
+__decorateClass$8([
+  Prop
+], ComponentsTab.prototype, "state", 2);
+ComponentsTab = __decorateClass$8([
+  Component({ name: "ComponentsTab" })
+], ComponentsTab);
+var __defProp$7 = Object.defineProperty;
+var __getOwnPropDesc$7 = Object.getOwnPropertyDescriptor;
+var __decorateClass$7 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$7(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$7(target, key, result);
+  return result;
+};
+let EventsTab = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "events", []);
+  }
+  render() {
+    const events = this.events.slice(-200).reverse();
+    return /* @__PURE__ */ jsxs("section", { class: "tab-panel", children: [
+      /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Recent mount / update / track / trigger events." }),
+      /* @__PURE__ */ jsx("div", { class: "table-wrap", children: events.length === 0 ? /* @__PURE__ */ jsx("div", { class: "tree-empty", children: "No events yet." }) : /* @__PURE__ */ jsxs("table", { children: [
+        /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { children: [
+          /* @__PURE__ */ jsx("th", { children: "time" }),
+          /* @__PURE__ */ jsx("th", { children: "type" }),
+          /* @__PURE__ */ jsx("th", { children: "component" }),
+          /* @__PURE__ */ jsx("th", { children: "key" })
+        ] }) }),
+        /* @__PURE__ */ jsx("tbody", { children: events.map((event) => {
+          var _a2;
+          return /* @__PURE__ */ jsxs("tr", { children: [
+            /* @__PURE__ */ jsx("td", { children: new Date(event.timestamp).toLocaleTimeString() }),
+            /* @__PURE__ */ jsx("td", { class: `event-${event.type}`, children: event.type }),
+            /* @__PURE__ */ jsx("td", { children: event.name || (event.componentId != null ? `#${event.componentId}` : "—") }),
+            /* @__PURE__ */ jsx("td", { children: ((_a2 = event.payload) == null ? void 0 : _a2.key) == null ? "—" : String(event.payload.key) })
+          ] }, event.seq);
+        }) })
+      ] }) })
+    ] });
+  }
+};
+__decorateClass$7([
+  Prop
+], EventsTab.prototype, "events", 2);
+EventsTab = __decorateClass$7([
+  Component({ name: "EventsTab" })
+], EventsTab);
+var __defProp$6 = Object.defineProperty;
+var __getOwnPropDesc$6 = Object.getOwnPropertyDescriptor;
+var __decorateClass$6 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$6(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$6(target, key, result);
+  return result;
+};
+let PanelTabs = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "tab", "components");
+    __publicField(this, "paused", false);
+    __publicField(this, "onSwitch", () => {
+    });
+    __publicField(this, "onTogglePause", () => {
+    });
+  }
+  render() {
+    return /* @__PURE__ */ jsxs("nav", { class: "tabs", children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          "data-tab": "components",
+          class: `tab${this.tab === "components" ? " active" : ""}`,
+          onClick: () => this.onSwitch("components"),
+          children: "Components"
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          "data-tab": "events",
+          class: `tab${this.tab === "events" ? " active" : ""}`,
+          onClick: () => this.onSwitch("events"),
+          children: "Events"
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          "data-tab": "performance",
+          class: `tab${this.tab === "performance" ? " active" : ""}`,
+          onClick: () => this.onSwitch("performance"),
+          children: "Performance"
+        }
+      ),
+      /* @__PURE__ */ jsx("button", { class: "tab right", onClick: this.onTogglePause, children: this.paused ? "Resume events" : "Pause events" })
+    ] });
+  }
+};
+__decorateClass$6([
+  Prop
+], PanelTabs.prototype, "tab", 2);
+__decorateClass$6([
+  Prop
+], PanelTabs.prototype, "paused", 2);
+__decorateClass$6([
+  Prop
+], PanelTabs.prototype, "onSwitch", 2);
+__decorateClass$6([
+  Prop
+], PanelTabs.prototype, "onTogglePause", 2);
+PanelTabs = __decorateClass$6([
+  Component({ name: "PanelTabs" })
+], PanelTabs);
+var __defProp$5 = Object.defineProperty;
+var __getOwnPropDesc$5 = Object.getOwnPropertyDescriptor;
+var __decorateClass$5 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$5(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$5(target, key, result);
+  return result;
+};
+let PerformanceTab = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "records", []);
+  }
+  render() {
+    const records = this.records.slice().sort((a, b) => b.duration - a.duration).slice(0, 200);
+    return /* @__PURE__ */ jsxs("section", { class: "tab-panel", children: [
+      /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Render duration (mount / update)." }),
+      /* @__PURE__ */ jsx("div", { class: "table-wrap", children: records.length === 0 ? /* @__PURE__ */ jsx("div", { class: "tree-empty", children: "No performance records. Set app.config.performance = true." }) : /* @__PURE__ */ jsxs("table", { children: [
+        /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { children: [
+          /* @__PURE__ */ jsx("th", { children: "component" }),
+          /* @__PURE__ */ jsx("th", { children: "kind" }),
+          /* @__PURE__ */ jsx("th", { children: "duration" }),
+          /* @__PURE__ */ jsx("th", { children: "renders" })
+        ] }) }),
+        /* @__PURE__ */ jsx("tbody", { children: records.map((record) => /* @__PURE__ */ jsxs("tr", { children: [
+          /* @__PURE__ */ jsx("td", { children: record.name || `#${record.componentId}` }),
+          /* @__PURE__ */ jsx("td", { children: record.kind }),
+          /* @__PURE__ */ jsxs("td", { children: [
+            record.duration.toFixed(2),
+            " ms"
+          ] }),
+          /* @__PURE__ */ jsx("td", { children: record.renderCount })
+        ] }, `${record.componentId}-${record.timestamp}`)) })
+      ] }) })
+    ] });
+  }
+};
+__decorateClass$5([
+  Prop
+], PerformanceTab.prototype, "records", 2);
+PerformanceTab = __decorateClass$5([
+  Component({ name: "PerformanceTab" })
+], PerformanceTab);
+var __defProp$4 = Object.defineProperty;
+var __getOwnPropDesc$4 = Object.getOwnPropertyDescriptor;
+var __decorateClass$4 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$4(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$4(target, key, result);
+  return result;
+};
+let PanelContent = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "tab", "components");
+    __publicField(this, "paused", false);
+    __publicField(this, "events", []);
+    __publicField(this, "performance", []);
+    __publicField(this, "component", null);
+    __publicField(this, "state", null);
+    __publicField(this, "onSwitch", () => {
+    });
+    __publicField(this, "onTogglePause", () => {
+    });
+  }
+  render() {
+    return /* @__PURE__ */ jsxs("main", { class: "main", children: [
+      /* @__PURE__ */ jsx(
+        PanelTabs,
+        {
+          tab: this.tab,
+          paused: this.paused,
+          onSwitch: this.onSwitch,
+          onTogglePause: this.onTogglePause
+        }
+      ),
+      this.tab === "components" ? /* @__PURE__ */ jsx(ComponentsTab, { component: this.component, state: this.state }) : null,
+      this.tab === "events" ? /* @__PURE__ */ jsx(EventsTab, { events: this.events }) : null,
+      this.tab === "performance" ? /* @__PURE__ */ jsx(PerformanceTab, { records: this.performance }) : null
+    ] });
+  }
+};
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "tab", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "paused", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "events", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "performance", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "component", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "state", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "onSwitch", 2);
+__decorateClass$4([
+  Prop
+], PanelContent.prototype, "onTogglePause", 2);
+PanelContent = __decorateClass$4([
+  Component({ name: "PanelContent" })
+], PanelContent);
+var __defProp$3 = Object.defineProperty;
+var __getOwnPropDesc$3 = Object.getOwnPropertyDescriptor;
+var __decorateClass$3 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$3(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$3(target, key, result);
+  return result;
+};
+let PanelHead = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "apps", []);
+    __publicField(this, "appId", null);
+    __publicField(this, "connected", false);
+    __publicField(this, "contentReady", false);
+    __publicField(this, "statusHint", "");
+    __publicField(this, "onAppChange", () => {
+    });
+    __publicField(this, "onRefresh", () => {
+    });
+    __publicField(this, "onPick", () => {
+    });
+  }
+  render() {
+    return /* @__PURE__ */ jsxs("header", { class: "topbar", children: [
+      /* @__PURE__ */ jsxs("div", { class: "brand", children: [
+        "ActView ",
+        /* @__PURE__ */ jsx("span", { children: "DevTools" })
+      ] }),
+      /* @__PURE__ */ jsx("div", { class: this.statusClass(), children: this.statusText() }),
+      /* @__PURE__ */ jsxs("div", { class: "topbar-actions", children: [
+        /* @__PURE__ */ jsx(
+          "select",
+          {
+            title: "Application",
+            value: this.appId == null ? "" : String(this.appId),
+            onChange: (event) => this.handleAppChange(event),
+            children: this.apps.length === 0 ? /* @__PURE__ */ jsx("option", { value: "", children: "no app" }) : this.apps.map((app) => /* @__PURE__ */ jsx("option", { value: String(app.id), children: app.name || `App ${app.id}` }, app.id))
+          }
+        ),
+        /* @__PURE__ */ jsx("button", { class: "btn", onClick: this.onRefresh, children: "Refresh" }),
+        /* @__PURE__ */ jsx("button", { class: "btn", onClick: this.onPick, children: "Pick element" })
+      ] })
+    ] });
+  }
+  handleAppChange(event) {
+    const value = Number(event.target.value);
+    this.onAppChange(Number.isFinite(value) ? value : null);
+  }
+  statusText() {
+    if (this.statusHint) return this.statusHint;
+    if (this.connected) return "connected";
+    if (this.contentReady) {
+      return "extension injected; waiting for @actview/devtools";
+    }
+    return "no content script; reload the extension and page";
+  }
+  statusClass() {
+    if (this.connected) return "status connected";
+    if (this.contentReady) return "status";
+    return "status disconnected";
+  }
+};
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "apps", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "appId", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "connected", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "contentReady", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "statusHint", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "onAppChange", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "onRefresh", 2);
+__decorateClass$3([
+  Prop
+], PanelHead.prototype, "onPick", 2);
+PanelHead = __decorateClass$3([
+  Component({ name: "PanelHead" })
+], PanelHead);
+var __defProp$2 = Object.defineProperty;
+var __getOwnPropDesc$2 = Object.getOwnPropertyDescriptor;
+var __decorateClass$2 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$2(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$2(target, key, result);
+  return result;
+};
+let ComponentTree = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "components", []);
+    __publicField(this, "appId", null);
+    __publicField(this, "selectedId", null);
+    __publicField(this, "connected", false);
+    __publicField(this, "onComponentSelect", () => {
+    });
+  }
+  render() {
+    const components = this.appId == null ? [] : this.components.filter((component) => component.appId === this.appId);
+    if (components.length === 0) {
+      return /* @__PURE__ */ jsx("div", { class: "tree-empty", children: this.connected ? "No components captured." : "Waiting for @actview/devtools…" });
+    }
+    const ids = new Set(components.map((component) => component.id));
+    const roots = components.filter(
+      (component) => component.parentId == null || !ids.has(component.parentId)
+    );
+    const rendered = /* @__PURE__ */ new Set();
+    const walk = (component, depth) => {
+      if (rendered.has(component.id)) return [];
+      rendered.add(component.id);
+      const children = components.filter(
+        (child) => child.parentId === component.id
+      );
+      const row = /* @__PURE__ */ jsxs(
+        "div",
+        {
+          class: `tree-node${component.id === this.selectedId ? " selected" : ""}`,
+          style: { paddingLeft: `${10 + depth * 14}px` },
+          onClick: () => this.onComponentSelect(component.id),
+          children: [
+            /* @__PURE__ */ jsx("span", { class: "caret", children: children.length > 0 ? "▾" : "·" }),
+            /* @__PURE__ */ jsx("span", { class: "name", children: component.name || "Anonymous" }),
+            /* @__PURE__ */ jsx("span", { class: "badge", title: "render count", children: component.renderCount ?? 0 })
+          ]
+        },
+        component.id
+      );
+      return [row, ...children.flatMap((child) => walk(child, depth + 1))];
+    };
+    return /* @__PURE__ */ jsx(Fragment, { children: roots.flatMap((root) => walk(root, 0)) });
+  }
+};
+__decorateClass$2([
+  Prop
+], ComponentTree.prototype, "components", 2);
+__decorateClass$2([
+  Prop
+], ComponentTree.prototype, "appId", 2);
+__decorateClass$2([
+  Prop
+], ComponentTree.prototype, "selectedId", 2);
+__decorateClass$2([
+  Prop
+], ComponentTree.prototype, "connected", 2);
+__decorateClass$2([
+  Prop
+], ComponentTree.prototype, "onComponentSelect", 2);
+ComponentTree = __decorateClass$2([
+  Component({ name: "ComponentTree" })
+], ComponentTree);
+var __defProp$1 = Object.defineProperty;
+var __getOwnPropDesc$1 = Object.getOwnPropertyDescriptor;
+var __decorateClass$1 = (decorators, target, key, kind) => {
+  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc$1(target, key) : target;
+  for (var i = decorators.length - 1, decorator; i >= 0; i--)
+    if (decorator = decorators[i])
+      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
+  if (kind && result) __defProp$1(target, key, result);
+  return result;
+};
+let PanelSidebar = class extends ActViewComponent {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "components", []);
+    __publicField(this, "appId", null);
+    __publicField(this, "selectedId", null);
+    __publicField(this, "connected", false);
+    __publicField(this, "onComponentSelect", () => {
+    });
+    __publicField(this, "onClearHighlight", () => {
+    });
+  }
+  render() {
+    return /* @__PURE__ */ jsxs("aside", { class: "sidebar", children: [
+      /* @__PURE__ */ jsxs("div", { class: "sidebar-title", children: [
+        "Components",
+        /* @__PURE__ */ jsx("button", { class: "link", onClick: this.onClearHighlight, children: "clear highlight" })
+      ] }),
+      /* @__PURE__ */ jsx("div", { class: "tree", children: /* @__PURE__ */ jsx(
+        ComponentTree,
+        {
+          components: this.components,
+          appId: this.appId,
+          selectedId: this.selectedId,
+          connected: this.connected,
+          onComponentSelect: this.onComponentSelect
+        }
+      ) })
+    ] });
+  }
+};
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "components", 2);
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "appId", 2);
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "selectedId", 2);
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "connected", 2);
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "onComponentSelect", 2);
+__decorateClass$1([
+  Prop
+], PanelSidebar.prototype, "onClearHighlight", 2);
+PanelSidebar = __decorateClass$1([
+  Component({ name: "PanelSidebar" })
+], PanelSidebar);
 var __defProp2 = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -4239,14 +4801,11 @@ let DevtoolsPanel = class extends ActViewComponent {
       { source: PANEL_SOURCE, type, payload },
       () => {
         if (chrome.runtime.lastError) {
-          this.setConnected(false);
+          this.connected = false;
+          this.contentReady = false;
         }
       }
     );
-  }
-  setConnected(connected) {
-    this.connected = connected;
-    if (!connected) this.contentReady = false;
   }
   applySnapshot(payload) {
     var _a2;
@@ -4276,248 +4835,62 @@ let DevtoolsPanel = class extends ActViewComponent {
     if (this.selectedId == null) return;
     this.send("getState", { id: this.selectedId });
   }
-  selectComponent(id) {
-    this.selectedId = id;
-    this.selectedState = null;
-    this.requestState();
-    this.send("highlight", { id });
-  }
-  visibleComponents() {
-    if (this.appId == null) return [];
-    return this.components.filter((component) => component.appId === this.appId);
-  }
-  renderTree() {
-    const components = this.visibleComponents();
-    if (components.length === 0) {
-      return /* @__PURE__ */ jsx("div", { class: "tree-empty", children: this.connected ? "No components captured." : "Waiting for @actview/devtools…" });
-    }
-    const ids = new Set(components.map((component) => component.id));
-    const roots = components.filter(
-      (component) => component.parentId == null || !ids.has(component.parentId)
-    );
-    const rendered = /* @__PURE__ */ new Set();
-    const walk = (component, depth) => {
-      if (rendered.has(component.id)) return [];
-      rendered.add(component.id);
-      const children = components.filter(
-        (child) => child.parentId === component.id
-      );
-      const row = /* @__PURE__ */ jsxs(
-        "div",
-        {
-          class: `tree-node${component.id === this.selectedId ? " selected" : ""}`,
-          style: { paddingLeft: `${10 + depth * 14}px` },
-          onClick: () => this.selectComponent(component.id),
-          children: [
-            /* @__PURE__ */ jsx("span", { class: "caret", children: children.length > 0 ? "▾" : "·" }),
-            /* @__PURE__ */ jsx("span", { class: "name", children: component.name || "Anonymous" }),
-            /* @__PURE__ */ jsx("span", { class: "badge", title: "render count", children: component.renderCount ?? 0 })
-          ]
-        },
-        component.id
-      );
-      return [row, ...children.flatMap((child) => walk(child, depth + 1))];
-    };
-    return roots.flatMap((root) => walk(root, 0));
-  }
-  renderDetails() {
-    var _a2;
-    const component = this.components.find(
-      (item) => item.id === this.selectedId
-    );
-    if (!component) {
-      return /* @__PURE__ */ jsx("div", { class: "details empty", children: "Select a component from the tree." });
-    }
-    const data = this.selectedState;
-    return /* @__PURE__ */ jsxs("div", { class: "details", children: [
-      /* @__PURE__ */ jsx("h2", { children: component.name || "Anonymous" }),
-      /* @__PURE__ */ jsxs("div", { class: "meta", children: [
-        "id ",
-        component.id,
-        " · app ",
-        component.appId,
-        " · renders",
-        " ",
-        component.renderCount,
-        " · ",
-        component.elTag || "no host",
-        component.elId ? `#${component.elId}` : ""
-      ] }),
-      !data ? /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Loading state…" }) : /* @__PURE__ */ jsxs(Fragment, { children: [
-        this.renderValueSection("Props", data.props),
-        this.renderValueSection("State", data.state),
-        this.renderValueSection("Computed", data.computed),
-        /* @__PURE__ */ jsxs("div", { class: "section-title", children: [
-          "Models (",
-          ((_a2 = data.models) == null ? void 0 : _a2.length) ?? 0,
-          ")"
-        ] }),
-        !data.models || data.models.length === 0 ? /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "No @Model in this component." }) : data.models.map((model) => /* @__PURE__ */ jsxs("div", { class: "model", children: [
-          /* @__PURE__ */ jsx("div", { class: "model-head", children: model.token }),
-          /* @__PURE__ */ jsx("pre", { class: "value", children: formatValue({
-            state: model.state,
-            computed: model.computed
-          }) })
-        ] }, model.token))
-      ] })
-    ] });
-  }
-  renderValueSection(title, value) {
-    return /* @__PURE__ */ jsxs(Fragment, { children: [
-      /* @__PURE__ */ jsx("div", { class: "section-title", children: title }),
-      /* @__PURE__ */ jsx("pre", { class: "value", children: formatValue(value) })
-    ] });
-  }
-  renderEvents() {
-    const events = this.events.slice(-200).reverse();
-    if (events.length === 0) {
-      return /* @__PURE__ */ jsx("div", { class: "tree-empty", children: "No events yet." });
-    }
-    return /* @__PURE__ */ jsxs("table", { children: [
-      /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { children: [
-        /* @__PURE__ */ jsx("th", { children: "time" }),
-        /* @__PURE__ */ jsx("th", { children: "type" }),
-        /* @__PURE__ */ jsx("th", { children: "component" }),
-        /* @__PURE__ */ jsx("th", { children: "key" })
-      ] }) }),
-      /* @__PURE__ */ jsx("tbody", { children: events.map((event) => {
-        var _a2;
-        return /* @__PURE__ */ jsxs("tr", { children: [
-          /* @__PURE__ */ jsx("td", { children: new Date(event.timestamp).toLocaleTimeString() }),
-          /* @__PURE__ */ jsx("td", { class: `event-${event.type}`, children: event.type }),
-          /* @__PURE__ */ jsx("td", { children: event.name || (event.componentId != null ? `#${event.componentId}` : "—") }),
-          /* @__PURE__ */ jsx("td", { children: ((_a2 = event.payload) == null ? void 0 : _a2.key) == null ? "—" : String(event.payload.key) })
-        ] }, event.seq);
-      }) })
-    ] });
-  }
-  renderPerformance() {
-    const records = this.performance.slice().sort((a, b) => b.duration - a.duration).slice(0, 200);
-    if (records.length === 0) {
-      return /* @__PURE__ */ jsx("div", { class: "tree-empty", children: "No performance records. Set app.config.performance = true." });
-    }
-    return /* @__PURE__ */ jsxs("table", { children: [
-      /* @__PURE__ */ jsx("thead", { children: /* @__PURE__ */ jsxs("tr", { children: [
-        /* @__PURE__ */ jsx("th", { children: "component" }),
-        /* @__PURE__ */ jsx("th", { children: "kind" }),
-        /* @__PURE__ */ jsx("th", { children: "duration" }),
-        /* @__PURE__ */ jsx("th", { children: "renders" })
-      ] }) }),
-      /* @__PURE__ */ jsx("tbody", { children: records.map((record) => /* @__PURE__ */ jsxs("tr", { children: [
-        /* @__PURE__ */ jsx("td", { children: record.name || `#${record.componentId}` }),
-        /* @__PURE__ */ jsx("td", { children: record.kind }),
-        /* @__PURE__ */ jsxs("td", { children: [
-          record.duration.toFixed(2),
-          " ms"
-        ] }),
-        /* @__PURE__ */ jsx("td", { children: record.renderCount })
-      ] }, `${record.componentId}-${record.timestamp}`)) })
-    ] });
-  }
-  statusText() {
-    if (this.statusHint) return this.statusHint;
-    if (this.connected) return "connected";
-    if (this.contentReady)
-      return "extension injected; waiting for @actview/devtools";
-    return "no content script; reload the extension and page";
-  }
-  statusClass() {
-    if (this.connected) return "status connected";
-    if (this.contentReady) return "status";
-    return "status disconnected";
-  }
-  handleAppChange(event) {
-    const value = Number(event.target.value);
-    this.appId = Number.isFinite(value) ? value : null;
+  handleAppChange(id) {
+    this.appId = id;
     this.selectedId = null;
     this.selectedState = null;
     this.send("clearHighlight");
   }
+  handleSelect(id) {
+    this.selectedId = id;
+    this.selectedState = null;
+    this.tab = "components";
+    this.requestState();
+    this.send("highlight", { id });
+  }
   render() {
+    const component = this.components.find(
+      (item) => item.id === this.selectedId
+    );
     return /* @__PURE__ */ jsxs("div", { class: "app-shell", children: [
-      /* @__PURE__ */ jsxs("header", { class: "topbar", children: [
-        /* @__PURE__ */ jsxs("div", { class: "brand", children: [
-          "ActView ",
-          /* @__PURE__ */ jsx("span", { children: "DevTools" })
-        ] }),
-        /* @__PURE__ */ jsx("div", { class: this.statusClass(), children: this.statusText() }),
-        /* @__PURE__ */ jsxs("div", { class: "topbar-actions", children: [
-          /* @__PURE__ */ jsx(
-            "select",
-            {
-              title: "Application",
-              value: this.appId == null ? "" : String(this.appId),
-              onChange: (event) => this.handleAppChange(event),
-              children: this.apps.length === 0 ? /* @__PURE__ */ jsx("option", { value: "", children: "no app" }) : this.apps.map((app) => /* @__PURE__ */ jsx("option", { value: String(app.id), children: app.name || `App ${app.id}` }))
-            }
-          ),
-          /* @__PURE__ */ jsx("button", { class: "btn", onClick: () => this.send("refresh"), children: "Refresh" }),
-          /* @__PURE__ */ jsx("button", { class: "btn", onClick: () => this.send("startPicker"), children: "Pick element" })
-        ] })
-      ] }),
+      /* @__PURE__ */ jsx(
+        PanelHead,
+        {
+          apps: this.apps,
+          appId: this.appId,
+          connected: this.connected,
+          contentReady: this.contentReady,
+          statusHint: this.statusHint,
+          onAppChange: (id) => this.handleAppChange(id),
+          onRefresh: () => this.send("refresh"),
+          onPick: () => this.send("startPicker")
+        }
+      ),
       /* @__PURE__ */ jsxs("div", { class: "layout", children: [
-        /* @__PURE__ */ jsxs("aside", { class: "sidebar", children: [
-          /* @__PURE__ */ jsxs("div", { class: "sidebar-title", children: [
-            "Components",
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                class: "link",
-                onClick: () => this.send("clearHighlight"),
-                children: "clear highlight"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsx("div", { class: "tree", children: this.renderTree() })
-        ] }),
-        /* @__PURE__ */ jsxs("main", { class: "main", children: [
-          /* @__PURE__ */ jsxs("nav", { class: "tabs", children: [
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                "data-tab": "components",
-                class: `tab${this.tab === "components" ? " active" : ""}`,
-                onClick: () => this.tab = "components",
-                children: "Components"
-              }
-            ),
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                "data-tab": "events",
-                class: `tab${this.tab === "events" ? " active" : ""}`,
-                onClick: () => this.tab = "events",
-                children: "Events"
-              }
-            ),
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                "data-tab": "performance",
-                class: `tab${this.tab === "performance" ? " active" : ""}`,
-                onClick: () => this.tab = "performance",
-                children: "Performance"
-              }
-            ),
-            /* @__PURE__ */ jsx(
-              "button",
-              {
-                class: "tab right",
-                onClick: () => this.paused = !this.paused,
-                children: this.paused ? "Resume events" : "Pause events"
-              }
-            )
-          ] }),
-          this.tab === "components" ? /* @__PURE__ */ jsx("section", { class: "tab-panel", children: this.selectedId == null ? /* @__PURE__ */ jsx("div", { class: "details empty", children: "Select a component from the tree." }) : this.renderDetails() }) : null,
-          this.tab === "events" ? /* @__PURE__ */ jsxs("section", { class: "tab-panel", children: [
-            /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Recent mount / update / track / trigger events." }),
-            /* @__PURE__ */ jsx("div", { class: "table-wrap", children: this.renderEvents() })
-          ] }) : null,
-          this.tab === "performance" ? /* @__PURE__ */ jsxs("section", { class: "tab-panel", children: [
-            /* @__PURE__ */ jsx("div", { class: "panel-hint", children: "Render duration (mount / update)." }),
-            /* @__PURE__ */ jsx("div", { class: "table-wrap", children: this.renderPerformance() })
-          ] }) : null
-        ] })
+        /* @__PURE__ */ jsx(
+          PanelSidebar,
+          {
+            components: this.components,
+            appId: this.appId,
+            selectedId: this.selectedId,
+            connected: this.connected,
+            onComponentSelect: (id) => this.handleSelect(id),
+            onClearHighlight: () => this.send("clearHighlight")
+          }
+        ),
+        /* @__PURE__ */ jsx(
+          PanelContent,
+          {
+            tab: this.tab,
+            paused: this.paused,
+            events: this.events,
+            performance: this.performance,
+            component: component ?? null,
+            state: this.selectedState,
+            onSwitch: (tab) => this.tab = tab,
+            onTogglePause: () => this.paused = !this.paused
+          }
+        )
       ] })
     ] });
   }
@@ -4567,15 +4940,4 @@ __decorateClass([
 DevtoolsPanel = __decorateClass([
   Component({ name: "DevtoolsPanel" })
 ], DevtoolsPanel);
-function formatValue(value) {
-  if (value === void 0) return "undefined";
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
 createApp(DevtoolsPanel).mount("#app");
-export {
-  DevtoolsPanel
-};

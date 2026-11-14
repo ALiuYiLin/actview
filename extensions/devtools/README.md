@@ -57,7 +57,23 @@ manifest.json
 devtools.html / devtools.js    创建 DevTools 面板
 content-script.js              页面 ↔ 扩展桥接
 panel.html / panel.css         面板壳
-src/panel.tsx                  ActView 实现的面板 UI
+src/
+  panel.tsx                    入口：createApp(DevtoolsPanel)
+  PanelApp.tsx                 状态 / chrome bridge 编排
+  types.ts
+  format.ts
+  layout/
+    PanelHead.tsx              topbar：连接 / App / 操作
+    PanelSidebar.tsx           侧栏
+    PanelContent.tsx           主内容：Tabs + Tab 内容
+  components/
+    ComponentTree.tsx          递归组件树
+    ComponentDetails.tsx       props/state/computed/Model
+  tabs/
+    PanelTabs.tsx              Tabs 导航
+    ComponentsTab.tsx
+    EventsTab.tsx
+    PerformanceTab.tsx
 build/panel.js                 构建产物（提交，供 unpacked 加载）
 vite.config.ts                 面板构建配置
 ```
