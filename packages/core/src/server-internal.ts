@@ -18,6 +18,7 @@ export {
   renderComponentRoot,
   setupComponent,
 } from './runtime/component'
+export { hydrate } from './runtime/patch'
 export { isComponent } from './types/component'
 export type { App } from './runtime/app'
 export type {

@@ -97,6 +97,20 @@ const fallbackAppContext: AppContext = {
 }
 
 // ------------------------------------------------------------
+// Hydration
+// ------------------------------------------------------------
+let hydrating = false
+let hydrationCursor: Node | null = null
+
+function hydrationMismatch(expected: string, actual: Node | null): void {
+  if (!__DEV__) return
+  console.warn(
+    `[actview] hydration mismatch：期望 ${expected}，实际 ${actual?.nodeName ?? 'null'}`,
+  )
+}
+
+
+// ------------------------------------------------------------
 // 对外入口
 // ------------------------------------------------------------
 
@@ -118,6 +132,25 @@ export function render(vnode: VNode | null, container: Element): void {
 
   patch(prevVNode, vnode, container, null, null)
   host._vnode = vnode
+}
+
+/**
+ * 客户端 hydration：复用容器内已有 SSR DOM，绑定事件 / refs 并建立 render effect。
+ *
+ * 说明：Phase 3 支持元素 / 文本 / Fragment / 普通组件；Teleport / KeepAlive 等
+ * 复杂边界暂按普通 patch 处理，后续阶段继续补标记与边界匹配。
+ */
+export function hydrate(vnode: VNode, container: Element): void {
+  const host = container as ContainerElement
+  hydrationCursor = container.firstChild
+  hydrating = true
+  try {
+    patch(null, vnode, container, null, null)
+    host._vnode = vnode
+  } finally {
+    hydrating = false
+    hydrationCursor = null
+  }
 }
 
 // ------------------------------------------------------------
@@ -195,6 +228,17 @@ function patchText(
     return
   }
 
+  if (hydrating) {
+    const existing = hydrationCursor
+    if (existing && existing.nodeType === 3) {
+      existing.nodeValue = text
+      n2.el = existing
+      hydrationCursor = existing.nextSibling
+      return
+    }
+    hydrationMismatch('Text', existing)
+  }
+
   const el = document.createTextNode(text)
   n2.el = el
   container.insertBefore(el, anchor)
@@ -224,15 +268,37 @@ function mountElement(
   anchor: Node | null,
   parent: ComponentInternalInstance | null,
 ): void {
-  // SVG 命名空间由 domProps.createElement 统一处理
-  const el = createElement(vnode.type as string)
+  const existing = hydrating ? hydrationCursor : null
+  const tag = String(vnode.type)
+  const matched =
+    existing != null &&
+    existing.nodeType === 1 &&
+    (existing as Element).tagName.toLowerCase() === tag.toLowerCase()
+
+  let el: Element
+  let adopted = false
+  if (hydrating && matched) {
+    el = existing as Element
+    adopted = true
+  } else {
+    if (hydrating) hydrationMismatch(`<${tag}>`, existing)
+    el = createElement(tag)
+  }
   // 先写 el：子节点挂载 / ref 处理都可能回读 vnode.el
   vnode.el = el
 
-  // children 归一化后挂到 el 内部，按顺序 append（anchor = null）
   const children = normalizeChildren(vnode.props?.children)
   vnode.children = children
-  for (const child of children) patch(null, child, el, null, parent)
+
+  if (hydrating && adopted) {
+    const outerCursor = el.nextSibling
+    hydrationCursor = el.firstChild
+    for (const child of children) patch(null, child, el, null, parent)
+    // 服务端多出的子节点不主动删除；游标回到元素之后。
+    hydrationCursor = outerCursor
+  } else {
+    for (const child of children) patch(null, child, el, null, parent)
+  }
 
   // 属性 / class / style / 事件（children / key / ref 由各自路径处理）
   patchProps(el, null, vnode.props)
@@ -240,7 +306,9 @@ function mountElement(
   const ref = resolveRef(vnode)
   if (ref != null) setRef(ref, el)
 
-  container.insertBefore(el, anchor)
+  if (!adopted) {
+    container.insertBefore(el, anchor)
+  }
 }
 
 function patchElement(
@@ -292,7 +360,9 @@ function processFragment(
   n2.children = children
 
   if (n1 == null) {
-    for (const child of children) patch(null, child, container, anchor, parent)
+    for (const child of children) {
+      patch(null, child, container, anchor, parent)
+    }
   } else {
     // 旧 Fragment 的 DOM 范围之后那个节点 = 新 children 的插入锚点；
     // 空 Fragment 无法从 DOM 反查，退回调用方传入的 anchor。
@@ -1350,20 +1420,34 @@ function normalizeChildren(children: unknown): VNode[] {
   flattenInto(children, flat)
 
   const result: VNode[] = []
+  let text = ''
+  const flushText = (): void => {
+    if (!text) return
+    result.push(createTextVNode(text))
+    text = ''
+  }
   for (const child of flat) {
     if (child == null || typeof child === 'boolean') continue
     if (typeof child === 'string' || typeof child === 'number') {
-      result.push(createTextVNode(String(child)))
+      // 相邻文本合并为一个 Text：与服务端 HTML 的文本节点形态一致，
+      // 也让 hydration 后的 diff 能复用同一个 DOM text node。
+      text += String(child)
       continue
     }
+    flushText()
     if (isVNode(child)) {
-      result.push(child)
+      if (child.type === Text) {
+        text += String(child.props?.text ?? '')
+      } else {
+        result.push(child)
+      }
       continue
     }
     throw new Error(
       `[actview] 无效的子节点：期望 VNode / string / number / null，当前为 ${typeof child}`,
     )
   }
+  flushText()
   return result
 }
 
