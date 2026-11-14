@@ -3,6 +3,11 @@
 // ============================================================
 
 import {
+  ErrorBoundary,
+  KeepAlive,
+  Suspense,
+} from '@actview/core'
+import {
   createVNode,
   isVNode,
   isComponent,
@@ -211,6 +216,45 @@ async function renderVNode(
   }
 
   if (isComponent(type)) {
+    // lazy：服务端直接加载最终组件，不渲染 loading / 局部状态
+    const lazyLoad = (type as unknown as {
+      __actview_lazy_load__?: () => Promise<any>
+    }).__actview_lazy_load__
+    if (typeof lazyLoad === 'function') {
+      const component = await lazyLoad()
+      return renderVNode(
+        createVNode(component, vnode.props),
+        parent,
+        context,
+        instances,
+      )
+    }
+
+    // Suspense：服务端等待子树完成，不输出 fallback / display:none 容器
+    if (type === Suspense) {
+      return renderChildren(vnode, parent, context, instances)
+    }
+
+    // KeepAlive：服务端直接渲染当前子树，不创建 DOM storage
+    if (type === KeepAlive) {
+      return renderChildren(vnode, parent, context, instances)
+    }
+
+    // ErrorBoundary：服务端捕获子树错误并输出 fallback
+    if (type === ErrorBoundary) {
+      try {
+        return await renderChildren(vnode, parent, context, instances)
+      } catch (err) {
+        const fallback = vnode.props?.fallback
+        if (typeof fallback === 'function') {
+          return renderChild(fallback(err), parent, context, instances)
+        }
+        return fallback == null
+          ? ''
+          : renderChild(fallback, parent, context, instances)
+      }
+    }
+
     const instance = createComponentInstance(vnode, parent, context)
     instances.push(instance)
     const pending = setupComponent(instance)
@@ -260,9 +304,12 @@ export async function renderToString(
 ): Promise<string> {
   const instances: ComponentInternalInstance[] = []
   const vnode = createVNode(app.component, rootProps)
-  const html = await renderVNode(vnode, null, app._context, instances)
-  app._context.root = instances[0] ?? null
-  // SSR 结束：停止组件 scope（watch/computed），避免请求间泄漏。
-  for (const instance of instances) instance.scope.stop()
-  return html
+  try {
+    const html = await renderVNode(vnode, null, app._context, instances)
+    app._context.root = instances[0] ?? null
+    return html
+  } finally {
+    // SSR 结束：停止组件 scope（watch/computed），避免请求间泄漏。
+    for (const instance of instances) instance.scope.stop()
+  }
 }

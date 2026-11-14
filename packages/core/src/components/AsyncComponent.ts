@@ -133,8 +133,21 @@ export function lazy(
     }
   }
 
-  return Lazy as unknown as ClassComponentCtor
+  const LazyComponent = Lazy as unknown as ClassComponentCtor
+  // SSR / 工具使用：标记 lazy 类并暴露只读加载函数（不进入公开 API 文档）。
+  Object.defineProperty(LazyComponent, '__actview_lazy__', {
+    value: true,
+    configurable: false,
+    enumerable: false,
+  })
+  Object.defineProperty(LazyComponent, '__actview_lazy_load__', {
+    value: load,
+    configurable: false,
+    enumerable: false,
+  })
+  return LazyComponent
 }
+
 
 async function loadWithRetry(
   loader: () => Promise<any>,
