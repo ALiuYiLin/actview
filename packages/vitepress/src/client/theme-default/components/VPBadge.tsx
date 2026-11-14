@@ -1,5 +1,5 @@
 import { ActViewComponent, Component, Prop } from 'actview'
-import '../extract-css/VPBadge.scoped.css'
+import '../extract-css/VPBadge.css'
 export interface VPBadgeProps {
   text?: string
   type?: 'info' | 'tip' | 'warning' | 'danger'

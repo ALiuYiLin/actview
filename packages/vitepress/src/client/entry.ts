@@ -5,6 +5,7 @@ import './theme-default/styles/icons.css'
 import './theme-default/styles/components/vp-doc.css'
 import './theme-default/styles/components/vp-code.css'
 import './theme-default/styles/components/custom-block.css'
+import './theme-default/styles/components/vp-sponsor.css'
 import { createDocsApp } from './app/createDocsApp'
 import { siteConfig } from 'virtual:actview-site'
 

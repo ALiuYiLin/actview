@@ -1,6 +1,5 @@
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPSponsorsGrid, type Sponsor } from './VPSponsorsGrid'
-import '../styles/components/vp-sponsor.scoped.css'
 export interface Sponsors {
   tier?: string
   size?: any

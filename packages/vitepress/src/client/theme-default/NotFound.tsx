@@ -1,5 +1,5 @@
 import { ActViewComponent, Component } from 'actview'
-import { useData } from '../composables/data'
+import { useData } from './composables/data'
 import '../extract-css/NotFound.scoped.css'
 @Component({ name: 'NotFound' })
 export class NotFound extends ActViewComponent {
@@ -22,4 +22,4 @@ export class NotFound extends ActViewComponent {
       </div>
     )
   }
-}
+}
