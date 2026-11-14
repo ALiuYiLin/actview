@@ -82,7 +82,8 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 
 - [docs/architecture.md](docs/architecture.md) — 包结构、目录、公开边界
 - [docs/decorators.md](docs/decorators.md) — 类组件与全部装饰器
-- [docs/dependency-injection.md](docs/dependency-injection.md) — 组件内 Model / @UseModel
+- [docs/dependency-injection.md](docs/dependency-injection.md) — 组件内 Model / @UseModel 设计与限制
+- [docs/model.md](docs/model.md) — @Model 使用指南（scope / Named / 生命周期）
 - [docs/plugins.md](docs/plugins.md) — App 插件契约与官方插件规划
 - [packages/router/README.md](packages/router/README.md) — 路由 v1 使用说明
 - [extensions/devtools/README.md](extensions/devtools/README.md) — Chrome DevTools 扩展 v0.1

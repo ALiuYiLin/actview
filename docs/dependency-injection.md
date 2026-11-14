@@ -1,8 +1,7 @@
 # 组件内数据层与依赖注入
 
 > 状态：第一版已实现（`@Model` / `@UseModel` / `@Scope` / `@Named` / `ComponentScope`），代码与文档均已落地。
-> 范围：组件内数据层 + inherited/app scope + qualifier；不做 Model 构造参数注入。
-> 相关文档：[decorators.md](./decorators.md) · [renderer.md](./renderer.md)
+> 使用教程见 [model.md](./model.md)；本文记录设计、实现与限制。
 
 ## 1. 决策
 

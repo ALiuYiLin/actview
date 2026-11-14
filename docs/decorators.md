@@ -109,7 +109,7 @@ class Counter extends ActViewComponent {
 - Model `@Provide` 写入 owner 注入表，后代可 `@Inject`；跨组件共享值/对象；
 - `@Setup` 支持 async（component / inherited 的 pre/after 阶段会等待 Promise）；
 - app scope 暂不支持 `@Prop` / `@Provide` / async `@Setup`；
-- 完整设计见 [dependency-injection.md](./dependency-injection.md)。
+- 完整设计见 [dependency-injection.md](./dependency-injection.md)，使用教程见 [model.md](./model.md)。
 
 ## 4. 生命周期装饰器
 
