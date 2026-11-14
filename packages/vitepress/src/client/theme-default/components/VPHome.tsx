@@ -1,10 +1,9 @@
-import '../extract-css/VPHome.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { VPHomeContent } from './VPHomeContent'
 import { VPHomeFeatures } from './VPHomeFeatures'
 import { VPHomeHero } from './VPHomeHero'
-
+import '../extract-css/VPHome.scoped.css'
 export interface VPHomeProps {
   content?: any
   homeHeroBefore?: any
@@ -19,17 +18,29 @@ export interface VPHomeProps {
   homeFeaturesAfter?: any
 }
 
+@Component({ name: 'VPHome' })
 export class VPHome extends ActViewComponent<VPHomeProps> {
+  @Prop
   content?: any
+  @Prop
   homeHeroBefore?: any
+  @Prop
   homeHeroInfoBefore?: any
+  @Prop
   homeHeroInfo?: any
+  @Prop
   homeHeroInfoAfter?: any
+  @Prop
   homeHeroActionsAfter?: any
+  @Prop
   homeHeroActionsBeforeActions?: any
+  @Prop
   homeHeroImage?: any
+  @Prop
   homeHeroAfter?: any
+  @Prop
   homeFeaturesBefore?: any
+  @Prop
   homeFeaturesAfter?: any
 
   render() {
@@ -67,21 +78,4 @@ export class VPHome extends ActViewComponent<VPHomeProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'content',
-  'homeHeroBefore',
-  'homeHeroInfoBefore',
-  'homeHeroInfo',
-  'homeHeroInfoAfter',
-  'homeHeroActionsAfter',
-  'homeHeroActionsBeforeActions',
-  'homeHeroImage',
-  'homeHeroAfter',
-  'homeFeaturesBefore',
-  'homeFeaturesAfter',
-] as const) {
-  Prop(VPHome.prototype, key)
-}
-Component({ name: 'VPHome' })(VPHome)
+}

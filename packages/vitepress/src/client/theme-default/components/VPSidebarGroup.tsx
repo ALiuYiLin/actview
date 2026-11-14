@@ -1,12 +1,13 @@
-import '../extract-css/VPSidebarGroup.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPSidebarItem } from './VPSidebarItem'
-
+import '../extract-css/VPSidebarGroup.scoped.css'
 export interface VPSidebarGroupProps {
   items?: any[]
 }
 
+@Component({ name: 'VPSidebarGroup' })
 export class VPSidebarGroup extends ActViewComponent<VPSidebarGroupProps> {
+  @Prop
   items?: any[]
 
   render() {
@@ -20,7 +21,4 @@ export class VPSidebarGroup extends ActViewComponent<VPSidebarGroupProps> {
       </>
     )
   }
-}
-
-Prop(VPSidebarGroup.prototype, 'items')
-Component({ name: 'VPSidebarGroup' })(VPSidebarGroup)
+}

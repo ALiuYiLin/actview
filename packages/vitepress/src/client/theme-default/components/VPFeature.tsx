@@ -1,8 +1,7 @@
-import '../extract-css/VPFeature.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPLink } from './VPLink'
 import { VPImage, type ThemeableImage } from './VPImage'
-
+import '../extract-css/VPFeature.scoped.css'
 export interface VPFeatureProps {
   icon?: string | ThemeableImage | { wrap?: boolean; alt?: string }
   title: string
@@ -13,13 +12,21 @@ export interface VPFeatureProps {
   target?: string
 }
 
+@Component({ name: 'VPFeature' })
 export class VPFeature extends ActViewComponent<VPFeatureProps> {
+  @Prop
   icon?: VPFeatureProps['icon']
+  @Prop
   title = ''
+  @Prop
   details?: string | string[]
+  @Prop
   link?: string
+  @Prop
   linkText?: string
+  @Prop
   rel?: string
+  @Prop
   target?: string
 
   render() {
@@ -76,17 +83,4 @@ export class VPFeature extends ActViewComponent<VPFeatureProps> {
       </VPLink>
     )
   }
-}
-
-for (const key of [
-  'icon',
-  'title',
-  'details',
-  'link',
-  'linkText',
-  'rel',
-  'target',
-] as const) {
-  Prop(VPFeature.prototype, key)
-}
-Component({ name: 'VPFeature' })(VPFeature)
+}

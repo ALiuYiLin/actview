@@ -5,7 +5,9 @@ export interface VPDocAsideCarbonAdsProps {
   carbonAds?: any
 }
 
+@Component({ name: 'VPDocAsideCarbonAds' })
 export class VPDocAsideCarbonAds extends ActViewComponent<VPDocAsideCarbonAdsProps> {
+  @Prop
   carbonAds?: any
 
   render() {
@@ -15,7 +17,4 @@ export class VPDocAsideCarbonAds extends ActViewComponent<VPDocAsideCarbonAdsPro
       </div>
     )
   }
-}
-
-Prop(VPDocAsideCarbonAds.prototype, 'carbonAds')
-Component({ name: 'VPDocAsideCarbonAds' })(VPDocAsideCarbonAds)
+}

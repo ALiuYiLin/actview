@@ -1,14 +1,16 @@
-import '../extract-css/VPLocalNav.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useLayout } from '../composables/layout'
-
+import '../extract-css/VPLocalNav.scoped.css'
 export interface VPLocalNavProps {
   open?: boolean
   onOpenMenu?: () => void
 }
 
+@Component({ name: 'VPLocalNav' })
 export class VPLocalNav extends ActViewComponent<VPLocalNavProps> {
+  @Prop
   open?: boolean
+  @Prop
   onOpenMenu?: () => void
 
   render() {
@@ -35,8 +37,4 @@ export class VPLocalNav extends ActViewComponent<VPLocalNavProps> {
       </div>
     )
   }
-}
-
-Prop(VPLocalNav.prototype, 'open')
-Prop(VPLocalNav.prototype, 'onOpenMenu')
-Component({ name: 'VPLocalNav' })(VPLocalNav)
+}

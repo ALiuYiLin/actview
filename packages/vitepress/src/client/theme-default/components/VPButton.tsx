@@ -1,6 +1,5 @@
-import '../extract-css/VPButton.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
-
+import '../extract-css/VPButton.scoped.css'
 const EXTERNAL_URL_RE = /^https?:\/\//i
 
 export interface VPButtonProps {
@@ -18,13 +17,21 @@ function normalizeHref(href: string): string {
   return href
 }
 
+@Component({ name: 'VPButton' })
 export class VPButton extends ActViewComponent<VPButtonProps> {
+  @Prop
   tag?: string
+  @Prop
   size?: 'medium' | 'big'
+  @Prop
   theme?: 'brand' | 'alt' | 'sponsor'
+  @Prop
   text?: string
+  @Prop
   href?: string
+  @Prop
   target?: string
+  @Prop
   rel?: string
 
   render() {
@@ -45,17 +52,4 @@ export class VPButton extends ActViewComponent<VPButtonProps> {
       </Dynamic>
     )
   }
-}
-
-for (const key of [
-  'tag',
-  'size',
-  'theme',
-  'text',
-  'href',
-  'target',
-  'rel',
-] as const) {
-  Prop(VPButton.prototype, key)
-}
-Component({ name: 'VPButton' })(VPButton)
+}

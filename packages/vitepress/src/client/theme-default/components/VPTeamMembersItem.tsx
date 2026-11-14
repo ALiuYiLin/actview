@@ -1,15 +1,17 @@
-import '../extract-css/VPTeamMembersItem.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPLink } from './VPLink'
 import { VPSocialLinks } from './VPSocialLinks'
-
+import '../extract-css/VPTeamMembersItem.scoped.css'
 export interface VPTeamMembersItemProps {
   size?: 'small' | 'medium'
   member: any
 }
 
+@Component({ name: 'VPTeamMembersItem' })
 export class VPTeamMembersItem extends ActViewComponent<VPTeamMembersItemProps> {
+  @Prop
   size?: 'small' | 'medium'
+  @Prop
   member: any
 
   render() {
@@ -58,8 +60,4 @@ export class VPTeamMembersItem extends ActViewComponent<VPTeamMembersItemProps> 
       </article>
     )
   }
-}
-
-Prop(VPTeamMembersItem.prototype, 'size')
-Prop(VPTeamMembersItem.prototype, 'member')
-Component({ name: 'VPTeamMembersItem' })(VPTeamMembersItem)
+}

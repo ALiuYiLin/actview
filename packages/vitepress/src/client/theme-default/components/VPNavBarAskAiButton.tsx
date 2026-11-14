@@ -1,6 +1,6 @@
-import '../extract-css/VPNavBarAskAiButton.css?scoped'
 import { ActViewComponent, Component } from 'actview'
-
+import '../extract-css/VPNavBarAskAiButton.scoped.css'
+@Component({ name: 'VPNavBarAskAiButton' })
 export class VPNavBarAskAiButton extends ActViewComponent {
   render() {
     return (
@@ -9,6 +9,4 @@ export class VPNavBarAskAiButton extends ActViewComponent {
       </button>
     )
   }
-}
-
-Component({ name: 'VPNavBarAskAiButton' })(VPNavBarAskAiButton)
+}

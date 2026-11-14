@@ -1,5 +1,6 @@
 import { ActViewComponent, Component } from 'actview'
 
+@Component({ name: "VPIconMinus" })
 export class VPIconMinus extends ActViewComponent {
   render() {
     return (
@@ -9,5 +10,3 @@ export class VPIconMinus extends ActViewComponent {
     )
   }
 }
-
-Component({ name: "VPIconMinus" })(VPIconMinus)

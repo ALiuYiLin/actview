@@ -1,17 +1,20 @@
-import '../extract-css/VPSidebarItem.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop, Ref } from 'actview'
 import { useData } from '../composables/data'
 import { isActive } from '../composables/layout'
 import { VPLink } from './VPLink'
-
+import '../extract-css/VPSidebarItem.scoped.css'
 export interface VPSidebarItemProps {
   item: any
   depth?: number
 }
 
+@Component({ name: 'VPSidebarItem' })
 export class VPSidebarItem extends ActViewComponent<VPSidebarItemProps> {
+  @Prop
   item: any
+  @Prop
   depth = 0
+  @Ref
   collapsed = false
 
   render() {
@@ -86,9 +89,4 @@ export class VPSidebarItem extends ActViewComponent<VPSidebarItemProps> {
       </Dynamic>
     )
   }
-}
-
-Prop(VPSidebarItem.prototype, 'item')
-Prop(VPSidebarItem.prototype, 'depth')
-Ref(VPSidebarItem.prototype, 'collapsed')
-Component({ name: 'VPSidebarItem' })(VPSidebarItem)
+}

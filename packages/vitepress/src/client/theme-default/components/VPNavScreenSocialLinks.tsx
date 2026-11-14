@@ -2,6 +2,7 @@ import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
 import { VPSocialLinks } from './VPSocialLinks'
 
+@Component({ name: 'VPNavScreenSocialLinks' })
 export class VPNavScreenSocialLinks extends ActViewComponent {
   render() {
     const { theme } = useData()
@@ -12,6 +13,4 @@ export class VPNavScreenSocialLinks extends ActViewComponent {
       />
     ) : null
   }
-}
-
-Component({ name: 'VPNavScreenSocialLinks' })(VPNavScreenSocialLinks)
+}

@@ -1,6 +1,5 @@
-import '../extract-css/VPSocialLink.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPSocialLink.scoped.css'
 export interface VPSocialLinkProps {
   icon: any
   link: string
@@ -8,10 +7,15 @@ export interface VPSocialLinkProps {
   me?: boolean
 }
 
+@Component({ name: 'VPSocialLink' })
 export class VPSocialLink extends ActViewComponent<VPSocialLinkProps> {
+  @Prop
   icon?: any
+  @Prop
   link = ''
+  @Prop
   ariaLabel?: string
+  @Prop
   me = true
 
   render() {
@@ -32,9 +36,4 @@ export class VPSocialLink extends ActViewComponent<VPSocialLinkProps> {
       </a>
     )
   }
-}
-
-for (const key of ['icon', 'link', 'ariaLabel', 'me'] as const) {
-  Prop(VPSocialLink.prototype, key)
-}
-Component({ name: 'VPSocialLink' })(VPSocialLink)
+}

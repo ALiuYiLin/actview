@@ -1,8 +1,7 @@
-import '../extract-css/VPHomeSponsors.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPSponsors } from './VPSponsors'
 import { VPButton } from './VPButton'
-
+import '../extract-css/VPHomeSponsors.scoped.css'
 export interface VPHomeSponsorsProps {
   message?: string
   actionText?: string
@@ -10,10 +9,15 @@ export interface VPHomeSponsorsProps {
   data?: any[]
 }
 
+@Component({ name: 'VPHomeSponsors' })
 export class VPHomeSponsors extends ActViewComponent<VPHomeSponsorsProps> {
+  @Prop
   message?: string
+  @Prop
   actionText?: string
+  @Prop
   actionLink?: string
+  @Prop
   data?: any[]
 
   render() {
@@ -43,9 +47,4 @@ export class VPHomeSponsors extends ActViewComponent<VPHomeSponsorsProps> {
       </section>
     )
   }
-}
-
-for (const key of ['message', 'actionText', 'actionLink', 'data'] as const) {
-  Prop(VPHomeSponsors.prototype, key)
-}
-Component({ name: 'VPHomeSponsors' })(VPHomeSponsors)
+}

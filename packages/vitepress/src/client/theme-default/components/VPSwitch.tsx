@@ -1,6 +1,5 @@
-import '../extract-css/VPSwitch.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPSwitch.scoped.css'
 export interface VPSwitchProps {
   children?: any
   class?: string
@@ -9,10 +8,15 @@ export interface VPSwitchProps {
   onclick?: () => void
 }
 
+@Component({ name: 'VPSwitch' })
 export class VPSwitch extends ActViewComponent<VPSwitchProps> {
+  @Prop
   class?: string
+  @Prop
   title?: string
+  @Prop
   ariaChecked?: boolean
+  @Prop
   onclick?: () => void
 
   render() {
@@ -32,10 +36,4 @@ export class VPSwitch extends ActViewComponent<VPSwitchProps> {
       </button>
     )
   }
-}
-
-Prop(VPSwitch.prototype, 'class')
-Prop(VPSwitch.prototype, 'title')
-Prop(VPSwitch.prototype, 'ariaChecked')
-Prop(VPSwitch.prototype, 'onclick')
-Component({ name: 'VPSwitch' })(VPSwitch)
+}

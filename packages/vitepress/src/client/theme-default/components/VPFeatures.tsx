@@ -1,7 +1,6 @@
-import '../extract-css/VPFeatures.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPFeature } from './VPFeature'
-
+import '../extract-css/VPFeatures.scoped.css'
 export interface VPFeaturesProps {
   features?: any[]
   class?: string
@@ -15,8 +14,11 @@ function getGrid(length: number): string {
   return ''
 }
 
+@Component({ name: 'VPFeatures' })
 export class VPFeatures extends ActViewComponent<VPFeaturesProps> {
+  @Prop
   features?: any[]
+  @Prop
   class?: string
 
   render() {
@@ -49,8 +51,4 @@ export class VPFeatures extends ActViewComponent<VPFeaturesProps> {
       </div>
     )
   }
-}
-
-Prop(VPFeatures.prototype, 'features')
-Prop(VPFeatures.prototype, 'class')
-Component({ name: 'VPFeatures' })(VPFeatures)
+}

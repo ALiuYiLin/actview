@@ -1,15 +1,18 @@
-import '../extract-css/VPTeamPageSection.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPTeamPageSection.scoped.css'
 export interface VPTeamPageSectionProps {
   title?: any
   lead?: any
   members?: any
 }
 
+@Component({ name: 'VPTeamPageSection' })
 export class VPTeamPageSection extends ActViewComponent<VPTeamPageSectionProps> {
+  @Prop
   title?: any
+  @Prop
   lead?: any
+  @Prop
   members?: any
 
   render() {
@@ -25,9 +28,4 @@ export class VPTeamPageSection extends ActViewComponent<VPTeamPageSectionProps> 
       </section>
     )
   }
-}
-
-Prop(VPTeamPageSection.prototype, 'title')
-Prop(VPTeamPageSection.prototype, 'lead')
-Prop(VPTeamPageSection.prototype, 'members')
-Component({ name: 'VPTeamPageSection' })(VPTeamPageSection)
+}

@@ -1,14 +1,15 @@
-import '../extract-css/VPNavBarMenu.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { VPNavBarMenuGroup } from './VPNavBarMenuGroup'
 import { VPNavBarMenuLink } from './VPNavBarMenuLink'
-
+import '../extract-css/VPNavBarMenu.scoped.css'
 export interface VPNavBarMenuProps {
   class?: string
 }
 
+@Component({ name: 'VPNavBarMenu' })
 export class VPNavBarMenu extends ActViewComponent<VPNavBarMenuProps> {
+  @Prop
   class?: string
 
   render() {
@@ -38,7 +39,4 @@ export class VPNavBarMenu extends ActViewComponent<VPNavBarMenuProps> {
       </nav>
     )
   }
-}
-
-Prop(VPNavBarMenu.prototype, 'class')
-Component({ name: 'VPNavBarMenu' })(VPNavBarMenu)
+}

@@ -1,11 +1,12 @@
-import '../extract-css/VPSkipLink.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPSkipLink.scoped.css'
 export interface VPSkipLinkProps {
   label?: string
 }
 
+@Component({ name: 'VPSkipLink' })
 export class VPSkipLink extends ActViewComponent<VPSkipLinkProps> {
+  @Prop
   label?: string
 
   render() {
@@ -15,7 +16,4 @@ export class VPSkipLink extends ActViewComponent<VPSkipLinkProps> {
       </a>
     )
   }
-}
-
-Prop(VPSkipLink.prototype, 'label')
-Component({ name: 'VPSkipLink' })(VPSkipLink)
+}

@@ -1,15 +1,20 @@
-import '../extract-css/VPNavBarSearchButton.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPNavBarSearchButton.scoped.css'
 export interface VPNavBarSearchButtonProps {
   text?: string
   class?: string
   onclick?: () => void
 }
 
+@Component({ name: 'VPNavBarSearchButton' })
 export class VPNavBarSearchButton extends ActViewComponent<VPNavBarSearchButtonProps> {
+  @Prop
   text?: string
+  @Prop
   onclick?: () => void
+
+  @Prop
+  class: any = undefined
 
   render() {
     return (
@@ -28,9 +33,4 @@ export class VPNavBarSearchButton extends ActViewComponent<VPNavBarSearchButtonP
       </button>
     )
   }
-}
-
-Prop(VPNavBarSearchButton.prototype, 'text')
-Prop(VPNavBarSearchButton.prototype, 'class')
-Prop(VPNavBarSearchButton.prototype, 'onclick')
-Component({ name: 'VPNavBarSearchButton' })(VPNavBarSearchButton)
+}

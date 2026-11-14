@@ -49,10 +49,10 @@ playground/vitepress/
 
 ```ts
 import { actviewMarkdown } from '@actview/vitepress/plugin'
-import actviewScopedCss from '@actview/plugin-scoped'
+import jsxScoped from '@10coding/vite-plugin-jsx-scoped'
 
 export default defineConfig({
-  plugins: [...actviewScopedCss(), actviewMarkdown()],
+  plugins: [jsxScoped(), actviewMarkdown()],
   define: { __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production') },
   esbuild: { jsx: 'automatic', jsxImportSource: '@actview/jsx' },
 })
@@ -108,8 +108,8 @@ LICENSE.vitepress     上游 MIT 许可证
 MIGRATION.md          架构与分阶段迁移方案
 ```
 
-> Scoped CSS 使用 `@actview/plugin-scoped`（与 `@10coding/vite-plugin-scoped-css` 同源方案）。
-> 当前 npm registry 查不到 `@10coding/vite-plugin-scoped-css`，所以暂用 ActView 官方实现。
+> Scoped CSS 使用 `@10coding/vite-plugin-jsx-scoped`；样式文件命名为 `*.scoped.css`，
+> 导入即触发作用域注入。当前通过 pnpm patch 为 Babel 解析器补上 legacy decorators 支持。
 
 ## 下一步
 

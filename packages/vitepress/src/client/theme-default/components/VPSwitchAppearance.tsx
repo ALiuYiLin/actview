@@ -1,8 +1,8 @@
-import '../extract-css/VPSwitchAppearance.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
 import { VPSwitch } from './VPSwitch'
-
+import '../extract-css/VPSwitchAppearance.scoped.css'
+@Component({ name: 'VPSwitchAppearance' })
 export class VPSwitchAppearance extends ActViewComponent {
   render() {
     const { isDark, setAppearance, theme } = useData()
@@ -22,6 +22,4 @@ export class VPSwitchAppearance extends ActViewComponent {
       </VPSwitch>
     )
   }
-}
-
-Component({ name: 'VPSwitchAppearance' })(VPSwitchAppearance)
+}

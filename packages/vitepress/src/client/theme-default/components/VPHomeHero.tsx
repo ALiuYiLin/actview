@@ -11,12 +11,19 @@ export interface VPHomeHeroProps {
   homeHeroImage?: any
 }
 
+@Component({ name: 'VPHomeHero' })
 export class VPHomeHero extends ActViewComponent<VPHomeHeroProps> {
+  @Prop
   homeHeroInfoBefore?: any
+  @Prop
   homeHeroInfo?: any
+  @Prop
   homeHeroInfoAfter?: any
+  @Prop
   homeHeroActionsAfter?: any
+  @Prop
   homeHeroActionsBeforeActions?: any
+  @Prop
   homeHeroImage?: any
 
   render() {
@@ -40,16 +47,4 @@ export class VPHomeHero extends ActViewComponent<VPHomeHeroProps> {
       />
     ) : null
   }
-}
-
-for (const key of [
-  'homeHeroInfoBefore',
-  'homeHeroInfo',
-  'homeHeroInfoAfter',
-  'homeHeroActionsAfter',
-  'homeHeroActionsBeforeActions',
-  'homeHeroImage',
-] as const) {
-  Prop(VPHomeHero.prototype, key)
-}
-Component({ name: 'VPHomeHero' })(VPHomeHero)
+}

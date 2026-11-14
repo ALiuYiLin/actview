@@ -46,20 +46,26 @@ function resolvePageKey(
 
 @Component({ name: 'DocsApp' })
 export class DocsApp extends ActViewComponent<DocsAppOptions> {
+  @Prop
   pages!: Record<string, () => Promise<DocsPageModule>>
+  @Prop
   themeConfig?: Record<string, any>
 
+  @Ref
   page: any = null
+  @Ref
   loading = true
   private popstateHandler = () => {
     void this.load(location.pathname)
   }
 
+  @Mounted
   mounted(): void {
     void this.load(location.pathname)
     window.addEventListener('popstate', this.popstateHandler)
   }
 
+  @Unmounted
   unmounted(): void {
     window.removeEventListener('popstate', this.popstateHandler)
   }
@@ -94,15 +100,6 @@ export class DocsApp extends ActViewComponent<DocsAppOptions> {
     return <Layout page={this.page} />
   }
 }
-
-Prop(DocsApp.prototype, 'pages')
-Prop(DocsApp.prototype, 'themeConfig')
-Ref(DocsApp.prototype, 'page')
-Ref(DocsApp.prototype, 'loading')
-Mounted(DocsApp.prototype, 'mounted')
-Unmounted(DocsApp.prototype, 'unmounted')
-Component({ name: 'DocsApp' })(DocsApp)
-
 export function createDocsApp(options: DocsAppOptions) {
   setThemeData({
     ...(options.siteData ?? {}),

@@ -1,10 +1,9 @@
-import '../extract-css/VPNav.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { useNav } from '../composables/nav'
 import { VPNavBar } from './VPNavBar'
 import { VPNavScreen } from './VPNavScreen'
-
+import '../extract-css/VPNav.scoped.css'
 export interface VPNavProps {
   navBarTitleBefore?: any
   navBarTitleAfter?: any
@@ -14,12 +13,19 @@ export interface VPNavProps {
   navScreenContentAfter?: any
 }
 
+@Component({ name: 'VPNav' })
 export class VPNav extends ActViewComponent<VPNavProps> {
+  @Prop
   navBarTitleBefore?: any
+  @Prop
   navBarTitleAfter?: any
+  @Prop
   navBarContentBefore?: any
+  @Prop
   navBarContentAfter?: any
+  @Prop
   navScreenContentBefore?: any
+  @Prop
   navScreenContentAfter?: any
 
   render() {
@@ -44,16 +50,4 @@ export class VPNav extends ActViewComponent<VPNavProps> {
       </header>
     )
   }
-}
-
-for (const key of [
-  'navBarTitleBefore',
-  'navBarTitleAfter',
-  'navBarContentBefore',
-  'navBarContentAfter',
-  'navScreenContentBefore',
-  'navScreenContentAfter',
-] as const) {
-  Prop(VPNav.prototype, key)
-}
-Component({ name: 'VPNav' })(VPNav)
+}

@@ -1,7 +1,7 @@
-import '../extract-css/VPDocFooterLastUpdated.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
-
+import '../extract-css/VPDocFooterLastUpdated.scoped.css'
+@Component({ name: 'VPDocFooterLastUpdated' })
 export class VPDocFooterLastUpdated extends ActViewComponent {
   render() {
     const { theme, page, lang } = useData()
@@ -23,6 +23,4 @@ export class VPDocFooterLastUpdated extends ActViewComponent {
       </p>
     )
   }
-}
-
-Component({ name: 'VPDocFooterLastUpdated' })(VPDocFooterLastUpdated)
+}

@@ -14,13 +14,23 @@ export interface VPLinkProps {
   [key: string]: any
 }
 
+@Component({ name: 'VPLink' })
 export class VPLink extends ActViewComponent<VPLinkProps> {
+  @Prop
   tag?: string
+  @Prop
   href?: string
+  @Prop
   noIcon?: boolean
+  @Prop
   external?: boolean
+  @Prop
   target?: string
+  @Prop
   rel?: string
+
+  @Prop
+  onclick: any = undefined
 
   render() {
     const props = this.$props
@@ -47,17 +57,4 @@ export class VPLink extends ActViewComponent<VPLinkProps> {
       </Dynamic>
     )
   }
-}
-
-for (const key of [
-  'tag',
-  'href',
-  'noIcon',
-  'external',
-  'target',
-  'rel',
-  'onclick',
-] as const) {
-  Prop(VPLink.prototype, key)
-}
-Component({ name: 'VPLink' })(VPLink)
+}

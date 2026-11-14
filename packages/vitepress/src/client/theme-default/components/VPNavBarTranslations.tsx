@@ -1,10 +1,10 @@
-import '../extract-css/VPNavBarTranslations.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
 import { useLangs } from '../composables/langs'
 import { VPFlyout } from './VPFlyout'
 import { VPMenuLink } from './VPMenuLink'
-
+import '../extract-css/VPNavBarTranslations.scoped.css'
+@Component({ name: 'VPNavBarTranslations' })
 export class VPNavBarTranslations extends ActViewComponent {
   render() {
     const { theme } = useData()
@@ -33,6 +33,4 @@ export class VPNavBarTranslations extends ActViewComponent {
       </VPFlyout>
     )
   }
-}
-
-Component({ name: 'VPNavBarTranslations' })(VPNavBarTranslations)
+}

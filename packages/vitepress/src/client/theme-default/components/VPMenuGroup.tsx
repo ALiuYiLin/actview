@@ -1,14 +1,16 @@
-import '../extract-css/VPMenuGroup.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPMenuLink } from './VPMenuLink'
-
+import '../extract-css/VPMenuGroup.scoped.css'
 export interface VPMenuGroupProps {
   text?: string
   items?: any[]
 }
 
+@Component({ name: 'VPMenuGroup' })
 export class VPMenuGroup extends ActViewComponent<VPMenuGroupProps> {
+  @Prop
   text?: string
+  @Prop
   items?: any[]
 
   render() {
@@ -22,8 +24,4 @@ export class VPMenuGroup extends ActViewComponent<VPMenuGroupProps> {
       </div>
     )
   }
-}
-
-Prop(VPMenuGroup.prototype, 'text')
-Prop(VPMenuGroup.prototype, 'items')
-Component({ name: 'VPMenuGroup' })(VPMenuGroup)
+}

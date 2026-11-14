@@ -1,4 +1,3 @@
-import './extract-css/Layout.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from './composables/data'
 import { useLayout } from './composables/layout'
@@ -10,7 +9,7 @@ import { VPLocalNav } from './components/VPLocalNav'
 import { VPNav } from './components/VPNav'
 import { VPSidebar } from './components/VPSidebar'
 import { VPSkipLink } from './components/VPSkipLink'
-
+import './extract-css/Layout.scoped.css'
 export interface LayoutProps {
   page?: any
   layoutTop?: any
@@ -18,10 +17,77 @@ export interface LayoutProps {
   [key: string]: any
 }
 
+@Component({ name: 'Layout' })
 export class Layout extends ActViewComponent<LayoutProps> {
+  @Prop
   page?: any
+  @Prop
   layoutTop?: any
+  @Prop
   layoutBottom?: any
+
+  @Prop
+  navBarTitleBefore: any = undefined
+
+  @Prop
+  navBarTitleAfter: any = undefined
+
+  @Prop
+  navBarContentBefore: any = undefined
+
+  @Prop
+  navBarContentAfter: any = undefined
+
+  @Prop
+  navScreenContentBefore: any = undefined
+
+  @Prop
+  navScreenContentAfter: any = undefined
+
+  @Prop
+  sidebarNavBefore: any = undefined
+
+  @Prop
+  sidebarNavAfter: any = undefined
+
+  @Prop
+  notFound: any = undefined
+
+  @Prop
+  pageTop: any = undefined
+
+  @Prop
+  pageBottom: any = undefined
+
+  @Prop
+  homeHeroBefore: any = undefined
+
+  @Prop
+  homeHeroInfoBefore: any = undefined
+
+  @Prop
+  homeHeroInfo: any = undefined
+
+  @Prop
+  homeHeroInfoAfter: any = undefined
+
+  @Prop
+  homeHeroActionsAfter: any = undefined
+
+  @Prop
+  homeHeroActionsBeforeActions: any = undefined
+
+  @Prop
+  homeHeroImage: any = undefined
+
+  @Prop
+  homeHeroAfter: any = undefined
+
+  @Prop
+  homeFeaturesBefore: any = undefined
+
+  @Prop
+  homeFeaturesAfter: any = undefined
 
   render() {
     const { frontmatter } = useData()
@@ -74,34 +140,4 @@ export class Layout extends ActViewComponent<LayoutProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'page',
-  'layoutTop',
-  'layoutBottom',
-  'navBarTitleBefore',
-  'navBarTitleAfter',
-  'navBarContentBefore',
-  'navBarContentAfter',
-  'navScreenContentBefore',
-  'navScreenContentAfter',
-  'sidebarNavBefore',
-  'sidebarNavAfter',
-  'notFound',
-  'pageTop',
-  'pageBottom',
-  'homeHeroBefore',
-  'homeHeroInfoBefore',
-  'homeHeroInfo',
-  'homeHeroInfoAfter',
-  'homeHeroActionsAfter',
-  'homeHeroActionsBeforeActions',
-  'homeHeroImage',
-  'homeHeroAfter',
-  'homeFeaturesBefore',
-  'homeFeaturesAfter',
-] as const) {
-  Prop(Layout.prototype, key)
-}
-Component({ name: 'Layout' })(Layout)
+}

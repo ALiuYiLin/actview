@@ -1,16 +1,19 @@
-import '../extract-css/VPNavScreenMenuGroup.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop, Ref } from 'actview'
 import { VPNavScreenMenuGroupLink } from './VPNavScreenMenuGroupLink'
 import { VPNavScreenMenuGroupSection } from './VPNavScreenMenuGroupSection'
-
+import '../extract-css/VPNavScreenMenuGroup.scoped.css'
 export interface VPNavScreenMenuGroupProps {
   text?: string
   items?: any[]
 }
 
+@Component({ name: 'VPNavScreenMenuGroup' })
 export class VPNavScreenMenuGroup extends ActViewComponent<VPNavScreenMenuGroupProps> {
+  @Prop
   text?: string
+  @Prop
   items?: any[]
+  @Ref
   isOpen = false
 
   render() {
@@ -57,9 +60,4 @@ export class VPNavScreenMenuGroup extends ActViewComponent<VPNavScreenMenuGroupP
       </div>
     )
   }
-}
-
-Prop(VPNavScreenMenuGroup.prototype, 'text')
-Prop(VPNavScreenMenuGroup.prototype, 'items')
-Ref(VPNavScreenMenuGroup.prototype, 'isOpen')
-Component({ name: 'VPNavScreenMenuGroup' })(VPNavScreenMenuGroup)
+}

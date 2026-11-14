@@ -1,14 +1,16 @@
-import '../extract-css/VPBadge.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPBadge.scoped.css'
 export interface VPBadgeProps {
   text?: string
   type?: 'info' | 'tip' | 'warning' | 'danger'
   children?: any
 }
 
+@Component({ name: 'VPBadge' })
 export class VPBadge extends ActViewComponent<VPBadgeProps> {
+  @Prop
   text?: string
+  @Prop
   type?: VPBadgeProps['type']
 
   render() {
@@ -19,8 +21,4 @@ export class VPBadge extends ActViewComponent<VPBadgeProps> {
       </span>
     )
   }
-}
-
-Prop(VPBadge.prototype, 'text')
-Prop(VPBadge.prototype, 'type')
-Component({ name: 'VPBadge' })(VPBadge)
+}

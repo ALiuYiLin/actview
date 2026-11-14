@@ -1,14 +1,16 @@
-import '../extract-css/VPTeamMembers.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPTeamMembersItem } from './VPTeamMembersItem'
-
+import '../extract-css/VPTeamMembers.scoped.css'
 export interface VPTeamMembersProps {
   size?: 'small' | 'medium'
   members?: any[]
 }
 
+@Component({ name: 'VPTeamMembers' })
 export class VPTeamMembers extends ActViewComponent<VPTeamMembersProps> {
+  @Prop
   size?: 'small' | 'medium'
+  @Prop
   members?: any[]
 
   render() {
@@ -27,8 +29,4 @@ export class VPTeamMembers extends ActViewComponent<VPTeamMembersProps> {
       </div>
     )
   }
-}
-
-Prop(VPTeamMembers.prototype, 'size')
-Prop(VPTeamMembers.prototype, 'members')
-Component({ name: 'VPTeamMembers' })(VPTeamMembers)
+}

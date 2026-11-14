@@ -1,4 +1,3 @@
-import '../extract-css/VPNavBar.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useLayout } from '../composables/layout'
 import { VPNavBarAppearance } from './VPNavBarAppearance'
@@ -9,7 +8,7 @@ import { VPNavBarSearch } from './VPNavBarSearch'
 import { VPNavBarSocialLinks } from './VPNavBarSocialLinks'
 import { VPNavBarTitle } from './VPNavBarTitle'
 import { VPNavBarTranslations } from './VPNavBarTranslations'
-
+import '../extract-css/VPNavBar.scoped.css'
 export interface VPNavBarProps {
   isScreenOpen?: boolean
   onToggleScreen?: () => void
@@ -19,12 +18,19 @@ export interface VPNavBarProps {
   navBarContentAfter?: any
 }
 
+@Component({ name: 'VPNavBar' })
 export class VPNavBar extends ActViewComponent<VPNavBarProps> {
+  @Prop
   isScreenOpen?: boolean
+  @Prop
   onToggleScreen?: () => void
+  @Prop
   navBarTitleBefore?: any
+  @Prop
   navBarTitleAfter?: any
+  @Prop
   navBarContentBefore?: any
+  @Prop
   navBarContentAfter?: any
 
   render() {
@@ -74,16 +80,4 @@ export class VPNavBar extends ActViewComponent<VPNavBarProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'isScreenOpen',
-  'onToggleScreen',
-  'navBarTitleBefore',
-  'navBarTitleAfter',
-  'navBarContentBefore',
-  'navBarContentAfter',
-] as const) {
-  Prop(VPNavBar.prototype, key)
-}
-Component({ name: 'VPNavBar' })(VPNavBar)
+}

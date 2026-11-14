@@ -1,6 +1,5 @@
-import '../extract-css/VPImage.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPImage.scoped.css'
 export interface VPImageSource {
   src: string
   alt?: string
@@ -25,11 +24,17 @@ function resolveSrc(image: string | VPImageSource): string {
   return typeof image === 'string' ? image : image.src
 }
 
+@Component({ name: 'VPImage' })
 export class VPImage extends ActViewComponent<VPImageProps> {
+  @Prop
   image?: ThemeableImage
+  @Prop
   alt?: string
+  @Prop
   class?: string
+  @Prop
   width?: number | string
+  @Prop
   height?: number | string
 
   render() {
@@ -69,9 +74,4 @@ export class VPImage extends ActViewComponent<VPImageProps> {
       </>
     )
   }
-}
-
-for (const key of ['image', 'alt', 'class', 'width', 'height'] as const) {
-  Prop(VPImage.prototype, key)
-}
-Component({ name: 'VPImage' })(VPImage)
+}

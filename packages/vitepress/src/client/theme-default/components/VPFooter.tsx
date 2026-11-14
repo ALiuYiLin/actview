@@ -1,12 +1,13 @@
-import '../extract-css/VPFooter.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
-
+import '../extract-css/VPFooter.scoped.css'
 export interface VPFooterProps {
   hasSidebar?: boolean
 }
 
+@Component({ name: 'VPFooter' })
 export class VPFooter extends ActViewComponent<VPFooterProps> {
+  @Prop
   hasSidebar?: boolean
 
   render() {
@@ -28,7 +29,4 @@ export class VPFooter extends ActViewComponent<VPFooterProps> {
       </footer>
     )
   }
-}
-
-Prop(VPFooter.prototype, 'hasSidebar')
-Component({ name: 'VPFooter' })(VPFooter)
+}

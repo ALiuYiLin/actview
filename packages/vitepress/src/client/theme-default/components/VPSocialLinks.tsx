@@ -1,16 +1,19 @@
-import '../extract-css/VPSocialLinks.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPSocialLink } from './VPSocialLink'
-
+import '../extract-css/VPSocialLinks.scoped.css'
 export interface VPSocialLinksProps {
   links?: any[]
   me?: boolean
   class?: string
 }
 
+@Component({ name: 'VPSocialLinks' })
 export class VPSocialLinks extends ActViewComponent<VPSocialLinksProps> {
+  @Prop
   links?: any[]
+  @Prop
   me?: boolean
+  @Prop
   class?: string
 
   render() {
@@ -30,9 +33,4 @@ export class VPSocialLinks extends ActViewComponent<VPSocialLinksProps> {
       </div>
     )
   }
-}
-
-Prop(VPSocialLinks.prototype, 'links')
-Prop(VPSocialLinks.prototype, 'me')
-Prop(VPSocialLinks.prototype, 'class')
-Component({ name: 'VPSocialLinks' })(VPSocialLinks)
+}

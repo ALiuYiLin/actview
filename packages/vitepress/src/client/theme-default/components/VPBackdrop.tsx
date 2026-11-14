@@ -1,15 +1,18 @@
-import '../extract-css/VPBackdrop.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPBackdrop.scoped.css'
 export interface VPBackdropProps {
   show?: boolean
   class?: string
   onclick?: (e: MouseEvent) => void
 }
 
+@Component({ name: 'VPBackdrop' })
 export class VPBackdrop extends ActViewComponent<VPBackdropProps> {
+  @Prop
   show?: boolean
+  @Prop
   class?: string
+  @Prop
   onclick?: (e: MouseEvent) => void
 
   render() {
@@ -21,9 +24,4 @@ export class VPBackdrop extends ActViewComponent<VPBackdropProps> {
       />
     )
   }
-}
-
-Prop(VPBackdrop.prototype, 'show')
-Prop(VPBackdrop.prototype, 'class')
-Prop(VPBackdrop.prototype, 'onclick')
-Component({ name: 'VPBackdrop' })(VPBackdrop)
+}

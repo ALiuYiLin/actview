@@ -1,8 +1,7 @@
-import '../extract-css/VPHero.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPButton } from './VPButton'
 import { VPImage, type ThemeableImage } from './VPImage'
-
+import '../extract-css/VPHero.scoped.css'
 export interface VPHeroProps {
   name?: string
   text?: string
@@ -18,18 +17,31 @@ export interface VPHeroProps {
   homeHeroActionsAfter?: any
 }
 
+@Component({ name: 'VPHero' })
 export class VPHero extends ActViewComponent<VPHeroProps> {
+  @Prop
   name?: string
+  @Prop
   text?: string
+  @Prop
   tagline?: string
+  @Prop
   image?: ThemeableImage
+  @Prop
   actions?: any[]
+  @Prop
   class?: string
+  @Prop
   homeHeroInfoBefore?: any
+  @Prop
   homeHeroInfo?: any
+  @Prop
   homeHeroInfoAfter?: any
+  @Prop
   homeHeroActionsBeforeActions?: any
+  @Prop
   homeHeroImage?: any
+  @Prop
   homeHeroActionsAfter?: any
 
   render() {
@@ -91,22 +103,4 @@ export class VPHero extends ActViewComponent<VPHeroProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'name',
-  'text',
-  'tagline',
-  'image',
-  'actions',
-  'class',
-  'homeHeroInfoBefore',
-  'homeHeroInfo',
-  'homeHeroInfoAfter',
-  'homeHeroActionsBeforeActions',
-  'homeHeroImage',
-  'homeHeroActionsAfter',
-] as const) {
-  Prop(VPHero.prototype, key)
-}
-Component({ name: 'VPHero' })(VPHero)
+}

@@ -1,5 +1,6 @@
 import { ActViewComponent, Component } from 'actview'
 
+@Component({ name: "VPIconLanguages" })
 export class VPIconLanguages extends ActViewComponent {
   render() {
     return (
@@ -13,5 +14,3 @@ export class VPIconLanguages extends ActViewComponent {
     )
   }
 }
-
-Component({ name: "VPIconLanguages" })(VPIconLanguages)

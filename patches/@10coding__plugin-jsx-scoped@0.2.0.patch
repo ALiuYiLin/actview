@@ -1,0 +1,26 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 55f01430c6a0f396fa93b132c88b14a8d31f6e75..b43c47617f72bea49610e6b56f5e4f9b2aa13711 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -115,7 +115,7 @@ function analyzeScopedUsage(source, filename = "unknown.jsx") {
+     return empty;
+   }
+   const isTs = /\.tsx?$/i.test(filename);
+-  const parserPlugins = isTs ? ["typescript", "jsx"] : ["jsx"];
++  const parserPlugins = isTs ? ["typescript", "jsx", ["decorators", { decoratorsBeforeExport: true }]] : ["jsx"];
+   let ast;
+   try {
+     ast = (0, import_parser.parse)(source, { sourceType: "module", plugins: parserPlugins, errorRecovery: false });
+diff --git a/dist/index.js b/dist/index.js
+index 0d5a3f13e519843857c856b503f5d3fdd3683d57..48f4c77a383c8880bfbc576d83f9f7da72421436 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -73,7 +73,7 @@ function analyzeScopedUsage(source, filename = "unknown.jsx") {
+     return empty;
+   }
+   const isTs = /\.tsx?$/i.test(filename);
+-  const parserPlugins = isTs ? ["typescript", "jsx"] : ["jsx"];
++  const parserPlugins = isTs ? ["typescript", "jsx", ["decorators", { decoratorsBeforeExport: true }]] : ["jsx"];
+   let ast;
+   try {
+     ast = parse(source, { sourceType: "module", plugins: parserPlugins, errorRecovery: false });

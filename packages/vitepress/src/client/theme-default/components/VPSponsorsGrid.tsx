@@ -11,8 +11,11 @@ export interface VPSponsorsGridProps {
   data?: Sponsor[]
 }
 
+@Component({ name: 'VPSponsorsGrid' })
 export class VPSponsorsGrid extends ActViewComponent<VPSponsorsGridProps> {
+  @Prop
   size?: VPSponsorsGridProps['size']
+  @Prop
   data?: Sponsor[]
 
   render() {
@@ -41,8 +44,4 @@ export class VPSponsorsGrid extends ActViewComponent<VPSponsorsGridProps> {
       </div>
     )
   }
-}
-
-Prop(VPSponsorsGrid.prototype, 'size')
-Prop(VPSponsorsGrid.prototype, 'data')
-Component({ name: 'VPSponsorsGrid' })(VPSponsorsGrid)
+}

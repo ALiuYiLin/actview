@@ -7,9 +7,13 @@ export interface VPDocAsideSponsorsProps {
   data?: any
 }
 
+@Component({ name: 'VPDocAsideSponsors' })
 export class VPDocAsideSponsors extends ActViewComponent<VPDocAsideSponsorsProps> {
+  @Prop
   tier?: string
+  @Prop
   size?: any
+  @Prop
   data?: any
 
   render() {
@@ -24,9 +28,4 @@ export class VPDocAsideSponsors extends ActViewComponent<VPDocAsideSponsorsProps
       </div>
     )
   }
-}
-
-Prop(VPDocAsideSponsors.prototype, 'tier')
-Prop(VPDocAsideSponsors.prototype, 'size')
-Prop(VPDocAsideSponsors.prototype, 'data')
-Component({ name: 'VPDocAsideSponsors' })(VPDocAsideSponsors)
+}

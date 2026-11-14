@@ -1,17 +1,19 @@
-import '../extract-css/VPNavBarTitle.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { useLangs } from '../composables/langs'
 import { useLayout } from '../composables/layout'
 import { VPImage } from './VPImage'
-
+import '../extract-css/VPNavBarTitle.scoped.css'
 export interface VPNavBarTitleProps {
   navBarTitleBefore?: any
   navBarTitleAfter?: any
 }
 
+@Component({ name: 'VPNavBarTitle' })
 export class VPNavBarTitle extends ActViewComponent<VPNavBarTitleProps> {
+  @Prop
   navBarTitleBefore?: any
+  @Prop
   navBarTitleAfter?: any
 
   render() {
@@ -40,8 +42,4 @@ export class VPNavBarTitle extends ActViewComponent<VPNavBarTitleProps> {
       </div>
     )
   }
-}
-
-Prop(VPNavBarTitle.prototype, 'navBarTitleBefore')
-Prop(VPNavBarTitle.prototype, 'navBarTitleAfter')
-Component({ name: 'VPNavBarTitle' })(VPNavBarTitle)
+}

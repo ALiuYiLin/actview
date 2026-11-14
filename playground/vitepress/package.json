@@ -10,11 +10,11 @@
     "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@actview/plugin-scoped": "^1.1.1",
     "@actview/vitepress": "workspace:*",
     "actview": "workspace:*"
   },
   "devDependencies": {
+    "@10coding/vite-plugin-jsx-scoped": "^0.6.0",
     "typescript": "~6.0.2",
     "vite": "^6.4.3"
   }

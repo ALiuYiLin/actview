@@ -19,7 +19,9 @@ function childActive(navItem: any, page: any): boolean {
   return (navItem.items ?? []).some((item: any) => childActive(item, page))
 }
 
+@Component({ name: 'VPNavBarMenuGroup' })
 export class VPNavBarMenuGroup extends ActViewComponent<VPNavBarMenuGroupProps> {
+  @Prop
   item: any
 
   render() {
@@ -36,7 +38,4 @@ export class VPNavBarMenuGroup extends ActViewComponent<VPNavBarMenuGroupProps> 
       />
     )
   }
-}
-
-Prop(VPNavBarMenuGroup.prototype, 'item')
-Component({ name: 'VPNavBarMenuGroup' })(VPNavBarMenuGroup)
+}

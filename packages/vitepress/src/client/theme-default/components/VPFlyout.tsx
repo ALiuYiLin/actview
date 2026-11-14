@@ -1,7 +1,6 @@
-import '../extract-css/VPFlyout.css?scoped'
 import { ActViewComponent, Component, Prop, Ref } from 'actview'
 import { VPMenu } from './VPMenu'
-
+import '../extract-css/VPFlyout.scoped.css'
 export interface VPFlyoutProps {
   icon?: string
   button?: string
@@ -11,12 +10,19 @@ export interface VPFlyoutProps {
   class?: string
 }
 
+@Component({ name: 'VPFlyout' })
 export class VPFlyout extends ActViewComponent<VPFlyoutProps> {
+  @Prop
   icon?: string
+  @Prop
   button?: string
+  @Prop
   label?: string
+  @Prop
   items?: any[]
+  @Prop
   class?: string
+  @Ref
   open = false
 
   render() {
@@ -53,10 +59,4 @@ export class VPFlyout extends ActViewComponent<VPFlyoutProps> {
       </div>
     )
   }
-}
-
-for (const key of ['icon', 'button', 'label', 'items', 'class'] as const) {
-  Prop(VPFlyout.prototype, key)
-}
-Ref(VPFlyout.prototype, 'open')
-Component({ name: 'VPFlyout' })(VPFlyout)
+}

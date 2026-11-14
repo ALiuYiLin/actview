@@ -7,9 +7,13 @@ export interface VPPageProps {
   pageBottom?: any
 }
 
+@Component({ name: 'VPPage' })
 export class VPPage extends ActViewComponent<VPPageProps> {
+  @Prop
   content?: any
+  @Prop
   pageTop?: any
+  @Prop
   pageBottom?: any
 
   render() {
@@ -24,9 +28,4 @@ export class VPPage extends ActViewComponent<VPPageProps> {
       </div>
     )
   }
-}
-
-Prop(VPPage.prototype, 'content')
-Prop(VPPage.prototype, 'pageTop')
-Prop(VPPage.prototype, 'pageBottom')
-Component({ name: 'VPPage' })(VPPage)
+}

@@ -1,15 +1,18 @@
-import '../extract-css/VPNavBarHamburger.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPNavBarHamburger.scoped.css'
 export interface VPNavBarHamburgerProps {
   active?: boolean
   class?: string
   onclick?: () => void
 }
 
+@Component({ name: 'VPNavBarHamburger' })
 export class VPNavBarHamburger extends ActViewComponent<VPNavBarHamburgerProps> {
+  @Prop
   active?: boolean
+  @Prop
   class?: string
+  @Prop
   onclick?: () => void
 
   render() {
@@ -33,9 +36,4 @@ export class VPNavBarHamburger extends ActViewComponent<VPNavBarHamburgerProps> 
       </button>
     )
   }
-}
-
-Prop(VPNavBarHamburger.prototype, 'active')
-Prop(VPNavBarHamburger.prototype, 'class')
-Prop(VPNavBarHamburger.prototype, 'onclick')
-Component({ name: 'VPNavBarHamburger' })(VPNavBarHamburger)
+}

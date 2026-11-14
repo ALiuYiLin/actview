@@ -1,10 +1,10 @@
-import '../extract-css/VPHomeContent.css?scoped'
 import { ActViewComponent, Component } from 'actview'
-
+import '../extract-css/VPHomeContent.scoped.css'
 export interface VPHomeContentProps {
   children?: any
 }
 
+@Component({ name: 'VPHomeContent' })
 export class VPHomeContent extends ActViewComponent<VPHomeContentProps> {
   render() {
     const width = typeof window !== 'undefined' ? window.innerWidth : 0
@@ -21,6 +21,4 @@ export class VPHomeContent extends ActViewComponent<VPHomeContentProps> {
       </div>
     )
   }
-}
-
-Component({ name: 'VPHomeContent' })(VPHomeContent)
+}

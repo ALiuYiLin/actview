@@ -1,9 +1,8 @@
-import '../extract-css/VPDocAside.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { VPDocAsideCarbonAds } from './VPDocAsideCarbonAds'
 import { VPDocAsideOutline } from './VPDocAsideOutline'
-
+import '../extract-css/VPDocAside.scoped.css'
 export interface VPDocAsideProps {
   asideTop?: any
   asideBottom?: any
@@ -13,12 +12,19 @@ export interface VPDocAsideProps {
   asideAdsAfter?: any
 }
 
+@Component({ name: 'VPDocAside' })
 export class VPDocAside extends ActViewComponent<VPDocAsideProps> {
+  @Prop
   asideTop?: any
+  @Prop
   asideBottom?: any
+  @Prop
   asideOutlineBefore?: any
+  @Prop
   asideOutlineAfter?: any
+  @Prop
   asideAdsBefore?: any
+  @Prop
   asideAdsAfter?: any
 
   render() {
@@ -40,16 +46,4 @@ export class VPDocAside extends ActViewComponent<VPDocAsideProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'asideTop',
-  'asideBottom',
-  'asideOutlineBefore',
-  'asideOutlineAfter',
-  'asideAdsBefore',
-  'asideAdsAfter',
-] as const) {
-  Prop(VPDocAside.prototype, key)
-}
-Component({ name: 'VPDocAside' })(VPDocAside)
+}

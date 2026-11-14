@@ -3,3 +3,6 @@ packages:
   - 'playground/*'
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  '@10coding/plugin-jsx-scoped@0.2.0': patches/@10coding__plugin-jsx-scoped@0.2.0.patch
+  '@10coding/vite-plugin-jsx-scoped@0.6.0': patches/@10coding__vite-plugin-jsx-scoped@0.6.0.patch

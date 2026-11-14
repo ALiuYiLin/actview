@@ -1,15 +1,16 @@
-import '../extract-css/VPNavScreenMenuLink.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { isActive } from '../composables/layout'
 import { useNav } from '../composables/nav'
 import { VPLink } from './VPLink'
-
+import '../extract-css/VPNavScreenMenuLink.scoped.css'
 export interface VPNavScreenMenuLinkProps {
   item: any
 }
 
+@Component({ name: 'VPNavScreenMenuLink' })
 export class VPNavScreenMenuLink extends ActViewComponent<VPNavScreenMenuLinkProps> {
+  @Prop
   item: any
 
   render() {
@@ -31,7 +32,4 @@ export class VPNavScreenMenuLink extends ActViewComponent<VPNavScreenMenuLinkPro
       </VPLink>
     )
   }
-}
-
-Prop(VPNavScreenMenuLink.prototype, 'item')
-Component({ name: 'VPNavScreenMenuLink' })(VPNavScreenMenuLink)
+}

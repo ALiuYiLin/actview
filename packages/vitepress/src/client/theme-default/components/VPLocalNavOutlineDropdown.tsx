@@ -1,9 +1,10 @@
-import '../extract-css/VPLocalNavOutlineDropdown.css?scoped'
 import { ActViewComponent, Component, Ref } from 'actview'
 import { useLayout } from '../composables/layout'
 import { VPDocOutlineItem } from './VPDocOutlineItem'
-
+import '../extract-css/VPLocalNavOutlineDropdown.scoped.css'
+@Component({ name: 'VPLocalNavOutlineDropdown' })
 export class VPLocalNavOutlineDropdown extends ActViewComponent {
+  @Ref
   open = false
 
   render() {
@@ -22,7 +23,4 @@ export class VPLocalNavOutlineDropdown extends ActViewComponent {
       </div>
     )
   }
-}
-
-Ref(VPLocalNavOutlineDropdown.prototype, 'open')
-Component({ name: 'VPLocalNavOutlineDropdown' })(VPLocalNavOutlineDropdown)
+}

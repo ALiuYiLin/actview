@@ -1,11 +1,10 @@
-import '../extract-css/VPDoc.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { useLayout } from '../composables/layout'
 import { route } from '../composables/route'
 import { VPDocAside } from './VPDocAside'
 import { VPDocFooter } from './VPDocFooter'
-
+import '../extract-css/VPDoc.scoped.css'
 export interface VPDocProps {
   content?: any
   docTop?: any
@@ -21,18 +20,31 @@ export interface VPDocProps {
   asideAdsAfter?: any
 }
 
+@Component({ name: 'VPDoc' })
 export class VPDoc extends ActViewComponent<VPDocProps> {
+  @Prop
   content?: any
+  @Prop
   docTop?: any
+  @Prop
   docBottom?: any
+  @Prop
   docFooterBefore?: any
+  @Prop
   docBefore?: any
+  @Prop
   docAfter?: any
+  @Prop
   asideTop?: any
+  @Prop
   asideBottom?: any
+  @Prop
   asideOutlineBefore?: any
+  @Prop
   asideOutlineAfter?: any
+  @Prop
   asideAdsBefore?: any
+  @Prop
   asideAdsAfter?: any
 
   render() {
@@ -104,22 +116,4 @@ export class VPDoc extends ActViewComponent<VPDocProps> {
       </div>
     )
   }
-}
-
-for (const key of [
-  'content',
-  'docTop',
-  'docBottom',
-  'docFooterBefore',
-  'docBefore',
-  'docAfter',
-  'asideTop',
-  'asideBottom',
-  'asideOutlineBefore',
-  'asideOutlineAfter',
-  'asideAdsBefore',
-  'asideAdsAfter',
-] as const) {
-  Prop(VPDoc.prototype, key)
-}
-Component({ name: 'VPDoc' })(VPDoc)
+}

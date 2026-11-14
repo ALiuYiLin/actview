@@ -3,6 +3,7 @@ import { useData } from '../composables/data'
 import { VPNavScreenMenuGroup } from './VPNavScreenMenuGroup'
 import { VPNavScreenMenuLink } from './VPNavScreenMenuLink'
 
+@Component({ name: 'VPNavScreenMenu' })
 export class VPNavScreenMenu extends ActViewComponent {
   render() {
     const { theme } = useData()
@@ -36,6 +37,4 @@ export class VPNavScreenMenu extends ActViewComponent {
       </nav>
     )
   }
-}
-
-Component({ name: 'VPNavScreenMenu' })(VPNavScreenMenu)
+}

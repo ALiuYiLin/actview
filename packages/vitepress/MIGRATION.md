@@ -245,7 +245,7 @@ SSR 是第二阶段目标；建议先做纯 SPA 文档站验证主题和 Markdow
 - ✅ 新建 `@actview/vitepress` 包配置；
 - ✅ ActView 实现直接落在 `src/client` / `src/node` / `src/shared`，不再使用独立的 `src/actview` 目录；
 - ✅ 已下线的 `Layout.vue` 改为 `src/client/theme-default/Layout.tsx`；
-- ✅ 引入 `theme-default/extract-css` 的完整剥离 CSS，并接入 `@actview/plugin-scoped`（`@10coding/vite-plugin-scoped-css` 当前 registry 不可用）。
+- ✅ 引入 `theme-default/extract-css` 的完整剥离 CSS（`*.scoped.css`），接入 `@10coding/vite-plugin-jsx-scoped`（通过 pnpm patch 支持 legacy decorators）。
 
 ### Phase 1：Markdown → ActView 页面（MVP，已完成）
 

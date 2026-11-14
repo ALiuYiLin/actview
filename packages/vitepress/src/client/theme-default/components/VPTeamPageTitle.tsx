@@ -1,13 +1,15 @@
-import '../extract-css/VPTeamPageTitle.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPTeamPageTitle.scoped.css'
 export interface VPTeamPageTitleProps {
   title?: any
   lead?: any
 }
 
+@Component({ name: 'VPTeamPageTitle' })
 export class VPTeamPageTitle extends ActViewComponent<VPTeamPageTitleProps> {
+  @Prop
   title?: any
+  @Prop
   lead?: any
 
   render() {
@@ -18,8 +20,4 @@ export class VPTeamPageTitle extends ActViewComponent<VPTeamPageTitleProps> {
       </div>
     )
   }
-}
-
-Prop(VPTeamPageTitle.prototype, 'title')
-Prop(VPTeamPageTitle.prototype, 'lead')
-Component({ name: 'VPTeamPageTitle' })(VPTeamPageTitle)
+}

@@ -1,17 +1,19 @@
-import '../extract-css/VPMenuLink.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { isActive } from '../composables/layout'
 import { VPLink } from './VPLink'
-
+import '../extract-css/VPMenuLink.scoped.css'
 export interface VPMenuLinkProps {
   item: any
   rel?: string
   [key: string]: any
 }
 
+@Component({ name: 'VPMenuLink' })
 export class VPMenuLink extends ActViewComponent<VPMenuLinkProps> {
+  @Prop
   item: any
+  @Prop
   rel?: string
 
   render() {
@@ -36,8 +38,4 @@ export class VPMenuLink extends ActViewComponent<VPMenuLinkProps> {
       </div>
     )
   }
-}
-
-Prop(VPMenuLink.prototype, 'item')
-Prop(VPMenuLink.prototype, 'rel')
-Component({ name: 'VPMenuLink' })(VPMenuLink)
+}

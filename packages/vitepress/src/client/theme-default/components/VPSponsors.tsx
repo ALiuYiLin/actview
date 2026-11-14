@@ -1,7 +1,6 @@
-import '../styles/components/vp-sponsor.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPSponsorsGrid, type Sponsor } from './VPSponsorsGrid'
-
+import '../styles/components/vp-sponsor.scoped.css'
 export interface Sponsors {
   tier?: string
   size?: any
@@ -15,10 +14,15 @@ export interface VPSponsorsProps {
   data?: Sponsors[] | Sponsor[]
 }
 
+@Component({ name: 'VPSponsors' })
 export class VPSponsors extends ActViewComponent<VPSponsorsProps> {
+  @Prop
   mode?: 'normal' | 'aside'
+  @Prop
   tier?: string
+  @Prop
   size?: any
+  @Prop
   data?: Sponsors[] | Sponsor[]
 
   render() {
@@ -41,9 +45,4 @@ export class VPSponsors extends ActViewComponent<VPSponsorsProps> {
       </div>
     )
   }
-}
-
-for (const key of ['mode', 'tier', 'size', 'data'] as const) {
-  Prop(VPSponsors.prototype, key)
-}
-Component({ name: 'VPSponsors' })(VPSponsors)
+}

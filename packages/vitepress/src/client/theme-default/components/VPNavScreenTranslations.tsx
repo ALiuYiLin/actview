@@ -2,7 +2,9 @@ import { ActViewComponent, Component, Ref } from 'actview'
 import { useLangs } from '../composables/langs'
 import { VPLink } from './VPLink'
 
+@Component({ name: 'VPNavScreenTranslations' })
 export class VPNavScreenTranslations extends ActViewComponent {
+  @Ref
   isOpen = false
 
   render() {
@@ -35,7 +37,4 @@ export class VPNavScreenTranslations extends ActViewComponent {
       </div>
     )
   }
-}
-
-Ref(VPNavScreenTranslations.prototype, 'isOpen')
-Component({ name: 'VPNavScreenTranslations' })(VPNavScreenTranslations)
+}

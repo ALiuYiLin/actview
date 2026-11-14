@@ -1,9 +1,9 @@
-import '../extract-css/VPDocAsideOutline.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
 import { useLayout } from '../composables/layout'
 import { VPDocOutlineItem } from './VPDocOutlineItem'
-
+import '../extract-css/VPDocAsideOutline.scoped.css'
+@Component({ name: 'VPDocAsideOutline' })
 export class VPDocAsideOutline extends ActViewComponent {
   render() {
     const { theme } = useData()
@@ -30,6 +30,4 @@ export class VPDocAsideOutline extends ActViewComponent {
       </nav>
     )
   }
-}
-
-Component({ name: 'VPDocAsideOutline' })(VPDocAsideOutline)
+}

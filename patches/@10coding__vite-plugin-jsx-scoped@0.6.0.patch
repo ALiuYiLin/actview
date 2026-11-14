@@ -1,0 +1,15 @@
+diff --git a/dist/index.js b/dist/index.js
+index 0e71e4e50d030210bff15bbc533acd22dd7b12ef..8e7761737b99aa44025709bdd5b1468e44c3c07c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -215,8 +215,8 @@ function resolveAliasPath(alias, specifier, root) {
+   return null;
+ }
+ function parserPluginsFor(filename) {
+-  if (/\.tsx?$/i.test(filename)) return ["typescript", "jsx"];
+-  if (/\.md$/i.test(filename)) return ["typescript", "jsx"];
++  if (/\.tsx?$/i.test(filename)) return ["typescript", "jsx", ["decorators", { decoratorsBeforeExport: true }]];
++  if (/\.md$/i.test(filename)) return ["typescript", "jsx", ["decorators", { decoratorsBeforeExport: true }]];
+   return ["jsx"];
+ }
+ function asError(error) {

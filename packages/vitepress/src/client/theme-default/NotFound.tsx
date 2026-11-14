@@ -1,7 +1,7 @@
-import '../extract-css/NotFound.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
-
+import '../extract-css/NotFound.scoped.css'
+@Component({ name: 'NotFound' })
 export class NotFound extends ActViewComponent {
   render() {
     const { theme } = useData()
@@ -22,6 +22,4 @@ export class NotFound extends ActViewComponent {
       </div>
     )
   }
-}
-
-Component({ name: 'NotFound' })(NotFound)
+}

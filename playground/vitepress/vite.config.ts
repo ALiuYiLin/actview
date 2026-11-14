@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
-import actviewScopedCss from '@actview/plugin-scoped'
+import jsxScoped from '@10coding/vite-plugin-jsx-scoped'
 import { actviewMarkdown } from '@actview/vitepress/plugin'
 
 const pkg = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 
 export default defineConfig(({ mode }) => ({
-  plugins: [...actviewScopedCss(), actviewMarkdown()],
+  plugins: [jsxScoped(), actviewMarkdown()],
   define: {
     __DEV__: JSON.stringify(mode !== 'production'),
   },

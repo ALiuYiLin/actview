@@ -1,18 +1,21 @@
-import '../extract-css/VPNavScreen.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { VPNavScreenAppearance } from './VPNavScreenAppearance'
 import { VPNavScreenMenu } from './VPNavScreenMenu'
 import { VPNavScreenSocialLinks } from './VPNavScreenSocialLinks'
-
+import '../extract-css/VPNavScreen.scoped.css'
 export interface VPNavScreenProps {
   open?: boolean
   navScreenContentBefore?: any
   navScreenContentAfter?: any
 }
 
+@Component({ name: 'VPNavScreen' })
 export class VPNavScreen extends ActViewComponent<VPNavScreenProps> {
+  @Prop
   open?: boolean
+  @Prop
   navScreenContentBefore?: any
+  @Prop
   navScreenContentAfter?: any
 
   render() {
@@ -29,9 +32,4 @@ export class VPNavScreen extends ActViewComponent<VPNavScreenProps> {
       </div>
     )
   }
-}
-
-Prop(VPNavScreen.prototype, 'open')
-Prop(VPNavScreen.prototype, 'navScreenContentBefore')
-Prop(VPNavScreen.prototype, 'navScreenContentAfter')
-Component({ name: 'VPNavScreen' })(VPNavScreen)
+}

@@ -1,8 +1,8 @@
-import '../extract-css/VPNavScreenAppearance.css?scoped'
 import { ActViewComponent, Component } from 'actview'
 import { useData } from '../composables/data'
 import { VPSwitchAppearance } from './VPSwitchAppearance'
-
+import '../extract-css/VPNavScreenAppearance.scoped.css'
+@Component({ name: 'VPNavScreenAppearance' })
 export class VPNavScreenAppearance extends ActViewComponent {
   render() {
     const { site, theme } = useData()
@@ -21,6 +21,4 @@ export class VPNavScreenAppearance extends ActViewComponent {
       </div>
     )
   }
-}
-
-Component({ name: 'VPNavScreenAppearance' })(VPNavScreenAppearance)
+}

@@ -1,17 +1,20 @@
-import '../extract-css/VPSidebar.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useLayout } from '../composables/layout'
 import { VPSidebarGroup } from './VPSidebarGroup'
-
+import '../extract-css/VPSidebar.scoped.css'
 export interface VPSidebarProps {
   open?: boolean
   sidebarNavBefore?: any
   sidebarNavAfter?: any
 }
 
+@Component({ name: 'VPSidebar' })
 export class VPSidebar extends ActViewComponent<VPSidebarProps> {
+  @Prop
   open?: boolean
+  @Prop
   sidebarNavBefore?: any
+  @Prop
   sidebarNavAfter?: any
 
   render() {
@@ -36,9 +39,4 @@ export class VPSidebar extends ActViewComponent<VPSidebarProps> {
       </aside>
     )
   }
-}
-
-Prop(VPSidebar.prototype, 'open')
-Prop(VPSidebar.prototype, 'sidebarNavBefore')
-Prop(VPSidebar.prototype, 'sidebarNavAfter')
-Component({ name: 'VPSidebar' })(VPSidebar)
+}

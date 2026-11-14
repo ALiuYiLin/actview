@@ -1,7 +1,8 @@
-import '../extract-css/VPLocalSearchBox.css?scoped'
 import { ActViewComponent, Component, Ref } from 'actview'
-
+import '../extract-css/VPLocalSearchBox.scoped.css'
+@Component({ name: 'VPLocalSearchBox' })
 export class VPLocalSearchBox extends ActViewComponent {
+  @Ref
   open = false
 
   render() {
@@ -18,7 +19,4 @@ export class VPLocalSearchBox extends ActViewComponent {
       </div>
     )
   }
-}
-
-Ref(VPLocalSearchBox.prototype, 'open')
-Component({ name: 'VPLocalSearchBox' })(VPLocalSearchBox)
+}

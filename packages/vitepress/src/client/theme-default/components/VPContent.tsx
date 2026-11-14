@@ -1,11 +1,10 @@
-import '../extract-css/VPContent.css?scoped'
 import { ActViewComponent, Component, Dynamic, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { useLayout } from '../composables/layout'
 import { VPDoc } from './VPDoc'
 import { VPHome } from './VPHome'
 import { VPPage } from './VPPage'
-
+import '../extract-css/VPContent.scoped.css'
 export interface VPContentProps {
   content?: any
   notFound?: any
@@ -14,10 +13,15 @@ export interface VPContentProps {
   [key: string]: any
 }
 
+@Component({ name: 'VPContent' })
 export class VPContent extends ActViewComponent<VPContentProps> {
+  @Prop
   content?: any
+  @Prop
   notFound?: any
+  @Prop
   pageTop?: any
+  @Prop
   pageBottom?: any
 
   render() {
@@ -51,10 +55,4 @@ export class VPContent extends ActViewComponent<VPContentProps> {
       </div>
     )
   }
-}
-
-Prop(VPContent.prototype, 'content')
-Prop(VPContent.prototype, 'notFound')
-Prop(VPContent.prototype, 'pageTop')
-Prop(VPContent.prototype, 'pageBottom')
-Component({ name: 'VPContent' })(VPContent)
+}

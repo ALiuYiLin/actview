@@ -1,13 +1,14 @@
-import '../extract-css/VPNavBarAppearance.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
 import { useData } from '../composables/data'
 import { VPSwitchAppearance } from './VPSwitchAppearance'
-
+import '../extract-css/VPNavBarAppearance.scoped.css'
 export interface VPNavBarAppearanceProps {
   class?: string
 }
 
+@Component({ name: 'VPNavBarAppearance' })
 export class VPNavBarAppearance extends ActViewComponent<VPNavBarAppearanceProps> {
+  @Prop
   class?: string
 
   render() {
@@ -30,7 +31,4 @@ export class VPNavBarAppearance extends ActViewComponent<VPNavBarAppearanceProps
       </div>
     )
   }
-}
-
-Prop(VPNavBarAppearance.prototype, 'class')
-Component({ name: 'VPNavBarAppearance' })(VPNavBarAppearance)
+}

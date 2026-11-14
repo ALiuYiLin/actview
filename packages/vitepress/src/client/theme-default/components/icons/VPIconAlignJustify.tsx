@@ -1,5 +1,6 @@
 import { ActViewComponent, Component } from 'actview'
 
+@Component({ name: "VPIconAlignJustify" })
 export class VPIconAlignJustify extends ActViewComponent {
   render() {
     return (
@@ -12,5 +13,3 @@ export class VPIconAlignJustify extends ActViewComponent {
     )
   }
 }
-
-Component({ name: "VPIconAlignJustify" })(VPIconAlignJustify)

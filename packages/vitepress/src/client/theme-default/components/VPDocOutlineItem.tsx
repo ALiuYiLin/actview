@@ -1,13 +1,15 @@
-import '../extract-css/VPDocOutlineItem.css?scoped'
 import { ActViewComponent, Component, Prop } from 'actview'
-
+import '../extract-css/VPDocOutlineItem.scoped.css'
 export interface VPDocOutlineItemProps {
   headers?: any[]
   root?: boolean
 }
 
+@Component({ name: 'VPDocOutlineItem' })
 export class VPDocOutlineItem extends ActViewComponent<VPDocOutlineItemProps> {
+  @Prop
   headers?: any[]
+  @Prop
   root?: boolean
 
   render() {
@@ -27,8 +29,4 @@ export class VPDocOutlineItem extends ActViewComponent<VPDocOutlineItemProps> {
       </ul>
     )
   }
-}
-
-Prop(VPDocOutlineItem.prototype, 'headers')
-Prop(VPDocOutlineItem.prototype, 'root')
-Component({ name: 'VPDocOutlineItem' })(VPDocOutlineItem)
+}
