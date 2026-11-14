@@ -38,7 +38,7 @@ export interface ReactiveOptions {
   shallow?: boolean
 }
 
-/** @Watch 监听源：字段名 / 字段名数组 / getter */
+/** @Watch 监听源：字段名 / 字段名数组 / 普通 function（以实例为 this，不可用箭头函数） */
 export type WatchSource = string | string[] | ((this: any) => any)
 
 /** @Watch 元数据 */

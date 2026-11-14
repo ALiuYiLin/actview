@@ -85,7 +85,13 @@ export function Computed(
 /**
  * @Watch(source, options?) 方法装饰器：
  *   @Watch('count') onCount(value, oldValue) {}
- *   @Watch(() => this.count > 3) onBig() {}
+ *
+ * source 为函数时必须是普通 function（安装时以实例为 this），不能使用箭头函数：
+ *   @Watch(function (this: any) { return this.count > 3 }) onBig() {}
+ *
+ * 推荐用 @Computed + 字段名表达派生条件：
+ *   @Computed get isBig() { return this.count > 3 }
+ *   @Watch('isBig') onBig() {}
  */
 export function Watch(source: WatchSource, options?: WatchOptions) {
   return function (

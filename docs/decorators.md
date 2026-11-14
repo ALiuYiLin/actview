@@ -59,11 +59,27 @@ export class Counter extends ActViewComponent<{ initial?: number }> {
 | `@Ref` | 字段等价于 `ref` 的 `.value` | `this.count: number`；`this.count++` 触发所属组件 re-render |
 | `@Reactive` | 对象 / 数组字段变成 `reactive`（或 `shallowReactive`） | 原始值字段请用 `@Ref` |
 | `@Computed` | getter → 按实例 `computed` | 惰性求值 + 缓存；必须用于 getter |
-| `@Watch(source, options?)` | 方法监听 | source：字段名 / 字段名数组 / getter；支持 `immediate` / `deep` |
+| `@Watch(source, options?)` | 方法监听 | source：字段名 / 字段名数组 / 普通 function；支持 `immediate` / `deep` |
 | `@Provide` | 把字段值 provide 给后代 | 字段级；key 默认为字段名，可 `@Provide('alias')` |
 | `@Inject(key?, default?)` | setup 期解析注入值 | 快照语义；`@Inject('theme')` / `@Inject('missing', 'fallback')` |
 
 `@Ref` 的实现：装饰器只记录元数据；`mountClassComponent` 在 `new Ctor()` 后摘掉 class field 产生的 own data property，再安装每实例 accessor（闭包持有 `ref`）。因此不依赖 `useDefineForClassFields` 全局配置，也不使用 Proxy。
+
+`@Watch` 的函数 source 必须是**普通 function**，安装时以实例作为 `this`；不能使用箭头函数（装饰器参数在类定义阶段求值，箭头函数会捕获错误的 `this`）：
+
+```tsx
+// ✅ 推荐：字段 / computed
+@Watch('count') onCount(value: number) {}
+@Computed get isBig() { return this.count > 3 }
+@Watch('isBig') onBig(value: boolean) {}
+
+// ✅ 普通 function
+@Watch(function (this: Counter) { return this.count > 3 })
+onBig() {}
+
+// ❌ 箭头函数
+@Watch(() => this.count > 3) onBig() {}
+```
 
 ## 3. 组件内数据层（@Model / @UseModel）
 

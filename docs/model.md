@@ -68,6 +68,8 @@ class Counter extends ActViewComponent {
 | 响应式对象 / 数组 | `@Reactive` |
 | 派生值 | `@Computed get xxx()` |
 | 监听 | `@Watch('field') method()` |
+
+`@Watch` 的函数 source 必须是普通 function（安装时以实例为 `this`），不能写 `@Watch(() => this.text)`；需要派生条件时用字段 / `@Computed` 作为 source，或在 handler 内判断。
 | 生命周期 | `@Setup` / `@Mounted` / `@Unmounted` 等 |
 | 依赖其他 Model | `@UseModel(OtherModel)` |
 | 组件 Prop 投影 | `@Prop` |
